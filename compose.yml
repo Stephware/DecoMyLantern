@@ -1,0 +1,22 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: deco-sqlserver
+
+    # Uncomment for Apple Silicon experimentation.
+    # This uses unsupported AMD64 emulation.
+    # platform: linux/amd64
+
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+
+    ports:
+      - "127.0.0.1:1433:1433"
+
+    volumes:
+      - deco_sql_data:/var/opt/mssql
+
+volumes:
+  deco_sql_data:
