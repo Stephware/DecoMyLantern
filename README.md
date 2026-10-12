@@ -1,7 +1,18 @@
 # Deco My Lantern
 
-A mobile-first Filipino parol experience that grows with friends' contributions. This repository contains a React + TypeScript frontend and an ASP.NET Core (.NET 10) Web API backed by SQL Server.
+A mobile-first Filipino parol that grows as friends contribute lights and Christmas messages.
 
-Development happens on `dev` through feature branches and pull requests. `main` is reserved for owner-approved releases.
+**Stack:** React + TypeScript + Vite + Tailwind CSS; ASP.NET Core Web API (.NET 10); SQL Server + EF Core 10; layered SVG.
 
-See `docs/setup-guide.md` and `CONTRIBUTING.md` on the development branch for setup and contribution guidelines.
+## Branches
+- `main`: release branch; repository owner only.
+- `dev`: integration branch; developers merge passing feature PRs.
+- `feature/*`: short-lived branches created from `dev`.
+
+## Getting started
+See [docs/setup-guide.md](docs/setup-guide.md). The frontend includes a **preview-only** lantern renderer; invitation submission and registered-owner flows require the backend modules to be completed and tested. Never treat preview friend counts as real contributions.
+
+## Project status
+Initial project foundation. Do not deploy for public contributions until authentication, rate limits, guest abuse defenses, and Christmas message privacy tests are complete.
+
+**Bootstrap note:** The repository has not yet had a live .NET build, npm dependency installation, or generated EF Core migration. The CI workflow uses `npm install` until a lockfile is committed. See the setup guide for the remaining local validation steps.

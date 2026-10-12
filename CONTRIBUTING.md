@@ -1,0 +1,12 @@
+# Contributing
+
+1. Update your local `dev`: `git switch dev && git pull origin dev`.
+2. Create a branch: `git switch -c feature/short-description`.
+3. Implement and test changes. Do not commit credentials, personal data, or actual SQL Server database files.
+4. Open a pull request **to `dev`**, not `main`. CI must pass before merging.
+5. Developers may squash-merge passing feature PRs into `dev`; avoid direct pushes to `dev`.
+6. Only the repository owner promotes tested changes from `dev` to `main` through a release PR.
+
+**Database changes:** Include the C# entities, EF Core configuration, migration and (if applicable) documentation in one PR. Migrations are version controlled and should not be silently rewritten after merging.
+
+**Frontend:** Keep the parol layout modular. New themes must maintain stable decoration slot identities so messages and contributions do not move when the owner changes themes.

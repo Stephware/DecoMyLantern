@@ -1,0 +1,32 @@
+# dotnet
+**/bin/
+**/obj/
+**/TestResults/
+.vs/
+*.user
+*.suo
+# node
+**/node_modules/
+**/dist/
+**/coverage/
+**/.vite/
+*.tsbuildinfo
+# environment and secrets
+**/.env
+**/.env.*
+!**/.env.example
+**/appsettings.Development.json
+**/appsettings.Production.json
+**/appsettings.*.local.json
+# database and local files
+*.mdf
+*.ndf
+*.ldf
+*.bak
+*.bacpac
+# tooling
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
