@@ -1,3 +1,4 @@
+using Xunit;
 using DecoMyLantern.Api.Features.Lanterns;
 using DecoMyLantern.Api.Features.Messages;
 

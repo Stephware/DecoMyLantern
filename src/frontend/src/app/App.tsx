@@ -10,7 +10,7 @@ export default function App() {
   const theme = THEMES.find(t => t.key === themeKey) ?? THEMES[0]
   const stage = stageForFriends(friends)
   const next = nextStage(friends)
-  const isUnlocked = new Date() >= new Date('2026-12-24T16:00:00Z')
+  const isUnlocked = Date.now() >= Date.parse('2026-12-24T16:00:00Z')
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#080e20] bg-[radial-gradient(ellipse_at_top,#26345b_0%,#080e20_67%)] text-[#fff8e8]">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-8">

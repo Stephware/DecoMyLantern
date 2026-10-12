@@ -14,3 +14,5 @@ See [docs/setup-guide.md](docs/setup-guide.md). The frontend includes a **previe
 
 ## Project status
 Initial project foundation. Do not deploy for public contributions until authentication, rate limits, guest abuse defenses, and Christmas message privacy tests are complete.
+
+**Bootstrap note:** The repository has not yet had a live .NET build, npm dependency installation, or generated EF Core migration. The CI workflow uses `npm install` until a lockfile is committed. See the setup guide for the remaining local validation steps.

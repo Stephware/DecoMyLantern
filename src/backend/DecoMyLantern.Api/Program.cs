@@ -57,4 +57,4 @@ app.MapGet("/api/my/lanterns/{id:guid}/messages",
 
 app.Run();
 
-public partial class Program;
+public partial class Program { }
