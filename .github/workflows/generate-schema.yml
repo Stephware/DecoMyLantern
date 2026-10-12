@@ -1,0 +1,52 @@
+# Temporary read-only generator for the initial schema. Remove after its output is committed.
+name: Generate initial SQL schema
+on:
+  pull_request:
+    branches: [dev]
+permissions:
+  contents: read
+jobs:
+  generate:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feature/mvc-backend-schema-ci'
+    runs-on: ubuntu-latest
+    env:
+      ConnectionStrings__DefaultConnection: "Server=localhost;Database=DecoMyLanternDb;User Id=sa;Password=ExampleDesignTimeOnly123!;Encrypt=False"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: dotnet restore DecoMyLantern.slnx
+      - run: dotnet tool restore
+      - name: Scaffold EF migration and SQL creation script
+        run: |
+          dotnet ef migrations add InitialCreate --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api --output-dir Models/Database/Migrations
+          dotnet ef migrations script --idempotent --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api --output database/schema.sql
+      - name: Generate npm lockfile
+        working-directory: src/frontend
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Export generated files as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: initial-schema-and-lockfile
+          path: |
+            src/backend/DecoMyLantern.Api/Models/Database/Migrations/*.cs
+            database/schema.sql
+            src/frontend/package-lock.json
+      - name: Emit generated files for source-control capture
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+          sources = list(Path('src/backend/DecoMyLantern.Api/Models/Database/Migrations').glob('*.cs'))
+          sources += [Path('database/schema.sql'), Path('src/frontend/package-lock.json')]
+          for p in sources:
+              print('BEGIN_GENERATED_FILE|' + p.as_posix())
+              encoded = base64.b64encode(p.read_bytes()).decode('ascii')
+              for i in range(0, len(encoded), 1800):
+                  print('GENERATED_CHUNK|' + encoded[i:i+1800])
+              print('END_GENERATED_FILE|' + p.as_posix())
+          PY
