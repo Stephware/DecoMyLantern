@@ -4,7 +4,7 @@
 
 The goal is to keep the parol beautiful at every stage: **curated SVG themes + milestone-based structural growth**, rather than stretching an image or forcing a Fibonacci snowflake shape.
 
-> **Development status:** This repository contains the initial UI preview, ASP.NET Core API foundation, SQL Server schema/migrations, and CI. The full host dashboard, invitation acceptance, anonymous contribution submission, and end-to-end Christmas message flow are **still in development**. The frontend's friend counter is a simulation, not real data. Do not treat this scaffold as production-ready.
+> **Development status:** This repository contains the initial UI preview, ASP.NET Core API foundation, SQL Server schema/migrations, and CI. Phase 1 adds host registration/login, the dashboard, and saved lantern creation/customization. Invitation acceptance, anonymous contribution submission, and the complete Christmas inbox remain **in development**. The dashboard reads real accepted-contribution counts, which will stay at zero until guest contributions are implemented. Do not treat this scaffold as production-ready.
 
 ## How the app is intended to work
 
@@ -140,7 +140,11 @@ On Windows PowerShell, replace the copy command with `Copy-Item .env.example .en
 
 Open **http://localhost:5173** in your browser. Vite proxies `/api` to `http://localhost:5050`.
 
-The current frontend shows a **parol growth and theme preview**. Real guest acceptances and messages are not yet connected.
+Open the site to **register or log in**, create your seasonal lantern, choose unlocked designs and decorative patterns, and save your changes to SQL Server. Log out and log back in to confirm the design persists.
+
+The dashboard shows real server-side contribution counts (initially zero). Share links and anonymous guest submission will arrive in Phase 3; the complete Christmas inbox experience will arrive in Phase 4.
+
+**Host API security:** Authentication uses an HTTP-only SameSite cookie. The frontend automatically requests and sends a CSRF token for every POST/PUT operation. Manual API testing requires fetching `GET /api/auth/csrf` and preserving cookies. See the [API contracts](docs/api-contracts.md).
 
 ## Run checks before a PR
 
