@@ -1,11 +1,18 @@
-# Architecture
+# Application architecture
 
-- `src/frontend`: React + TypeScript + Vite, Tailwind CSS and SVG renderer. Public preview and guest link entry points are mobile-first.
-- `src/backend/DecoMyLantern.Api`: ASP.NET Core Web API with feature modules, Domain entities and EF Core persistence.
-- `tests/DecoMyLantern.Api.Tests`: backend business-rule tests.
+The backend follows the MVC-style organization of `Stephware/InventoryOrderingSystem`:
 
-Owner accounts use ASP.NET Core Identity. Guests need no account; a pseudonymous, randomly generated browser identifier can discourage repeat participation, but does not prove unique humans. Authentication, rate limits and guest-contribution endpoints require thorough testing before public deployment.
+```text
+React + TypeScript (browser)
+  -> ASP.NET Core API Controllers
+  -> Services (business rules)
+  -> Repository (EF Core queries)
+  -> Models/Database (Entities + ApplicationDbContext + Configurations)
+  -> SQL Server
+```
 
-New friend contributions should occupy stable slots. Stage geometry changes only at 0, 5, 15 and 30 accepted friends (configurable), while each accepted contribution illuminates a light. Themes share a compatible five-pointed parol layout.
+`Models/DTOs` contains API contracts. The frontend owns the views, so the API intentionally does not have Razor `Views/` files. ASP.NET Core Identity provides the registered host's `/api/auth/*` routes; guests do not log in.
 
-Christmas message bodies are never returned by the server to the owner before `UnlockAtUtc`. For the 2026 Philippine Christmas season, unlock is 2026-12-24T16:00:00Z.
+Growth thresholds (0, 5, 15, 30) unlock structural parol layers, with one stable decoration slot per accepted guest. Curated SVG designs share a compatible five-pointed structure.
+
+Messages remain owner-only and sealed until December 25, midnight Philippine Standard Time (UTC+8). The API never returns message text early. Real guest submission endpoints and a completed host dashboard are **not implemented yet**.

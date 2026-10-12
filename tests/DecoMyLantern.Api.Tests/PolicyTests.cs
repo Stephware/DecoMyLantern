@@ -1,9 +1,7 @@
 using Xunit;
-using DecoMyLantern.Api.Features.Lanterns;
-using DecoMyLantern.Api.Features.Messages;
-
+using DecoMyLantern.Api.Services.Lanterns;
+using DecoMyLantern.Api.Services.Messages;
 namespace DecoMyLantern.Api.Tests;
-
 public sealed class PolicyTests
 {
     [Theory]

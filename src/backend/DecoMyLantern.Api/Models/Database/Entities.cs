@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace DecoMyLantern.Api.Domain.Entities;
+namespace DecoMyLantern.Api.Models.Database;
 
 public sealed class ApplicationUser : IdentityUser<Guid>
 {

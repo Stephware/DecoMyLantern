@@ -1,18 +1,16 @@
 # Deco My Lantern
 
-A mobile-first Filipino parol that grows as friends contribute lights and Christmas messages.
+A mobile-first Filipino Christmas parol that grows through anonymous guest lights and private Christmas letters.
 
-**Stack:** React + TypeScript + Vite + Tailwind CSS; ASP.NET Core Web API (.NET 10); SQL Server + EF Core 10; layered SVG.
+## Stack
+- React + TypeScript + Vite + Tailwind CSS
+- ASP.NET Core Web API (.NET 10), organized like a familiar MVC project: `Controllers → Services → Repository → Models/Database`
+- SQL Server + EF Core Code First
+- Layered SVG parol renderer
 
-## Branches
-- `main`: release branch; repository owner only.
-- `dev`: integration branch; developers merge passing feature PRs.
-- `feature/*`: short-lived branches created from `dev`.
+## Development
+`main` is owner-only production. Developers use `feature/*` branches based on `dev`, then create passing PRs into `dev`. Only the owner merges `dev` into `main`.
 
-## Getting started
-See [docs/setup-guide.md](docs/setup-guide.md). The frontend includes a **preview-only** lantern renderer; invitation submission and registered-owner flows require the backend modules to be completed and tested. Never treat preview friend counts as real contributions.
+Start with [setup guide](docs/setup-guide.md); database entities and the schema-generation/bootstrap command are documented in [database-schema](docs/database-schema.md). Configure GitHub rulesets using [GitHub protection](docs/github-protection.md).
 
-## Project status
-Initial project foundation. Do not deploy for public contributions until authentication, rate limits, guest abuse defenses, and Christmas message privacy tests are complete.
-
-**Bootstrap note:** The repository has not yet had a live .NET build, npm dependency installation, or generated EF Core migration. The CI workflow uses `npm install` until a lockfile is committed. See the setup guide for the remaining local validation steps.
+**Status:** The UI is a preview. Guest contribution writes, creator flows and production security checks are not yet complete. Do not treat demo friends as real accepted contributions.

@@ -1,8 +1,8 @@
-using DecoMyLantern.Api.Domain.Entities;
+using DecoMyLantern.Api.Models.Database;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace DecoMyLantern.Api.Infrastructure.Persistence;
+namespace DecoMyLantern.Api.Models.Database;
 
 public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
     : IdentityDbContext<ApplicationUser, Microsoft.AspNetCore.Identity.IdentityRole<Guid>, Guid>(options)

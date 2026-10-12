@@ -1,4 +1,4 @@
-namespace DecoMyLantern.Api.Features.Lanterns;
+namespace DecoMyLantern.Api.Services.Lanterns;
 
 public static class GrowthPolicy
 {

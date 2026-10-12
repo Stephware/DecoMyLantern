@@ -1,4 +1,4 @@
-namespace DecoMyLantern.Api.Features.Messages;
+namespace DecoMyLantern.Api.Services.Messages;
 
 public static class ChristmasUnlockPolicy
 {
