@@ -8,8 +8,15 @@ public static class LanternPolicy
     // Philippine Standard Time is fixed at UTC+08:00.
     public static int SeasonFor(DateTime utcNow) => utcNow.ToUniversalTime().AddHours(8).Year;
 
-    public static int? NextMilestone(int acceptedFriends) =>
-        Milestones.FirstOrDefault(milestone => milestone > acceptedFriends) is var next && next > 0 ? next : null;
+    public static int? NextMilestone(int acceptedFriends)
+    {
+        foreach (var milestone in Milestones)
+        {
+            if (acceptedFriends < milestone) return milestone;
+        }
+
+        return null;
+    }
 
     public static bool IsAllowedPattern(string key) =>
         Patterns.Contains(key, StringComparer.Ordinal);
