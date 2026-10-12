@@ -21,13 +21,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install --no-audit --no-fund
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
   backend:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      ConnectionStrings__DefaultConnection: "Server=localhost;Database=DecoMyLanternDb;User Id=sa;Password=ExampleDesignTimeOnly123!;Encrypt=False"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -42,3 +46,6 @@ jobs:
       - run: dotnet restore DecoMyLantern.slnx
       - run: dotnet build DecoMyLantern.slnx --no-restore --configuration Release
       - run: dotnet test DecoMyLantern.slnx --no-build --configuration Release
+      - run: dotnet tool restore
+      - name: Validate EF Core migrations
+        run: dotnet ef migrations has-pending-model-changes --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api
