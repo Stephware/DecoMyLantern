@@ -1,8 +1,8 @@
-using DecoMyLantern.Api.Domain.Entities;
+using DecoMyLantern.Api.Models.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace DecoMyLantern.Api.Infrastructure.Persistence.Configurations;
+namespace DecoMyLantern.Api.Models.Database.Configurations;
 
 public sealed class DesignConfiguration : IEntityTypeConfiguration<ParolDesign>
 {
