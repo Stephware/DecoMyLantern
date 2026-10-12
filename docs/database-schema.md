@@ -1,19 +1,24 @@
-# MVP SQL Server schema
+# SQL Server database structure
 
-EF Core Code First and migrations are the **source of truth**. See `Domain/Entities`, `ApplicationDbContext` and `Configurations`.
+The schema is defined in `src/backend/DecoMyLantern.Api/Models/Database` using EF Core 10 Code First.
 
-| Entity | Purpose |
+| Entity | Database rule |
 |---|---|
-| ApplicationUser / Identity tables | Registered lantern creators |
-| Lantern | One per owner per season, selected design, theme and UTC unlock |
-| ParolDesign | Curated SVG theme keys and required friend counts |
-| GrowthStage | Configuration for structural unlock milestones |
-| ShareLink | Revocable invitation token hash, never store raw invitation tokens |
-| GuestVisitor | Random browser pseudonym token hash (no login / email) |
-| Contribution | Active accepted guest, slot index, display name, lantern and link |
-| Message | Optional private sealed message associated with a contribution |
-| MessageReport | Owner report of abusive message content |
+| Identity ApplicationUser | Registered lantern owner |
+| Lanterns | Unique OwnerUserId + SeasonYear, rowversion concurrency |
+| ParolDesigns | Unique DesignKey, 3 seeded themes |
+| GrowthStages | Unique StageKey + RequiredFriends; seeded 0, 5, 15, 30 |
+| ShareLinks | Unique TokenHash; expiry and revocation |
+| GuestVisitors | Unique random browser TokenHash (not verified human identity) |
+| Contributions | Unique (LanternId, GuestVisitorId) and (LanternId, SlotIndex) |
+| Messages | Optional one per contribution, max 500 characters |
+| MessageReports | Message moderation/report tracking |
 
-Indexes: unique (OwnerUserId, SeasonYear), unique DesignKey, unique StageKey and RequiredFriends, unique share link TokenHash, unique guest TokenHash, unique (LanternId, GuestVisitorId), unique (LanternId, SlotIndex), unique Message.ContributionId.
+## Create the database
 
-A browser cookie identifies a browser, not a real person. Supplement with rate limiting and optional challenge mechanisms before launch.
+1. Configure `ConnectionStrings:DefaultConnection` with `dotnet user-secrets` or environment variables.
+2. From the repository root run `bash database/bootstrap.sh` to create the initial EF migration if missing, and generate `database/schema.sql` from that migration.
+3. Commit the generated migration source and `database/schema.sql` to Git.
+4. Run `bash database/bootstrap.sh --apply` to apply the migrations to your configured SQL Server.
+
+Alternatively, run `database/create-database.sql` connected to master, then run the generated `database/schema.sql` in the new database using SQLCMD mode. Never use `EnsureCreated()` for the shared database, and always review migration changes.

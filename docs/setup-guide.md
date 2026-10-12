@@ -1,35 +1,46 @@
-# Development setup
+# Setup guide
 
-Requirements: .NET SDK 10, Node.js 22, npm, and SQL Server (local or remote). On Apple Silicon use a supported remote/Windows SQL Server instance if needed.
+Requirements: .NET 10 SDK, Node.js 22, and a SQL Server instance (Windows or remote SQL Server is preferable on Apple Silicon).
 
-Frontend:
+```bash
+git clone https://github.com/Stephware/DecoMyLantern.git
+cd DecoMyLantern
+git switch dev
+```
+
+## Frontend
 ```bash
 cd src/frontend
 npm install
 cp .env.example .env
 npm run dev
 ```
-The development preview is standalone; friend-count controls are a simulation.
+Vite is on http://localhost:5173 and proxies /api to http://localhost:5050.
 
-Backend:
+## Backend
 ```bash
 cd src/backend/DecoMyLantern.Api
-dotnet restore
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=YOUR_SERVER;Database=DecoMyLanternDb;User Id=YOUR_USER;Password=YOUR_PASSWORD;Encrypt=True;TrustServerCertificate=True;"
 dotnet run
 ```
-Never commit actual connection strings or secrets. Use local user secrets or environment variables.
+Keep the real SQL connection string out of Git. For a production DB use proper TLS validation instead of `TrustServerCertificate=True`.
 
-Create and commit the **initial migration** on a machine with .NET SDK 10 (the migration is not generated in this bootstrap commit):
+## Database
+Return to the repository root:
 ```bash
 dotnet tool restore
-dotnet ef migrations add InitialCreate --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api --output-dir Infrastructure/Persistence/Migrations
+bash database/bootstrap.sh
+# Review + commit generated EF migration and database/schema.sql
+bash database/bootstrap.sh --apply
 ```
+For SQL Server Management Studio users, run `database/create-database.sql` on master and generated `database/schema.sql` on DecoMyLanternDb in SQLCMD mode. The generated migration is the source of truth.
 
-Apply migrations:
+## Validation
 ```bash
-dotnet ef database update --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api
+cd src/frontend && npm run lint && npm run typecheck && npm run build
+cd ../..
+dotnet restore DecoMyLantern.slnx
+dotnet build DecoMyLantern.slnx --no-restore --configuration Release
+dotnet test DecoMyLantern.slnx --no-build --configuration Release
 ```
-Generate the npm lockfile after the first `npm install`, then commit `src/frontend/package-lock.json`, change CI to `npm ci`, and enable npm caching. An EF migration is not yet checked in, and the schema is not yet applied. Do not use `EnsureCreated` in production.
-
-Branch workflow: feature branches off `dev`; PRs to `dev`; owner-only release PRs to `main`. GitHub branch protection must be configured manually in repository settings, and private repo enforcement depends on eligible GitHub plan.
+The project is an early scaffold; the GitHub CI checks code quality but does not run a real SQL Server integration test.

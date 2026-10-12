@@ -1,18 +1,11 @@
-# Planned API contracts
+# API contracts (current)
 
-Initial API foundation:
-- GET `/api/health`
-- GET `/api/designs` returns enabled templates (no private information)
-- GET `/api/growth-stages` returns milestones
+- GET `/api/health` — liveness
+- GET `/api/designs` — enabled parol designs
+- GET `/api/growth-stages` — structural milestones
+- POST `/api/auth/register`, POST `/api/auth/login` and other built-in Identity endpoints — registered host access
+- GET `/api/my/lanterns/{lanternId}/messages` — requires host authentication; only owner gets messages, bodies redacted until unlock
 
-Planned secured owner endpoints:
-- Identity authentication routes (host account registration and login)
-- Create/read the current owner's lantern; choose unlocked templates
-- List sealed message metadata before unlock and bodies after unlock
+Still to implement: creating a host's seasonal lantern, share link management, anonymous guest light/message submissions (no login), anti-abuse safeguards, design selection, owner reports.
 
-Planned anonymous guest endpoints:
-- Resolve a random invitation token, show public lantern preview
-- Submit one guest contribution and an optional message (max 500 characters)
-- Apply per-IP / per-invitation abuse controls, origin checks and idempotency protections
-
-No unprotected mutation endpoint should be published before authorization and abuse protections are in place.
+Do not expose public mutation endpoints without invitation validation, duplicate protection, rate limiting, and transactional slot assignment.
