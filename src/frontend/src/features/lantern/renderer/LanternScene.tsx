@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { stageForFriends } from '../growth/stages'
 import type { Theme } from '../../customization/themes'
 
-type Props = { friends: number; theme: Theme }
+type Props = { friends: number; theme: Theme; pattern?: string }
 function starPoints(outer: number, inner: number, cx = 250, cy = 250): string {
   return Array.from({ length: 10 }, (_, index) => {
     const angle = (index * Math.PI / 5) - Math.PI / 2
@@ -11,7 +11,7 @@ function starPoints(outer: number, inner: number, cx = 250, cy = 250): string {
     return `${cx + Math.cos(angle) * r},${cy + Math.sin(angle) * r}`
   }).join(' ')
 }
-export default function LanternScene({ friends, theme }: Props) {
+export default function LanternScene({ friends, theme, pattern = 'default' }: Props) {
   const [zoom, setZoom] = useState(1)
   const stage = stageForFriends(friends)
   const span = (stage.radius + 30) * 2 / zoom
@@ -31,6 +31,8 @@ export default function LanternScene({ friends, theme }: Props) {
             <feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
         </defs>
+        {pattern === 'rings' && <g stroke={theme.colors[1]} strokeWidth="1.6" fill="none" opacity=".42"><circle cx="250" cy="250" r="108" strokeDasharray="2 6" /><circle cx="250" cy="250" r="116" strokeDasharray="1 10" /></g>}
+        {pattern === 'rays' && <g stroke={theme.colors[0]} strokeWidth="2" opacity=".42">{Array.from({ length: 24 }, (_, i) => <path key={i} d="M250 130 L250 110" transform={`rotate(${i * 15} 250 250)`} />)}</g>}
         {stage.requiredFriends >= 30 && <g stroke={theme.colors[1]} fill="none" opacity=".75">{Array.from({length: 20}, (_,i) => <path key={i} d="M250 76 L250 64" strokeWidth="3" transform={`rotate(${i*18} 250 250)`} />)}<circle cx="250" cy="250" r="173" strokeWidth="3" strokeDasharray="3 9"/></g>}
         {stage.requiredFriends >= 15 && <g fill="none" stroke={theme.colors[0]} strokeWidth="2.5" opacity=".85"><circle cx="250" cy="250" r="148" strokeDasharray="5 6"/>{Array.from({length: 20}, (_,i) => <circle key={i} cx="250" cy="113" r="5" fill={theme.colors[i%4]} transform={`rotate(${i*18} 250 250)`}/>)}</g>}
         {stage.requiredFriends >= 5 && <g fill="none" stroke={theme.colors[1]} strokeWidth="2.5" opacity=".8"><circle cx="250" cy="250" r="122" /><circle cx="250" cy="250" r="128" strokeDasharray="2 9"/></g>}
