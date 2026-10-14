@@ -108,8 +108,13 @@ public sealed class LanternServiceTests
         public Task<ParolDesign?> FindEnabledDesignAsync(string key, CancellationToken cancellationToken) =>
             Task.FromResult(designs.FirstOrDefault(design => design.DesignKey == key && design.IsEnabled));
 
-        public Task<int> CountAcceptedContributionsAsync(Guid lanternId, CancellationToken cancellationToken) =>
-            Task.FromResult(AcceptedCount);
+        public Task<IReadOnlyList<DecoMyLantern.Api.Models.DTOs.ContributionLightDto>> GetAcceptedLightsAsync(Guid lanternId, CancellationToken cancellationToken)
+        {
+            IReadOnlyList<DecoMyLantern.Api.Models.DTOs.ContributionLightDto> lights = Enumerable.Range(0, AcceptedCount)
+                .Select(index => new DecoMyLantern.Api.Models.DTOs.ContributionLightDto(Guid.NewGuid(), index, $"Friend {index + 1}"))
+                .ToList();
+            return Task.FromResult(lights);
+        }
 
         public void Add(Lantern lantern) => lanterns.Add(lantern);
 
