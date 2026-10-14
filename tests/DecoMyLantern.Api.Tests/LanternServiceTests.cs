@@ -91,6 +91,25 @@ public sealed class LanternServiceTests
         Assert.Equal(400, exception.StatusCode);
     }
 
+    [Fact]
+    public async Task Returns_each_persisted_contribution_slot_without_renumbering()
+    {
+        var repository = new FakeRepository { SlotIndexes = [0, 8, 21] };
+        var service = new LanternService(repository, TimeProvider.System);
+        var ownerId = Guid.NewGuid();
+        await service.CreateAsync(ownerId, CancellationToken.None);
+
+        var lantern = await service.GetCurrentAsync(ownerId, CancellationToken.None);
+        Assert.NotNull(lantern);
+        Assert.Equal(3, lantern.AcceptedFriends);
+        Assert.Equal(new[] { 0, 8, 21 }, lantern.Lights.Select(light => light.SlotIndex));
+        Assert.Equal("base", lantern.GrowthStage);
+
+        var saved = await service.UpdateAsync(ownerId,
+            new UpdateLanternRequest { DesignKey = "classic", PatternKey = "rings" }, CancellationToken.None);
+        Assert.Equal(new[] { 0, 8, 21 }, saved.Lights.Select(light => light.SlotIndex));
+    }
+
     private sealed class FakeRepository : ILanternRepository
     {
         private readonly List<Lantern> lanterns = [];
@@ -101,6 +120,7 @@ public sealed class LanternServiceTests
         ];
 
         public int AcceptedCount { get; set; }
+        public int[]? SlotIndexes { get; set; }
 
         public Task<Lantern?> FindByOwnerAndSeasonAsync(Guid ownerId, int year, CancellationToken cancellationToken) =>
             Task.FromResult(lanterns.FirstOrDefault(lantern => lantern.OwnerUserId == ownerId && lantern.SeasonYear == year));
@@ -110,7 +130,7 @@ public sealed class LanternServiceTests
 
         public Task<IReadOnlyList<DecoMyLantern.Api.Models.DTOs.ContributionLightDto>> GetAcceptedLightsAsync(Guid lanternId, CancellationToken cancellationToken)
         {
-            IReadOnlyList<DecoMyLantern.Api.Models.DTOs.ContributionLightDto> lights = Enumerable.Range(0, AcceptedCount)
+            IReadOnlyList<DecoMyLantern.Api.Models.DTOs.ContributionLightDto> lights = (SlotIndexes ?? Enumerable.Range(0, AcceptedCount).ToArray())
                 .Select(index => new DecoMyLantern.Api.Models.DTOs.ContributionLightDto(Guid.NewGuid(), index, $"Friend {index + 1}"))
                 .ToList();
             return Task.FromResult(lights);
