@@ -1,7 +1,34 @@
 @import "tailwindcss";
-:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #f8f3e8; background: #080e20; font-synthesis: none; }
+
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #f8f3e8;
+  background: #080e20;
+  font-synthesis: none;
+}
+
 html, body, #root { min-height: 100%; }
 button { cursor: pointer; }
 button:focus-visible, input:focus-visible { outline: 2px solid #ffcf75; outline-offset: 3px; }
 .parol-glow { filter: drop-shadow(0 0 12px rgba(244,177,56,.45)); }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+@keyframes parol-layer-arrive {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes parol-light-appear {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.parol-layer-rise { animation: parol-layer-arrive 650ms ease-out both; }
+.parol-light { animation: parol-light-appear 340ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}

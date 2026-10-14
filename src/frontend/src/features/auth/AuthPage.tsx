@@ -44,7 +44,7 @@ export default function AuthPage({ onAuthenticated }: Props) {
           <h1 className="mx-auto max-w-xl font-serif text-4xl font-semibold leading-[1.13] tracking-tight sm:text-6xl lg:mx-0">A little light from <span className="text-amber-300">every friend.</span></h1>
           <p className="mx-auto mt-5 max-w-lg text-sm leading-7 text-white/65 sm:text-base lg:mx-0">Create a Christmas parol that grows as the people around you add their lights. Save the messages they leave, sealed until Christmas morning.</p>
           <div className="mx-auto mt-4 max-w-[400px] lg:mx-0">
-            <LanternScene friends={5} theme={THEMES[0]} />
+            <LanternScene previewCount={5} theme={THEMES[0]} />
           </div>
           <p className="text-xs text-white/35">Visual preview · Guest contributions are coming in a later release</p>
         </section>

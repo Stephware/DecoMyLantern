@@ -1,5 +1,7 @@
 export type Host = { id: string; email: string }
 
+export type ContributionLight = { id: string; slotIndex: number; displayName: string }
+
 export type Lantern = {
   id: string
   seasonYear: number
@@ -11,6 +13,7 @@ export type Lantern = {
   nextMilestone: number | null
   unlockAtUtc: string
   createdAtUtc: string
+  lights: ContributionLight[]
 }
 
 export type Design = {

@@ -4,7 +4,7 @@
 
 The goal is to keep the parol beautiful at every stage: **curated SVG themes + milestone-based structural growth**, rather than stretching an image or forcing a Fibonacci snowflake shape.
 
-> **Development status:** This repository contains the initial UI preview, ASP.NET Core API foundation, SQL Server schema/migrations, and CI. Phase 1 adds host registration/login, the dashboard, and saved lantern creation/customization. Invitation acceptance, anonymous contribution submission, and the complete Christmas inbox remain **in development**. The dashboard reads real accepted-contribution counts, which will stay at zero until guest contributions are implemented. Do not treat this scaffold as production-ready.
+> **Development status:** This repository contains the initial UI preview, ASP.NET Core API foundation, SQL Server schema/migrations, and CI. Phase 1 provides host registration/login and saved lantern customization. **Phase 2** adds Classic/Floral/Festival layered SVG artwork, stable indexed contributor lights, 0/5/15/30 growth layers and mobile pinch/drag/fit controls. Invitation acceptance, anonymous contribution submission, and the full Christmas inbox remain **in development**. Live accepted-contribution counts will stay at zero until Phase 3. Do not treat this scaffold as production-ready.
 
 ## How the app is intended to work
 
@@ -140,7 +140,7 @@ On Windows PowerShell, replace the copy command with `Copy-Item .env.example .en
 
 Open **http://localhost:5173** in your browser. Vite proxies `/api` to `http://localhost:5050`.
 
-Open the site to **register or log in**, create your seasonal lantern, choose unlocked designs and decorative patterns, and save your changes to SQL Server. Log out and log back in to confirm the design persists.
+Open the site to **register or log in**, create your seasonal lantern, explore three SVG design collections, choose unlocked designs and decorative patterns, and save your changes to SQL Server. Drag or pinch the parol to examine details; use **Fit** to recenter. The Design studio selector lets you preview 0/5/15/30 lights without changing stored data. Log out and log back in to confirm saved choices persist.
 
 The dashboard shows real server-side contribution counts (initially zero). Share links and anonymous guest submission will arrive in Phase 3; the complete Christmas inbox experience will arrive in Phase 4.
 
@@ -155,6 +155,7 @@ cd src/frontend
 npm ci
 npm run lint
 npm run typecheck
+npm run test
 npm run build
 ```
 
@@ -229,6 +230,7 @@ Do not merge feature branches directly to `main`, force-push protected branches,
 
 - [Detailed local setup](docs/setup-guide.md)
 - [Architecture](docs/architecture.md)
+- [Parol renderer and light-slot rules](docs/parol-renderer.md)
 - [Database and migrations](docs/database-schema.md)
 - [API routes](docs/api-contracts.md)
 - [GitHub branch protection](docs/github-protection.md)

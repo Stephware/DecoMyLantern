@@ -2,6 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DecoMyLantern.Api.Models.DTOs;
 
+// The slot index comes from the persisted Contribution and never changes when the parol grows.
+public sealed record ContributionLightDto(Guid Id, int SlotIndex, string DisplayName);
+
 public sealed record LanternDto(
     Guid Id,
     int SeasonYear,
@@ -12,7 +15,8 @@ public sealed record LanternDto(
     string GrowthStage,
     int? NextMilestone,
     DateTime UnlockAtUtc,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    IReadOnlyList<ContributionLightDto> Lights);
 
 public sealed class UpdateLanternRequest
 {
