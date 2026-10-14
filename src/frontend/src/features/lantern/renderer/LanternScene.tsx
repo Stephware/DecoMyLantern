@@ -31,17 +31,17 @@ function scaledDistance(a: Finger, b: Finger): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
-export default function LanternScene({ theme, pattern = 'default', contributions = [], previewCount = 0 }: Props) {
+export default function LanternScene({ theme, pattern = 'default', contributions = [], previewCount }: Props) {
   const [camera, setCamera] = useState<Camera>({ zoom: 1, x: 0, y: 0 })
   const pointers = useRef<Map<number, Finger>>(new Map())
-  const preview = Array.from({ length: limit(previewCount, 0, 60) }, (_, index): LanternLight => ({
+  const preview = Array.from({ length: limit(previewCount ?? 0, 0, 60) }, (_, index): LanternLight => ({
     id: `preview-${index}`,
     slotIndex: index,
     displayName: `Preview light ${index + 1}`,
   }))
-  const lights = contributions.length > 0 ? contributions : previewCount > 0 ? preview : contributions
+  const isPreview = previewCount !== undefined
+  const lights = isPreview ? preview : contributions
   const stage = stageForFriends(lights.length)
-  const isPreview = previewCount > 0
   const transform = `translate(${CENTER_X + camera.x} ${CENTER_Y + camera.y}) scale(${camera.zoom}) translate(${-CENTER_X} ${-CENTER_Y})`
 
   function pointerDown(event: PointerEvent<SVGSVGElement>) {
