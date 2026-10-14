@@ -77,7 +77,8 @@ public sealed class LanternService(ILanternRepository repository, TimeProvider t
         var design = await repository.FindEnabledDesignAsync(designKey, cancellationToken)
             ?? throw new LanternOperationException(400, "Invalid or unavailable parol design.");
 
-        var count = await repository.CountAcceptedContributionsAsync(lantern.Id, cancellationToken);
+        var lights = await repository.GetAcceptedLightsAsync(lantern.Id, cancellationToken);
+        var count = lights.Count;
         if (count < design.RequiredFriends)
             throw new LanternOperationException(403, "This parol design has not been unlocked yet.");
 
@@ -95,24 +96,25 @@ public sealed class LanternService(ILanternRepository repository, TimeProvider t
             throw new LanternOperationException(409, "Your lantern changed while saving. Refresh and try again.");
         }
 
-        return ToDto(lantern, count);
+        return ToDto(lantern, lights);
     }
 
     private async Task<LanternDto> ToDtoAsync(Lantern lantern, CancellationToken cancellationToken)
     {
-        var accepted = await repository.CountAcceptedContributionsAsync(lantern.Id, cancellationToken);
-        return ToDto(lantern, accepted);
+        var lights = await repository.GetAcceptedLightsAsync(lantern.Id, cancellationToken);
+        return ToDto(lantern, lights);
     }
 
-    private static LanternDto ToDto(Lantern lantern, int accepted) => new(
+    private static LanternDto ToDto(Lantern lantern, IReadOnlyList<ContributionLightDto> lights) => new(
         lantern.Id,
         lantern.SeasonYear,
         lantern.SelectedDesign.DesignKey,
         lantern.PaletteKey,
         lantern.PatternKey,
-        accepted,
-        GrowthPolicy.StageFor(accepted),
-        LanternPolicy.NextMilestone(accepted),
+        lights.Count,
+        GrowthPolicy.StageFor(lights.Count),
+        LanternPolicy.NextMilestone(lights.Count),
         lantern.UnlockAtUtc,
-        lantern.CreatedAtUtc);
+        lantern.CreatedAtUtc,
+        lights);
 }
