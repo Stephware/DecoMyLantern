@@ -241,6 +241,7 @@ Do not merge feature branches directly to `main`, force-push protected branches,
 - [Detailed local setup](docs/setup-guide.md)
 - [Architecture](docs/architecture.md)
 - [Parol renderer and light-slot rules](docs/parol-renderer.md)
+- [Task 3: 50-friend growth capacity checks](docs/task3-50-friend-capacity.md)
 - [Database and migrations](docs/database-schema.md)
 - [API routes](docs/api-contracts.md)
 - [GitHub branch protection](docs/github-protection.md)

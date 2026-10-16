@@ -18,7 +18,7 @@ All three SVG collections — **Classic Gold**, **Floral Bloom**, and **Festival
 
 These ranges are descriptions, **not unlock thresholds**. In particular, going from 5 to 6, 15 to 16, and 30 to 31 adds **one ornament**, not a whole completed ring at once. The base star remains untouched.
 
-**50 is a design target, not a backend contribution cap.** At counts above 50, the complete grand crown remains and additional real lights still render. Formal 50-friend stress testing and policy decisions are scheduled for Task 3.
+**50 is a design target, not a backend contribution cap.** At counts above 50, the complete grand crown remains and additional real lights still render. Task 3 covers all-counts 0–50 geometry checks, mobile coordinate separation and 51+ behavior. See [Task 3 capacity report](task3-50-friend-capacity.md). Real guest concurrency and on-device visual tests still require verification.
 
 The backend computes `growthStage` using `GrowthPolicy.StageFor(acceptedFriends)`. The frontend's `stageForFriends` mirrors its five ranges for display. `decorationCounts` derives accent counts from the **number of accepted, non-removed contributions**; no sample or client-supplied friend count can change saved owner data.
 
@@ -54,4 +54,4 @@ From `src/frontend` run `npm ci`, `npm run test`, `npm run lint`, `npm run typec
 
 From the root run `dotnet restore DecoMyLantern.slnx`, `dotnet build DecoMyLantern.slnx --configuration Release`, `dotnet test DecoMyLantern.slnx --configuration Release`, and `dotnet ef migrations has-pending-model-changes --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api` after `dotnet tool restore`.
 
-Manually preview **0, 3, 10, 23, 40, 50** sample lights for each design on both desktop and phone. With zero real contributions, verify that Classic, Floral, and Festival can each be saved and restored after a page reload. Task 2 adds passwordless token-backed owner access and a recovery key; real guest submissions, invitation links, and end-to-end 50-friend testing remain later tasks.
+Manually preview **0, 3, 10, 23, 40, 50** sample lights for each design on both desktop and phone. With zero real contributions, verify that Classic, Floral, and Festival can each be saved and restored after a page reload. Task 2 owner-token access has merged; invitation/guest contribution handling is under Task 4. Real SQL Server 50-friend submission and concurrent request tests still need running.

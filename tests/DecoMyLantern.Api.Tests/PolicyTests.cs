@@ -19,6 +19,31 @@ public sealed class PolicyTests
         Assert.Equal(expected, GrowthPolicy.StageFor(count));
 
     [Fact]
+    public void Every_friend_count_through_50_uses_the_agreed_visual_range()
+    {
+        for (var count = 0; count <= 50; count++)
+        {
+            var expected = count switch
+            {
+                0 => "base",
+                <= 5 => "lights",
+                <= 15 => "details",
+                <= 30 => "fuller",
+                _ => "grand"
+            };
+            Assert.Equal(expected, GrowthPolicy.StageFor(count));
+        }
+    }
+
+    [Fact]
+    public void Fifty_is_a_visual_target_not_a_hard_backend_growth_limit()
+    {
+        Assert.Equal("grand", GrowthPolicy.StageFor(50));
+        Assert.Equal("grand", GrowthPolicy.StageFor(51));
+        Assert.Equal("grand", GrowthPolicy.StageFor(120));
+    }
+
+    [Fact]
     public void Invalid_friend_count_is_rejected() =>
         Assert.Throws<ArgumentOutOfRangeException>(() => GrowthPolicy.StageFor(-1));
 
