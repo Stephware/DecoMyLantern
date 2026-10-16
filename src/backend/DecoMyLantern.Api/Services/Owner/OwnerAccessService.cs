@@ -30,7 +30,7 @@ public sealed class OwnerAccessService(
     {
         await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
         var username = "parol-" + Guid.NewGuid().ToString("N");
-        var user = new ApplicationUser { UserName = username, Email = null };
+        var user = new ApplicationUser { Id = Guid.NewGuid(), UserName = username, Email = null };
         var result = await userManager.CreateAsync(user);
         if (!result.Succeeded)
             throw new OwnerAccessException(500, "Unable to create your parol. Please try again.");
