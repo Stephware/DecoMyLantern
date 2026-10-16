@@ -29,8 +29,9 @@ export default function InvitationManager() {
     try {
       const issued = await createInvitation()
       setUrl(invitationUrl(window.location.origin, issued.token))
-      setLinks(await getInvitations())
       setNotice('Your invitation is ready. Copy and share the link below.')
+      try { setLinks(await getInvitations()) }
+      catch { setError('Link created, but the invitation history could not be refreshed.') }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to create invitation.')
     } finally {
@@ -54,8 +55,12 @@ export default function InvitationManager() {
     setError('')
     try {
       await revokeInvitation(id)
-      setLinks(await getInvitations())
+      setLinks(previous => previous.map(link => link.id === id
+        ? { ...link, revokedAtUtc: new Date().toISOString() }
+        : link))
       setNotice('Invitation revoked. Existing contributions were preserved.')
+      try { setLinks(await getInvitations()) }
+      catch { setError('Link revoked, but the invitation history could not be refreshed.') }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to revoke invitation.')
     } finally {
