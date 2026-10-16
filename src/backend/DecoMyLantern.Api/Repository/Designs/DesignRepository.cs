@@ -13,7 +13,6 @@ public sealed class DesignRepository(ApplicationDbContext context) : IDesignRepo
     public Task<List<ParolDesign>> GetEnabledAsync(CancellationToken cancellationToken) =>
         context.ParolDesigns.AsNoTracking()
             .Where(x => x.IsEnabled)
-            .OrderBy(x => x.RequiredFriends)
-            .ThenBy(x => x.Name)
+            .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
 }
