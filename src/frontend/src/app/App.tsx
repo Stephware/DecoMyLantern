@@ -3,6 +3,7 @@ import WelcomePage from '../features/owner/WelcomePage'
 import RecoveryKeyPage from '../features/owner/RecoveryKeyPage'
 import HostDashboard from '../features/dashboard/HostDashboard'
 import GuestInvitationPage from '../features/invitations/GuestInvitationPage'
+import { invitationTokenFromHash } from '../features/invitations/invitationLinks'
 import {
   ApiError,
   createOwner,
@@ -24,16 +25,9 @@ import {
 
 type Screen = 'loading' | 'welcome' | 'recovery-key' | 'owner' | 'error'
 
-function invitationTokenFromHash(): string | null {
-  const hash = window.location.hash
-  if (!hash.startsWith('#/invite/')) return null
-  // Fragment-only routing: the token is never sent in the page URL request.
-  return hash.slice('#/invite/'.length)
-}
-
 export default function App() {
   const [screen, setScreen] = useState<Screen>('loading')
-  const [invitationToken, setInvitationToken] = useState<string | null>(invitationTokenFromHash)
+  const [invitationToken, setInvitationToken] = useState<string | null>(() => invitationTokenFromHash(window.location.hash))
   const [owner, setOwner] = useState<Owner | null>(null)
   const [lantern, setLantern] = useState<Lantern | null>(null)
   const [designs, setDesigns] = useState<Design[]>([])
@@ -71,7 +65,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    const onHashChange = () => setInvitationToken(invitationTokenFromHash())
+    const onHashChange = () => setInvitationToken(invitationTokenFromHash(window.location.hash))
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
