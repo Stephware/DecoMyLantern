@@ -1,4 +1,5 @@
-export type Host = { id: string; email: string }
+export type Owner = { id: string }
+export type OwnerIssue = { owner: Owner; recoveryCode: string }
 
 export type ContributionLight = { id: string; slotIndex: number; displayName: string }
 
@@ -39,21 +40,24 @@ function errorMessage(data: unknown, fallback: string): string {
   return payload.title ?? fallback
 }
 
-async function csrfToken(): Promise<string> {
-  const response = await fetch('/api/auth/csrf', { credentials: 'same-origin' })
-  if (!response.ok) throw new ApiError(response.status, 'Unable to initialize secure request. Try refreshing the page.')
+async function csrfToken(path: string): Promise<string> {
+  const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store' })
+  if (!response.ok) throw new ApiError(response.status, 'Unable to initialize secure request. Refresh the page.')
   const data = await response.json() as { token: string }
   return data.token
 }
 
-async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function api<T>(path: string, options: RequestInit = {}, csrfPath = '/api/owner/csrf'): Promise<T> {
   const method = (options.method ?? 'GET').toUpperCase()
   const modifying = !['GET', 'HEAD', 'OPTIONS'].includes(method)
   const headers = new Headers(options.headers)
   if (options.body) headers.set('Content-Type', 'application/json')
-  if (modifying) headers.set('X-CSRF-TOKEN', await csrfToken())
+  if (modifying) headers.set('X-CSRF-TOKEN', await csrfToken(csrfPath))
 
-  const response = await fetch(path, { ...options, headers, credentials: 'same-origin' })
+  const response = await fetch(path, {
+    ...options, headers, credentials: 'same-origin',
+    cache: 'no-store',
+  })
   if (!response.ok) {
     const payload: unknown = await response.json().catch(() => null)
     throw new ApiError(response.status, errorMessage(payload, 'Something went wrong. Please try again.'))
@@ -62,12 +66,18 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export const getMe = () => api<Host>('/api/auth/me')
-export const registerHost = (email: string, password: string) =>
-  api<Host>('/api/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) })
-export const loginHost = (email: string, password: string) =>
-  api<Host>('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
-export const logoutHost = () => api<void>('/api/auth/logout', { method: 'POST' })
+export const getOwner = () => api<Owner>('/api/owner/me')
+export const createOwner = () =>
+  api<OwnerIssue>('/api/owner/create', { method: 'POST' })
+export const recoverOwner = (recoveryCode: string) =>
+  api<OwnerIssue>('/api/owner/recover', { method: 'POST', body: JSON.stringify({ recoveryCode }) })
+export const getLegacyOwner = () => api<{ available: boolean }>('/api/owner/legacy-available')
+export const upgradeLegacyOwner = () =>
+  api<OwnerIssue>('/api/owner/upgrade-legacy', { method: 'POST' }, '/api/owner/legacy-csrf')
+export const rotateRecoveryCode = () =>
+  api<{ recoveryCode: string }>('/api/owner/recovery-code', { method: 'POST' })
+export const signOutOwner = () => api<void>('/api/owner/sign-out', { method: 'POST' })
+
 export const getMyLantern = () => api<Lantern>('/api/my/lantern')
 export const createMyLantern = () => api<Lantern>('/api/my/lantern', { method: 'POST' })
 export const updateMyLantern = (designKey: string, patternKey: string) =>
