@@ -1,17 +1,17 @@
-# Deco My Lantern
+# BeMyParol (formerly Deco My Lantern)
 
-**Deco My Lantern** is a mobile-first web project inspired by Filipino Christmas *parols*. Each accepted guest contribution adds a light to someone's lantern. As contributions reach milestones, the parol gains new decorative layers and more intricate patterns.
+**BeMyParol** is a mobile-first web project inspired by Filipino Christmas *parols*. Each accepted guest contribution adds a light to someone's lantern; friends #6–50 also add one new outer ornament each. No minimum number of friends is needed for any design.
 
-The goal is to keep the parol beautiful at every stage: **curated SVG themes + milestone-based structural growth**, rather than stretching an image or forcing a Fibonacci snowflake shape.
+The parol looks complete from **zero friends** and becomes progressively richer with every contribution. Visual ranges describe the artwork; they are not gates or unlock requirements.
 
-> **Development status:** This repository contains the initial UI preview, ASP.NET Core API foundation, SQL Server schema/migrations, and manual validation commands. Phase 1 provides host registration/login and saved lantern customization. **Phase 2** adds Classic/Floral/Festival layered SVG artwork, stable indexed contributor lights, 0/5/15/30 growth layers and mobile pinch/drag/fit controls. Invitation acceptance, anonymous contribution submission, and the full Christmas inbox remain **in development**. Live accepted-contribution counts will stay at zero until Phase 3. Do not treat this scaffold as production-ready.
+> **Development status:** This repository contains the initial UI preview, ASP.NET Core API foundation, SQL Server schema/migrations, and manual validation commands. Phase 1 provides host registration/login and saved lantern customization. **Phase 2** adds Classic/Floral/Festival layered SVG artwork, stable indexed contributor lights, and mobile pinch/drag/fit controls. **Task 1 of the BeMyParol redesign** replaces unlock thresholds with five continuous growth ranges (0, 1–5, 6–15, 16–30, 31–50) and makes all enabled designs immediately available. Invitation acceptance, anonymous contribution submission, and the full Christmas inbox remain **in development**. Live accepted-contribution counts will stay at zero until Phase 3. Do not treat this scaffold as production-ready.
 
 ## How the app is intended to work
 
 - **Hosts** register/log in and create **one lantern per Christmas season**.
 - **Friends** open a shared link directly, without creating an account, then contribute a light and optionally leave a message.
-- Each accepted contribution will occupy a stable light position. Parol growth uses predesigned layers and friend milestones (initially 0, 5, 15, and 30).
-- Hosts can choose from compatible parol designs as they unlock them.
+- Each accepted contribution occupies a stable light position. Friends #6–50 also progressively add an outer ornament; visual ranges start at 0, 1, 6, 16, and 31 friends.
+- Hosts can choose any enabled parol design at any friend count, including zero.
 - Messages are private to the lantern owner and stay sealed until **December 25, 12:00 AM Philippine Standard Time (UTC+8)**. For Christmas 2026, the server-side unlock is `2026-12-24T16:00:00Z`.
 
 Anonymous guest participation is convenient, but a browser token cannot prove that two contributions came from different people. Duplicate-submission checks, rate limits, moderation, and other safeguards must be finished before public launch.
@@ -95,7 +95,7 @@ Replace the placeholders with your **own development SQL Server connection**. Th
 
 **Never commit real database passwords, tokens, `.env` files, or other secrets.**
 
-Create/update the database using the **committed EF Core migration**:
+Create/update the database using the **committed EF Core migrations** (Task 1 includes a data-only migration for design availability and new stage seeds):
 
 ```bash
 dotnet tool restore
@@ -139,7 +139,7 @@ On Windows PowerShell, replace the copy command with `Copy-Item .env.example .en
 
 Open **http://localhost:5173** in your browser. Vite proxies `/api` to `http://localhost:5050`.
 
-Open the site to **register or log in**, create your seasonal lantern, explore three SVG design collections, choose unlocked designs and decorative patterns, and save your changes to SQL Server. Drag or pinch the parol to examine details; use **Fit** to recenter. The Design studio selector lets you preview 0/5/15/30 lights without changing stored data. Log out and log back in to confirm saved choices persist.
+Open the site to **register or log in**, create your seasonal lantern, explore three SVG design collections (all available immediately), choose decorative patterns, and save your changes to SQL Server. Drag or pinch the parol to examine details; use **Fit** to recenter. The Design studio selector lets you preview 0/3/10/23/40/50 lights without changing stored data. Log out and log back in to confirm saved choices persist.
 
 The dashboard shows real server-side contribution counts (initially zero). Share links and anonymous guest submission will arrive in Phase 3; the complete Christmas inbox experience will arrive in Phase 4.
 
