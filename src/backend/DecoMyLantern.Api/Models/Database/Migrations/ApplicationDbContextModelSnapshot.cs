@@ -344,6 +344,49 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                     b.ToTable("MessageReports");
                 });
 
+            modelBuilder.Entity("DecoMyLantern.Api.Models.Database.OwnerCredential", b =>
+                {
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("RecoveryExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RecoveryHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("SessionExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("OwnerUserId");
+
+                    b.HasIndex("RecoveryHash")
+                        .IsUnique();
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("OwnerCredentials");
+                });
+
             modelBuilder.Entity("DecoMyLantern.Api.Models.Database.ParolDesign", b =>
                 {
                     b.Property<Guid>("Id")
@@ -644,6 +687,17 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                     b.Navigation("Message");
 
                     b.Navigation("Reporter");
+                });
+
+            modelBuilder.Entity("DecoMyLantern.Api.Models.Database.OwnerCredential", b =>
+                {
+                    b.HasOne("DecoMyLantern.Api.Models.Database.ApplicationUser", "Owner")
+                        .WithOne()
+                        .HasForeignKey("DecoMyLantern.Api.Models.Database.OwnerCredential", "OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("DecoMyLantern.Api.Models.Database.ShareLink", b =>

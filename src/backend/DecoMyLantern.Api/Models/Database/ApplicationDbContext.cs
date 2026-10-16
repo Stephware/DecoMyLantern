@@ -8,6 +8,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     : IdentityDbContext<ApplicationUser, Microsoft.AspNetCore.Identity.IdentityRole<Guid>, Guid>(options)
 {
     public DbSet<Lantern> Lanterns => Set<Lantern>();
+    public DbSet<OwnerCredential> OwnerCredentials => Set<OwnerCredential>();
     public DbSet<ParolDesign> ParolDesigns => Set<ParolDesign>();
     public DbSet<GrowthStage> GrowthStages => Set<GrowthStage>();
     public DbSet<ShareLink> ShareLinks => Set<ShareLink>();

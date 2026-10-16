@@ -54,4 +54,4 @@ From `src/frontend` run `npm ci`, `npm run test`, `npm run lint`, `npm run typec
 
 From the root run `dotnet restore DecoMyLantern.slnx`, `dotnet build DecoMyLantern.slnx --configuration Release`, `dotnet test DecoMyLantern.slnx --configuration Release`, and `dotnet ef migrations has-pending-model-changes --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api` after `dotnet tool restore`.
 
-Manually preview **0, 3, 10, 23, 40, 50** sample lights for each design on both desktop and phone. With zero real contributions, verify that Classic, Floral, and Festival can each be saved and restored after a page reload. Real guest submissions, invitation links, token ownership, and end-to-end 50-friend testing remain later tasks.
+Manually preview **0, 3, 10, 23, 40, 50** sample lights for each design on both desktop and phone. With zero real contributions, verify that Classic, Floral, and Festival can each be saved and restored after a page reload. Task 2 adds passwordless token-backed owner access and a recovery key; real guest submissions, invitation links, and end-to-end 50-friend testing remain later tasks.

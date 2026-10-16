@@ -7,24 +7,25 @@ using DecoMyLantern.Api.Services.Designs;
 using DecoMyLantern.Api.Services.GrowthStages;
 using DecoMyLantern.Api.Services.Lanterns;
 using DecoMyLantern.Api.Services.Messages;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using DecoMyLantern.Api.Services.Owner;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
+builder.Services.AddMemoryCache();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddAuthorization();
-builder.Services.AddIdentityApiEndpoints<ApplicationUser>(options =>
-    {
-        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
-        options.Lockout.MaxFailedAccessAttempts = 5;
-    })
-    .AddEntityFrameworkStores<ApplicationDbContext>();
 
+// Keep Identity's data model and cookie validation only for a one-time upgrade
+// of existing logged-in parol owners. Do NOT map any registration/login endpoints.
+builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
+    .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = "Deco.Host";
@@ -43,14 +44,42 @@ builder.Services.ConfigureApplicationCookie(options =>
     };
 });
 
+// Owner tokens, not Identity sessions, authorize all /api/my/* routes.
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = OwnerSession.Scheme;
+    options.DefaultChallengeScheme = OwnerSession.Scheme;
+}).AddScheme<AuthenticationSchemeOptions, OwnerTokenHandler>(OwnerSession.Scheme, _ => { });
+
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-CSRF-TOKEN";
-    options.Cookie.Name = "Deco.Antiforgery";
+    options.Cookie.Name = "BeMyParol.Antiforgery";
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Strict;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
 });
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("owner-create", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 6, Window = TimeSpan.FromHours(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("owner-recover", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 6, Window = TimeSpan.FromMinutes(15),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+});
+
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IDesignRepository, DesignRepository>();
 builder.Services.AddScoped<IGrowthStageRepository, GrowthStageRepository>();
@@ -60,10 +89,32 @@ builder.Services.AddScoped<IDesignService, DesignService>();
 builder.Services.AddScoped<IGrowthStageService, GrowthStageService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<ILanternService, LanternService>();
+builder.Services.AddScoped<IOwnerAccessService, OwnerAccessService>();
 
 var app = builder.Build();
-if (!app.Environment.IsDevelopment()) { app.UseExceptionHandler(); app.UseHsts(); }
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler();
+    app.UseHsts();
+}
 app.UseRouting();
+// Never allow owner profiles, private letters, bearer cookie responses or
+// CSRF tokens to be stored by a browser/proxy cache.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api/owner") ||
+        context.Request.Path.StartsWithSegments("/api/my"))
+    {
+        context.Response.OnStarting(() =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            context.Response.Headers.Pragma = "no-cache";
+            return Task.CompletedTask;
+        });
+    }
+    await next();
+});
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

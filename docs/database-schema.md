@@ -4,8 +4,9 @@ The schema is defined in `src/backend/DecoMyLantern.Api/Models/Database` using E
 
 | Entity | Database rule |
 |---|---|
-| Identity ApplicationUser | Registered lantern owner |
-| Lanterns | Unique OwnerUserId + SeasonYear, rowversion concurrency |
+| Identity ApplicationUser | Internal owner record, no email/password required for new owners; retains existing owner foreign keys and historical rows |
+| Lanterns | Unique OwnerUserId + SeasonYear, rowversion concurrency | 
+| OwnerCredentials | One-to-one owner row; SHA-256 TokenHash/RecoveryHash (unique), session/recovery expiration, rowversion for rotation conflict detection |
 | ParolDesigns | Unique DesignKey, 3 seeded themes all available from 0 friends; legacy RequiredFriends column retained at 0 |
 | GrowthStages | Unique StageKey + RequiredFriends; visual ranges begin at 0, 1, 6, 16, 31 (not feature unlocks) |
 | ShareLinks | Unique TokenHash; expiry and revocation |
@@ -24,6 +25,17 @@ dotnet ef database update --project src/backend/DecoMyLantern.Api --startup-proj
 ```
 
 This changes the two previously locked design seed values to zero and adds the fifth growth-range row. Do not edit existing data manually as a substitute for the migration.
+
+## Apply the Task 2 migration
+
+`20261016173000_PasswordlessOwnerAccess` adds a new `OwnerCredentials` table and two unique hash indexes. It does not remove the existing Identity users, lanterns, messages, or contributor data. The existing user ID is still the foreign key owner ID. Apply all pending migrations (including Task 1) from the repository root:
+
+```bash
+dotnet tool restore
+dotnet ef database update --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api
+```
+
+Do not use manual SQL scripts and EF migrations interchangeably without checking `__EFMigrationsHistory`.
 
 ## Create the database
 
