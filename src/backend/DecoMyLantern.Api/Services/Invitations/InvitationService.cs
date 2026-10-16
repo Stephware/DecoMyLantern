@@ -38,7 +38,7 @@ public interface IInvitationService
     Task RevokeLinkAsync(Guid ownerId, Guid linkId, CancellationToken cancellationToken);
     Task<InvitationPreviewDto> PreviewAsync(string inviteToken, string? guestToken, CancellationToken cancellationToken);
     Task<GuestContributionResultDto> ContributeAsync(
-        GuestContributionRequest request, string guestToken, CancellationToken cancellationToken);
+        GuestContributionRequest request, string guestToken, Guid? authenticatedOwnerId, CancellationToken cancellationToken);
 }
 
 public sealed class InvitationService(
@@ -99,7 +99,7 @@ public sealed class InvitationService(
     }
 
     public async Task<GuestContributionResultDto> ContributeAsync(
-        GuestContributionRequest request, string guestToken, CancellationToken cancellationToken)
+        GuestContributionRequest request, string guestToken, Guid? authenticatedOwnerId, CancellationToken cancellationToken)
     {
         if (!InvitationPolicy.IsValidName(request.DisplayName))
             throw new InvitationException(400, "Enter a name with 1 to 80 characters.");
@@ -129,6 +129,10 @@ public sealed class InvitationService(
                 .FromSqlInterpolated($"SELECT * FROM [Lanterns] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {link.LanternId}")
                 .SingleOrDefaultAsync(cancellationToken)
                 ?? throw new InvitationException(404, "This parol no longer exists.");
+
+            // An owner may illuminate someone else's parol, but not their own.
+            if (authenticatedOwnerId.HasValue && authenticatedOwnerId.Value == lantern.OwnerUserId)
+                throw new InvitationException(409, "You cannot add a guest light to your own parol.");
 
             var visitor = await database.GuestVisitors
                 .SingleOrDefaultAsync(x => x.TokenHash == visitorHash, cancellationToken);
