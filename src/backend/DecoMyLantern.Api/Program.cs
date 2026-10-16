@@ -98,6 +98,22 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 app.UseRouting();
+// Never allow owner profiles, private letters, bearer cookie responses or
+// CSRF tokens to be stored by a browser/proxy cache.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api/owner") ||
+        context.Request.Path.StartsWithSegments("/api/my"))
+    {
+        context.Response.OnStarting(() =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            context.Response.Headers.Pragma = "no-cache";
+            return Task.CompletedTask;
+        });
+    }
+    await next();
+});
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
