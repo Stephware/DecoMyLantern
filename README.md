@@ -4,12 +4,12 @@
 
 The parol looks complete from **zero friends** and becomes progressively richer with every contribution. Visual ranges describe the artwork; they are not gates or unlock requirements.
 
-> **Development status:** This repository contains the initial UI preview, ASP.NET Core API foundation, SQL Server schema/migrations, and manual validation commands. Phase 1 originally implemented email/password accounts and saved lanterns; **Task 2 replaces the login flow with anonymous, revocable owner tokens and a recovery key**, while keeping existing lantern data and owner relationships. **Phase 2** adds Classic/Floral/Festival layered SVG artwork, stable indexed contributor lights, and mobile pinch/drag/fit controls. **Task 1 of the BeMyParol redesign** replaces unlock thresholds with five continuous growth ranges (0, 1–5, 6–15, 16–30, 31–50) and makes all enabled designs immediately available. Invitation acceptance, anonymous contribution submission, and the full Christmas inbox remain **in development**. Live accepted-contribution counts will stay at zero until Phase 3. Do not treat this scaffold as production-ready.
+> **Development status:** This repository contains the initial UI preview, ASP.NET Core API foundation, SQL Server schema/migrations, and manual validation commands. Phase 1 originally implemented email/password accounts and saved lanterns; **Task 2 replaces the login flow with anonymous, revocable owner tokens and a recovery key**, while keeping existing lantern data and owner relationships. **Phase 2** adds Classic/Floral/Festival layered SVG artwork, stable indexed contributor lights, and mobile pinch/drag/fit controls. **Task 1 of the BeMyParol redesign** replaces unlock thresholds with five continuous growth ranges (0, 1–5, 6–15, 16–30, 31–50) and makes all enabled designs immediately available. **Task 4** adds account-free guest invitations, contribution lights and optional sealed messages; the full owner Christmas inbox UI remains **in development**. Live accepted-contribution counts will stay at zero until Phase 3. Do not treat this scaffold as production-ready.
 
 ## How the app is intended to work
 
 - **Owners** create a seasonal parol without signing up or logging in. The API gives the browser a secure HTTP-only owner cookie and shows a private recovery key once.
-- **Friends** open a shared link directly, without creating an account, then contribute a light and optionally leave a message.
+- **Friends** open a unique invitation link without creating an account, see a guest-only page, then contribute one light per browser visitor and optionally leave a sealed Christmas message.
 - Each accepted contribution occupies a stable light position. Friends #6–50 also progressively add an outer ornament; visual ranges start at 0, 1, 6, 16, and 31 friends.
 - Hosts can choose any enabled parol design at any friend count, including zero.
 - Messages are private to the lantern owner and stay sealed until **December 25, 12:00 AM Philippine Standard Time (UTC+8)**. For Christmas 2026, the server-side unlock is `2026-12-24T16:00:00Z`.
@@ -141,9 +141,15 @@ Open **http://localhost:5173** in your browser. Vite proxies `/api` to `http://l
 
 Open the site and choose **Create my parol**. No email/password is needed. **Copy your private recovery key and keep it safe before continuing.** The owner session persists in a secure HTTP-only browser cookie across refreshes. Use **Recovery key** in the dashboard to generate a replacement (the old code then stops working). Use **Leave parol** to revoke the browser session; recovering access afterward requires your recovery key. You can still explore three SVG collections and preview 0/3/10/23/40/50 lights without changing real contributions.
 
-The dashboard shows real server-side contribution counts (initially zero). Share links and anonymous guest submission will arrive in Phase 3; the complete Christmas inbox experience will arrive in Phase 4.
+The dashboard displays real accepted contributions. Owners can create, copy and revoke invitation links. The Christmas inbox still needs its full owner UI; message bodies remain server-protected until December 25.
 
 **Owner API security:** The server authenticates by looking up the SHA-256 hash of a 256-bit random browser token in SQL on each protected request. The token is only sent in an HTTP-only SameSite=Strict cookie (Secure on HTTPS/production); React does not read or persist it. All writes require a fresh CSRF token from `GET /api/owner/csrf`. Only public catalogs are cached for two minutes — never owner identity or recovery codes. See the [API contracts](docs/api-contracts.md).
+
+## Friend invitations — Task 4
+
+Once your parol exists, select **Create invitation link**, copy the link, and share it with friends. Friends can open their own guest page, enter a name, and optionally leave a Christmas note. The invitation link never contains your private owner or recovery key. One light per guest browser is enforced with a secure cookie and SQL constraints; this does not prove unique human identity. Links expire December 31 Philippine time, and revoking a link does not remove existing contributions.
+
+The share secret is only returned once, so save the copied URL or create a new link when needed (old links continue working). See [Task 4: invitations, security and real-guest test plan](docs/task4-friend-invitations.md). Its local SQL smoke test inserts 51 guests and must **never** be used against production.
 
 ## Existing-user migration and recovery
 
@@ -241,6 +247,7 @@ Do not merge feature branches directly to `main`, force-push protected branches,
 - [Detailed local setup](docs/setup-guide.md)
 - [Architecture](docs/architecture.md)
 - [Parol renderer and light-slot rules](docs/parol-renderer.md)
+- [Task 4: Friend invitation and contribution workflow](docs/task4-friend-invitations.md)
 - [Database and migrations](docs/database-schema.md)
 - [API routes](docs/api-contracts.md)
 - [GitHub branch protection](docs/github-protection.md)
