@@ -1,6 +1,7 @@
 using DecoMyLantern.Api.Models.Database;
 using DecoMyLantern.Api.Services.Lanterns;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace DecoMyLantern.Api.Services.Owner;
@@ -115,7 +116,8 @@ public sealed class OwnerAccessService(
         };
         database.OwnerCredentials.Add(credential);
         try { await database.SaveChangesAsync(cancellationToken); }
-        catch (DbUpdateException)
+        catch (DbUpdateException exception) when (exception.InnerException is SqlException sql &&
+            (sql.Number == 2601 || sql.Number == 2627))
         { throw new OwnerAccessException(409, "Owner access has already been issued. Please refresh."); }
         return new IssuedOwnerAccess(ownerId, token, recoveryCode, credential.SessionExpiresAtUtc);
     }
