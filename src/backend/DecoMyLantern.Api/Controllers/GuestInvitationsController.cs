@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using DecoMyLantern.Api.Models.DTOs;
 using DecoMyLantern.Api.Services.Invitations;
 using DecoMyLantern.Api.Services.Owner;
@@ -51,9 +52,6 @@ public sealed class GuestInvitationsController(
         [FromBody] GuestContributionRequest request, CancellationToken cancellationToken)
     {
         if (!await ValidateCsrfAsync()) return BadRequest(new { message = "Refresh the invitation and try again." });
-        if (User.Identity?.IsAuthenticated == true)
-            return Conflict(new { message = "Open your friends' invitation in a separate guest browser to contribute." });
-
         NoStore();
         if (!Request.Cookies.TryGetValue(VisitorCookie, out var visitorToken) ||
             !OwnerSecrets.TryHash(visitorToken, out _))
@@ -61,7 +59,9 @@ public sealed class GuestInvitationsController(
 
         try
         {
-            var result = await service.ContributeAsync(request, visitorToken, cancellationToken);
+            var ownerId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
+                ? (Guid?)id : null;
+            var result = await service.ContributeAsync(request, visitorToken, ownerId, cancellationToken);
             return StatusCode(StatusCodes.Status201Created, result);
         }
         catch (InvitationException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
