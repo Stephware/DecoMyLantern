@@ -11,4 +11,6 @@ No SQL credentials are committed. You can also use `database/create-database.sql
 
 GitHub CI/CD is disabled. Run the frontend and backend builds/tests locally; this does not prove your SQL Server instance has been migrated.
 
+Task 2 adds the `20261016173000_PasswordlessOwnerAccess` migration and `OwnerCredentials` table. Stored credentials are SHA-256 hashes of random 256-bit tokens; no bearer or recovery plaintext is stored in SQL. Existing owners and lantern records are retained. The SQL idempotent schema script includes this migration; regenerate it with `bash database/bootstrap.sh` when a .NET SDK is available and review its diff.
+
 The Task 1 progressive-growth update includes a **seed-data-only** migration (`20261016160000_ProgressiveParolGrowth`) and a matching idempotent SQL section. Existing lanterns/contributions are preserved. Prefer `dotnet ef database update` when using .NET; if applying `database/schema.sql` directly, review the script and migration history first. After changes to migrations, run `bash database/bootstrap.sh` with the local SDK to regenerate this script from EF Core, and review the resulting diff.
