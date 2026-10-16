@@ -1,21 +1,38 @@
 export type GrowthStage = {
-  key: 'base' | 'enhanced' | 'radiant' | 'grand'
+  key: 'base' | 'lights' | 'details' | 'fuller' | 'grand'
   name: string
-  requiredFriends: number
-  radius: number
+  /** Start of a visual range, never an unlock or permission requirement. */
+  minFriends: number
 }
 
 export const STAGES: readonly GrowthStage[] = [
-  { key: 'base', name: 'First Light', requiredFriends: 0, radius: 172 },
-  { key: 'enhanced', name: 'Glowing Star', requiredFriends: 5, radius: 198 },
-  { key: 'radiant', name: 'Radiant Parol', requiredFriends: 15, radius: 228 },
-  { key: 'grand', name: 'Grand Parol', requiredFriends: 30, radius: 252 },
+  { key: 'base', name: 'Complete Base', minFriends: 0 },
+  { key: 'lights', name: 'Added Lights', minFriends: 1 },
+  { key: 'details', name: 'More Details', minFriends: 6 },
+  { key: 'fuller', name: 'Fuller Layers', minFriends: 16 },
+  { key: 'grand', name: 'Grand Parol', minFriends: 31 },
 ]
 
 export function stageForFriends(count: number): GrowthStage {
-  return [...STAGES].reverse().find(stage => count >= stage.requiredFriends) ?? STAGES[0]
+  if (!Number.isSafeInteger(count) || count < 0) {
+    throw new RangeError('Accepted friend count must be a non-negative safe integer.')
+  }
+  return [...STAGES].reverse().find(stage => count >= stage.minFriends) ?? STAGES[0]
 }
 
-export function nextStage(count: number): GrowthStage | undefined {
-  return STAGES.find(stage => stage.requiredFriends > count)
+/**
+ * Each friend from #6 to #50 adds exactly one new outer accent.
+ * The first five are represented by their actual contributed lights.
+ * The renderer does not reject counts over 50: the grand design holds its
+ * full accents while further persisted contributor lights remain visible.
+ */
+export function decorationCounts(count: number) {
+  if (!Number.isSafeInteger(count) || count < 0) {
+    throw new RangeError('Accepted friend count must be a non-negative safe integer.')
+  }
+  return {
+    details: Math.min(Math.max(count - 5, 0), 10),
+    fuller: Math.min(Math.max(count - 15, 0), 15),
+    grand: Math.min(Math.max(count - 30, 0), 20),
+  }
 }
