@@ -60,7 +60,8 @@ async function api<T>(path: string, options: RequestInit = {}, csrfPath = '/api/
   })
   if (!response.ok) {
     const payload: unknown = await response.json().catch(() => null)
-    throw new ApiError(response.status, errorMessage(payload, 'Something went wrong. Please try again.'))
+    throw new ApiError(response.status, errorMessage(payload,
+      response.status === 429 ? 'Too many attempts. Please wait and try again.' : 'Something went wrong. Please try again.'))
   }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
