@@ -9,4 +9,6 @@ C# entity classes in `src/backend/DecoMyLantern.Api/Models/Database` and EF Core
 
 No SQL credentials are committed. You can also use `database/create-database.sql` (on `master`) and the generated `database/schema.sql` (on `DecoMyLanternDb`) in SQL Server Management Studio with SQLCMD mode. Use the generated EF migration as authoritative instead of manually maintaining table definitions.
 
-The API CI can build and test without a live SQL Server. It does not prove your database instance has been created or migrated.
+GitHub CI/CD is disabled. Run the frontend and backend builds/tests locally; this does not prove your SQL Server instance has been migrated.
+
+The Task 1 progressive-growth update includes a **seed-data-only** migration (`20261016160000_ProgressiveParolGrowth`) and a matching idempotent SQL section. Existing lanterns/contributions are preserved. Prefer `dotnet ef database update` when using .NET; if applying `database/schema.sql` directly, review the script and migration history first. After changes to migrations, run `bash database/bootstrap.sh` with the local SDK to regenerate this script from EF Core, and review the resulting diff.
