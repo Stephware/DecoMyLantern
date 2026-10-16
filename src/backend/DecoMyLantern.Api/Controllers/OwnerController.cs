@@ -73,6 +73,14 @@ public sealed class OwnerController(
     // Transitional support for existing signed-in hosts. No new email/password
     // registration or login route remains available.
     [Authorize(AuthenticationSchemes = IdentityConstants.ApplicationScheme)]
+    [HttpGet("legacy-csrf")]
+    public IActionResult LegacyCsrf()
+    {
+        NoStore();
+        return Ok(new { token = antiforgery.GetAndStoreTokens(HttpContext).RequestToken });
+    }
+
+    [Authorize(AuthenticationSchemes = IdentityConstants.ApplicationScheme)]
     [HttpGet("legacy-available")]
     public IActionResult LegacyAvailable()
     {
