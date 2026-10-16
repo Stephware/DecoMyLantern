@@ -3,14 +3,14 @@ import LanternScene from '../lantern/renderer/LanternScene'
 import ParolArtwork from '../lantern/renderer/ParolArtwork'
 import { stageForFriends } from '../lantern/growth/stages'
 import { THEMES } from '../customization/themes'
-import type { Design, Host, Lantern } from '../../lib/api'
+import type { Design, Lantern } from '../../lib/api'
 
 type Props = {
-  host: Host
   lantern: Lantern | null
   designs: Design[]
   onCreate: () => Promise<void>
   onSave: (designKey: string, patternKey: string) => Promise<void>
+  onRegenerateRecovery: () => Promise<void>
   onLogout: () => Promise<void>
 }
 
@@ -20,7 +20,7 @@ const PATTERNS = [
   { key: 'rays', label: 'Radiant rays', detail: 'A brighter starburst' },
 ] as const
 
-export default function HostDashboard({ host, lantern, designs, onCreate, onSave, onLogout }: Props) {
+export default function HostDashboard({ lantern, designs, onCreate, onSave, onRegenerateRecovery, onLogout }: Props) {
   const [draftDesign, setDraftDesign] = useState(lantern?.designKey ?? 'classic')
   const [draftPattern, setDraftPattern] = useState(lantern?.patternKey ?? 'default')
   const [busy, setBusy] = useState(false)
@@ -55,6 +55,7 @@ export default function HostDashboard({ host, lantern, designs, onCreate, onSave
   }
 
   async function signOut() {
+    if (!window.confirm('Before leaving, make sure you saved your recovery key. You will need it to return to this parol. Continue?')) return
     setSigningOut(true)
     setError('')
     try {
@@ -70,10 +71,13 @@ export default function HostDashboard({ host, lantern, designs, onCreate, onSave
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_35%_0%,#27395d_0%,transparent_55%),radial-gradient(ellipse_at_92%_85%,#392538_0%,transparent_45%)]" />
       <header className="relative border-b border-white/10">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8">
-          <div className="flex items-center gap-2 text-sm font-bold tracking-wide sm:text-lg"><span className="text-2xl text-amber-300">✦</span> Deco My Lantern</div>
+          <div className="flex items-center gap-2 text-sm font-bold tracking-wide sm:text-lg"><span className="text-2xl text-amber-300">✦</span> BeMyParol</div>
           <div className="flex items-center gap-4">
-            <span className="hidden max-w-56 truncate text-xs text-white/50 sm:block">{host.email}</span>
-            <button type="button" disabled={signingOut} onClick={signOut} className="rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white/75 transition hover:border-amber-300/40 hover:text-white disabled:opacity-50">{signingOut ? 'Signing out…' : 'Log out'}</button>
+            <button type="button" disabled={busy || signingOut} onClick={() => {
+              if (window.confirm('Generate a new recovery key? Your previous recovery key will immediately stop working.'))
+                void run(onRegenerateRecovery, 'New recovery key generated.')
+            }} className="rounded-full border border-amber-300/25 px-4 py-2 text-xs font-semibold text-amber-100 transition hover:border-amber-300/50 disabled:opacity-50">Recovery key</button>
+            <button type="button" disabled={signingOut || busy} onClick={signOut} className="rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white/75 transition hover:border-amber-300/40 hover:text-white disabled:opacity-50">{signingOut ? 'Leaving…' : 'Leave parol'}</button>
           </div>
         </div>
       </header>
