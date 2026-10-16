@@ -44,6 +44,8 @@ public sealed class OwnerController(
     public async Task<IActionResult> Create(CancellationToken cancellationToken)
     {
         if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid security token. Refresh and try again." });
+        if (User.Identity?.IsAuthenticated == true)
+            return Conflict(new { message = "This browser already owns a parol. Open your dashboard instead." });
         NoStore();
         try
         {
