@@ -508,3 +508,30 @@ BEGIN
 END;
 COMMIT;
 GO
+
+-- Task 2: hashed passwordless owner sessions and recovery keys.
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261016173000_PasswordlessOwnerAccess'
+)
+BEGIN
+    CREATE TABLE [OwnerCredentials] (
+        [OwnerUserId] uniqueidentifier NOT NULL,
+        [TokenHash] varchar(64) NOT NULL,
+        [RecoveryHash] varchar(64) NOT NULL,
+        [CreatedAtUtc] datetime2 NOT NULL,
+        [SessionExpiresAtUtc] datetime2 NOT NULL,
+        [RecoveryExpiresAtUtc] datetime2 NOT NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_OwnerCredentials] PRIMARY KEY ([OwnerUserId]),
+        CONSTRAINT [FK_OwnerCredentials_AspNetUsers_OwnerUserId] FOREIGN KEY ([OwnerUserId])
+            REFERENCES [AspNetUsers] ([Id]) ON DELETE NO ACTION
+    );
+    CREATE UNIQUE INDEX [IX_OwnerCredentials_TokenHash] ON [OwnerCredentials] ([TokenHash]);
+    CREATE UNIQUE INDEX [IX_OwnerCredentials_RecoveryHash] ON [OwnerCredentials] ([RecoveryHash]);
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261016173000_PasswordlessOwnerAccess', N'10.0.4');
+END;
+COMMIT;
+GO
