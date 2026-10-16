@@ -78,9 +78,6 @@ public sealed class LanternService(ILanternRepository repository, TimeProvider t
             ?? throw new LanternOperationException(400, "Invalid or unavailable parol design.");
 
         var lights = await repository.GetAcceptedLightsAsync(lantern.Id, cancellationToken);
-        var count = lights.Count;
-        if (count < design.RequiredFriends)
-            throw new LanternOperationException(403, "This parol design has not been unlocked yet.");
 
         lantern.SelectedDesignId = design.Id;
         lantern.SelectedDesign = design;
@@ -113,7 +110,6 @@ public sealed class LanternService(ILanternRepository repository, TimeProvider t
         lantern.PatternKey,
         lights.Count,
         GrowthPolicy.StageFor(lights.Count),
-        LanternPolicy.NextMilestone(lights.Count),
         lantern.UnlockAtUtc,
         lantern.CreatedAtUtc,
         lights);

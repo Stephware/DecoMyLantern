@@ -13,7 +13,6 @@ public sealed record LanternDto(
     string PatternKey,
     int AcceptedFriends,
     string GrowthStage,
-    int? NextMilestone,
     DateTime UnlockAtUtc,
     DateTime CreatedAtUtc,
     IReadOnlyList<ContributionLightDto> Lights);

@@ -1,64 +1,57 @@
-# Phase 2 — Parol renderer
+# BeMyParol — continuous per-friend growth
 
-## Overview
+## Design principle
 
-Deco My Lantern now renders three **different SVG collections**, with a shared five-point silhouette, glass-like capiz panels, decorative details, hanging filament and tassels:
+**A user with zero friends still has a complete, beautiful parol.** Every accepted guest contribution adds a real, individually positioned light. A larger friend circle makes the parol increasingly elaborate, but no parol design, color collection, or pattern is locked behind contribution counts.
 
-- **Classic Gold** (unlocked at 0 friends): golden woven shapes and geometric capiz accents
-- **Floral Bloom** (unlocked at 5 accepted friends): petals and floral vines
-- **Festival Lights** (unlocked at 15 accepted friends): decorative multicolor geometric festival patterns
+All three SVG collections — **Classic Gold**, **Floral Bloom**, and **Festival Lights** — remain selectable with **zero** accepted friends. They use the same 600 × 640 coordinate system and stable light positions.
 
-All designs use the same normalized **600 × 640 SVG coordinate system**. Their motif and colors change, but accepted contribution positions are stable.
+## Five descriptive visual ranges
 
-## Growth stages
-
-Growth is based only on the number of **accepted, non-removed** contributions returned from SQL Server.
-
-| Accepted friends | Stage | New SVG layer |
+| Accepted friends | Stage key | Appearance |
 | --- | --- | --- |
-| 0–4 | First Light (`base`) | Core five-point capiz parol with silk tails and center rosette |
-| 5–14 | Glowing Star (`enhanced`) | Outer luminous bead ring with ten diamond ornament points |
-| 15–29 | Radiant Parol (`radiant`) | Second sculpted halo with 20 leaf/flame ornaments |
-| 30+ | Grand Parol (`grand`) | Final radial crown and outer ring of 24 lantern accents |
+| 0 | `base` | Complete five-point capiz star, tails, motifs and luminous center |
+| 1–5 | `lights` | Each friend adds their own luminous light |
+| 6–15 | `details` | Each new friend adds a light **plus one** detail-ring diamond (up to 10) |
+| 16–30 | `fuller` | Each new friend adds a light **plus one** fuller-layer petal (up to 15) |
+| 31–50 | `grand` | Each new friend adds a light **plus one** crown ornament (up to 20) |
 
-Stages **add** independent decorative elements instead of replacing the core. Growth uses milestone thresholds; it does not resize a bitmap or use the Fibonacci snowflake formula.
+These ranges are descriptions, **not unlock thresholds**. In particular, going from 5 to 6, 15 to 16, and 30 to 31 adds **one ornament**, not a whole completed ring at once. The base star remains untouched.
 
-## Stable lights
+**50 is a design target, not a backend contribution cap.** At counts above 50, the complete grand crown remains and additional real lights still render. Formal 50-friend stress testing and policy decisions are scheduled for Task 3.
 
-The authenticated `GET /api/my/lantern` and `PUT /api/my/lantern` endpoints return a `lights` array. Every member has `id`, `slotIndex`, and `displayName`.
+The backend computes `growthStage` using `GrowthPolicy.StageFor(acceptedFriends)`. The frontend's `stageForFriends` mirrors its five ranges for display. `decorationCounts` derives accent counts from the **number of accepted, non-removed contributions**; no sample or client-supplied friend count can change saved owner data.
 
-- `SlotIndex` is allocated and persisted by the backend when contributions are accepted (guest contribution submission is implemented in Phase 3).
-- `lightPosition(slotIndex)` computes a deterministic coordinate from the index **alone**. It never depends on theme, contribution array position, friend count, or stage.
-- Do **not** compact slots when a contribution is removed; leave gaps. The SQL constraint on `(LanternId, SlotIndex)` protects uniqueness.
-- After styling, the scene displays one visible glow per active contribution, keyed by its persisted ID, with its display name in the accessible SVG title.
-- The owner API omits removed contributions. The accepted count and growth stage derive from the same list of active contributions; no simulated friends are used in the dashboard's **My lantern** mode.
+## Individual contributor lights remain stable
+
+`GET /api/my/lantern` and `PUT /api/my/lantern` include `lights: [{ id, slotIndex, displayName }]`.
+
+- `SlotIndex` is persisted for each accepted contribution. The guest submission workflow that assigns slots remains Task 4.
+- `lightPosition(slotIndex)` computes coordinates from **only** the stable slot index, not from the current number of contributions, their order, the design, or the visual range.
+- Removed contributions leave gaps in the sequence, without moving others. The database enforces uniqueness on `(LanternId, SlotIndex)`.
+- `LanternScene` uses real `contributions` for the owner view; `previewCount` explicitly creates **sample lights only** and never mutates the backend or unlocks content.
 
 ## Mobile interactions
 
-`LanternScene` supports one-finger/mouse drag, two-finger pinch, zoom in/out, and Fit to restore the centered full-lantern view. Buttons provide accessible text labels and 44px touch targets. Pointer movements are limited to a bounded range so the parol is easy to recover with Fit. Only the parol canvas disables native touch panning, so the rest of the page can still scroll.
+`LanternScene` supports drag, pinch-to-zoom, Zoom In, Zoom Out and Fit. The SVG viewBox is 600 × 640 with enough room for the designed outer crown and tails. Animations respect `prefers-reduced-motion`.
 
-Animations honor the operating system's `prefers-reduced-motion` preference.
+**Note:** Container-measured dynamic auto-fit scaling is a *separate requested frontend enhancement* and is **not** claimed as implemented by Task 1. Its implementation belongs to the later frontend work, not this backend growth task.
 
-## Visual previews versus persisted data
+## Database migration
 
-Until Phase 3 is built, the owner has zero accepted friend contributions. To inspect all stages now, the dashboard has a clearly labeled **Design studio** preview selector for 0, 5, 15 and 30 sample lights. Preview data is never sent to the backend and does **not unlock** restricted collections. A locked collection can be previewed but cannot be saved. **My lantern** switches back to real persisted lights immediately.
+`20261016160000_ProgressiveParolGrowth` is a **seed-data-only EF Core migration**. It changes legacy `ParolDesigns.RequiredFriends` values to zero, replaces the old four descriptive `GrowthStages` seed rows with five updated ones, and preserves IDs and all existing lantern/contribution data.
 
-Do not reuse `previewCount` for a public lantern or as an authorization signal.
-
-## Testing
-
-From `src/frontend`:
+Update your local database after pulling `dev`:
 
 ```bash
-npm ci
-npm run test
-npm run lint
-npm run typecheck
-npm run build
+dotnet tool restore
+dotnet ef database update --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api
 ```
 
-The renderer tests exercise stage boundaries, deterministic coordinates, sparse slots, finite bounds and invalid indices. Backend tests also verify that returned slot values remain unchanged, including gaps. GitHub CI now runs these alongside existing backend tests and EF migration validation.
+## Manual validation
 
-## Future phases
+From `src/frontend` run `npm ci`, `npm run test`, `npm run lint`, `npm run typecheck`, and `npm run build`.
 
-Phase 3 must write/return real guest contributions with transactional slot allocation and duplicate protection. Phase 4 implements the full server-protected Christmas inbox. No database schema change was required for Phase 2.
+From the root run `dotnet restore DecoMyLantern.slnx`, `dotnet build DecoMyLantern.slnx --configuration Release`, `dotnet test DecoMyLantern.slnx --configuration Release`, and `dotnet ef migrations has-pending-model-changes --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api` after `dotnet tool restore`.
+
+Manually preview **0, 3, 10, 23, 40, 50** sample lights for each design on both desktop and phone. With zero real contributions, verify that Classic, Floral, and Festival can each be saved and restored after a page reload. Real guest submissions, invitation links, token ownership, and end-to-end 50-friend testing remain later tasks.

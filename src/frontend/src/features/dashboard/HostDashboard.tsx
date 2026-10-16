@@ -38,7 +38,7 @@ export default function HostDashboard({ host, lantern, designs, onCreate, onSave
   const accepted = lantern?.acceptedFriends ?? 0
   const changed = lantern !== null && (draftDesign !== lantern.designKey || draftPattern !== lantern.patternKey)
   const selectedDesign = designs.find(item => item.designKey === draftDesign)
-  const draftLocked = selectedDesign === undefined || accepted < selectedDesign.requiredFriends
+  const invalidDesign = selectedDesign === undefined
 
   async function run(action: () => Promise<void>, confirmation: string) {
     setBusy(true)
@@ -111,15 +111,15 @@ export default function HostDashboard({ host, lantern, designs, onCreate, onSave
                   <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/65">{previewCount === null ? 'Your real contribution lights' : 'Design studio · Sample lights only'}</span>
                 </div>
                 <div className="mx-auto max-w-[620px]"><LanternScene theme={theme} pattern={draftPattern} contributions={previewCount === null ? lantern.lights : []} previewCount={previewCount === null ? undefined : previewCount} /></div>
-                <div className="mt-1 flex flex-wrap items-center justify-center gap-2" aria-label="Preview growth milestones">
+                <div className="mt-1 flex flex-wrap items-center justify-center gap-2" aria-label="Preview visual growth ranges">
                   <button type="button" onClick={() => setPreviewCount(null)} aria-pressed={previewCount === null} className={'rounded-full border px-3 py-2 text-xs font-semibold transition ' + (previewCount === null ? 'border-amber-300 bg-amber-300/15 text-amber-100' : 'border-white/10 text-white/55 hover:border-white/25')}>My lantern</button>
-                  {[0, 5, 15, 30].map(count => <button key={count} type="button" onClick={() => setPreviewCount(count)} aria-pressed={previewCount === count} className={'rounded-full border px-3 py-2 text-xs font-semibold transition ' + (previewCount === count ? 'border-amber-300 bg-amber-300/15 text-amber-100' : 'border-white/10 text-white/55 hover:border-white/25')}>{count} lights</button>)}
+                  {[0, 3, 10, 23, 40, 50].map(count => <button key={count} type="button" onClick={() => setPreviewCount(count)} aria-pressed={previewCount === count} className={'rounded-full border px-3 py-2 text-xs font-semibold transition ' + (previewCount === count ? 'border-amber-300 bg-amber-300/15 text-amber-100' : 'border-white/10 text-white/55 hover:border-white/25')}>{count} lights</button>)}
                 </div>
-                <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Only accepted guest contributions appear here. Lights keep their positions through every growth stage.' : 'Visual demonstration only. Preview lights do not alter your account or unlock paid/locked designs.'}</p>
+                <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Only accepted guest contributions appear here. Lights keep their positions through every growth stage.' : 'Visual demonstration only. Preview lights do not alter your real friend count or saved parol.'}</p>
                 <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-[#0b1325]/80 p-4 sm:grid-cols-3 sm:p-5">
                   <div><p className="text-2xl font-bold text-amber-200">{accepted}</p><p className="mt-1 text-xs text-white/50">Accepted lights</p></div>
-                  <div><p className="text-lg font-semibold capitalize text-white">{lantern.growthStage}</p><p className="mt-1 text-xs text-white/50">Growth stage</p></div>
-                  <div className="col-span-2 sm:col-span-1"><p className="text-lg font-semibold text-white">{lantern.nextMilestone === null ? 'Final stage' : lantern.nextMilestone - accepted + ' more'}</p><p className="mt-1 text-xs text-white/50">Until next milestone</p></div>
+                  <div><p className="text-lg font-semibold text-white">{stageForFriends(accepted).name}</p><p className="mt-1 text-xs text-white/50">Visual progression</p></div>
+                  <div className="col-span-2 sm:col-span-1"><p className="text-lg font-semibold text-white">Every friend adds a light</p><p className="mt-1 text-xs text-white/50">No unlock requirements</p></div>
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-[#121e35]/75 p-5 sm:p-6">
@@ -136,17 +136,16 @@ export default function HostDashboard({ host, lantern, designs, onCreate, onSave
               <section className="rounded-3xl border border-white/10 bg-[#14213a]/90 p-5 shadow-xl sm:p-6">
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-300/75">Personalize</p>
                 <h2 className="mt-2 font-serif text-2xl">Make it yours</h2>
-                <p className="mb-6 mt-2 text-sm leading-6 text-white/55">Explore all collections and growth stages. You can preview locked designs, but only save designs unlocked by real accepted lights.</p>
+                <p className="mb-6 mt-2 text-sm leading-6 text-white/55">Every parol design is available from the start. Friends add individual lights and decorative details as they join.</p>
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-white/60">Design & color palette</h3>
                 <div className="space-y-3">
                   {designs.map(design => {
                     const palette = THEMES.find(item => item.key === design.designKey)
-                    const locked = accepted < design.requiredFriends
                     return <button key={design.designKey} type="button" disabled={busy} onClick={() => { setDraftDesign(design.designKey); setNotice('') }} aria-pressed={draftDesign === design.designKey} className={'flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition ' + (draftDesign === design.designKey ? 'border-amber-300 bg-amber-300/10' : 'border-white/10 bg-white/5 hover:border-amber-200/50')}>
-                      {palette && <svg viewBox="100 100 400 470" role="img" aria-label={design.name + ' thumbnail'} className="h-[98px] w-[86px] shrink-0 rounded-xl bg-[#0b1425]"><ParolArtwork theme={palette} stage={stageForFriends(30)} pattern="default" /></svg>}
+                      {palette && <svg viewBox="100 100 400 470" role="img" aria-label={design.name + ' thumbnail'} className="h-[98px] w-[86px] shrink-0 rounded-xl bg-[#0b1425]"><ParolArtwork theme={palette} friendCount={0} pattern="default" /></svg>}
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold">{design.name}</span>
-                        <span className="mt-1 block text-xs text-white/50">{locked ? 'Preview only · Unlock at ' + design.requiredFriends + ' lights' : 'Unlocked · Available to save'}</span>
+                        <span className="mt-1 block text-xs text-white/50">Available to everyone · No friend requirement</span>
                         <span className="mt-2 flex gap-1">{palette?.colors.map((color, index) => <span key={index} className="h-2.5 w-2.5 rounded-full border border-white/20" style={{ backgroundColor: color }} />)}</span>
                       </span>
                       <span aria-hidden="true" className="text-sm text-amber-300">{draftDesign === design.designKey ? '●' : '○'}</span>
@@ -161,7 +160,7 @@ export default function HostDashboard({ host, lantern, designs, onCreate, onSave
                     <span aria-hidden="true" className="text-amber-300">{draftPattern === option.key ? '●' : '○'}</span>
                   </button>)}
                 </div>
-                <button type="button" disabled={!changed || busy || designs.length === 0 || draftLocked} onClick={() => void run(() => onSave(draftDesign, draftPattern), 'Your lantern customization has been saved.')} className="mt-6 w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Saving…' : draftLocked ? 'Unlock with accepted lights to save' : changed ? 'Save customization →' : 'All changes saved'}</button>
+                <button type="button" disabled={!changed || busy || designs.length === 0 || invalidDesign} onClick={() => void run(() => onSave(draftDesign, draftPattern), 'Your lantern customization has been saved.')} className="mt-6 w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Saving…' : invalidDesign ? 'Choose an available design' : changed ? 'Save customization →' : 'All changes saved'}</button>
               </section>
               <section className="rounded-2xl border border-dashed border-amber-200/25 bg-amber-300/5 p-5">
                 <p className="text-sm font-bold text-amber-100">Invite your friends</p>

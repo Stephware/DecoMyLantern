@@ -14,14 +14,6 @@ public sealed class LanternServiceTests
     public void Season_uses_Philippine_time(string instant, int expected) =>
         Assert.Equal(expected, LanternPolicy.SeasonFor(DateTime.Parse(instant).ToUniversalTime()));
 
-    [Theory]
-    [InlineData(0, 5)]
-    [InlineData(5, 15)]
-    [InlineData(15, 30)]
-    [InlineData(30, null)]
-    public void Next_milestone_uses_friend_thresholds(int friends, int? expected) =>
-        Assert.Equal(expected, LanternPolicy.NextMilestone(friends));
-
     [Fact]
     public async Task Host_can_create_only_one_lantern_in_current_season()
     {
@@ -41,27 +33,29 @@ public sealed class LanternServiceTests
     }
 
     [Fact]
-    public async Task Owner_cannot_select_locked_design_but_can_save_available_pattern()
+    public async Task Owner_can_select_every_enabled_design_with_zero_friends()
     {
         var repository = new FakeRepository();
         var service = new LanternService(repository, TimeProvider.System);
         var ownerId = Guid.NewGuid();
         await service.CreateAsync(ownerId, CancellationToken.None);
 
-        var blocked = await Assert.ThrowsAsync<LanternOperationException>(() =>
-            service.UpdateAsync(ownerId, new UpdateLanternRequest { DesignKey = "floral", PatternKey = "rings" }, CancellationToken.None));
-        Assert.Equal(403, blocked.StatusCode);
+        // Old seeded RequiredFriends values must never restrict design selection.
+        foreach (var key in new[] { "floral", "festival", "classic" })
+        {
+            var updated = await service.UpdateAsync(ownerId,
+                new UpdateLanternRequest { DesignKey = key, PatternKey = "rings" }, CancellationToken.None);
+            Assert.Equal(key, updated.DesignKey);
+            Assert.Equal("rings", updated.PatternKey);
+            Assert.Equal("base", updated.GrowthStage);
+            Assert.Equal(0, updated.AcceptedFriends);
+        }
 
-        var updated = await service.UpdateAsync(ownerId,
-            new UpdateLanternRequest { DesignKey = "classic", PatternKey = "rays" }, CancellationToken.None);
-        Assert.Equal("rays", updated.PatternKey);
-
-        repository.AcceptedCount = 5;
-        var unlocked = await service.UpdateAsync(ownerId,
-            new UpdateLanternRequest { DesignKey = "floral", PatternKey = "rings" }, CancellationToken.None);
-        Assert.Equal("floral", unlocked.DesignKey);
-        Assert.Equal("rings", unlocked.PatternKey);
-        Assert.Equal("enhanced", unlocked.GrowthStage);
+        repository.AcceptedCount = 6;
+        var growing = await service.GetCurrentAsync(ownerId, CancellationToken.None);
+        Assert.NotNull(growing);
+        Assert.Equal("details", growing.GrowthStage);
+        Assert.Equal(6, growing.AcceptedFriends);
     }
 
     [Fact]
@@ -103,7 +97,7 @@ public sealed class LanternServiceTests
         Assert.NotNull(lantern);
         Assert.Equal(3, lantern.AcceptedFriends);
         Assert.Equal(new[] { 0, 8, 21 }, lantern.Lights.Select(light => light.SlotIndex));
-        Assert.Equal("base", lantern.GrowthStage);
+        Assert.Equal("lights", lantern.GrowthStage);
 
         var saved = await service.UpdateAsync(ownerId,
             new UpdateLanternRequest { DesignKey = "classic", PatternKey = "rings" }, CancellationToken.None);
@@ -116,7 +110,8 @@ public sealed class LanternServiceTests
         private readonly List<ParolDesign> designs =
         [
             new ParolDesign { Id = Guid.NewGuid(), DesignKey = "classic", Name = "Classic Gold", IsEnabled = true, RequiredFriends = 0 },
-            new ParolDesign { Id = Guid.NewGuid(), DesignKey = "floral", Name = "Floral Bloom", IsEnabled = true, RequiredFriends = 5 }
+            new ParolDesign { Id = Guid.NewGuid(), DesignKey = "floral", Name = "Floral Bloom", IsEnabled = true, RequiredFriends = 5 },
+            new ParolDesign { Id = Guid.NewGuid(), DesignKey = "festival", Name = "Festival Lights", IsEnabled = true, RequiredFriends = 15 }
         ];
 
         public int AcceptedCount { get; set; }

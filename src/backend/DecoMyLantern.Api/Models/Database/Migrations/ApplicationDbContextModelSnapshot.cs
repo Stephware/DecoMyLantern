@@ -170,7 +170,7 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                         new
                         {
                             Id = 1,
-                            Name = "First Light",
+                            Name = "Complete Base",
                             RequiredFriends = 0,
                             SortOrder = 1,
                             StageKey = "base"
@@ -178,25 +178,33 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                         new
                         {
                             Id = 2,
-                            Name = "Glowing Star",
-                            RequiredFriends = 5,
+                            Name = "Added Lights",
+                            RequiredFriends = 1,
                             SortOrder = 2,
-                            StageKey = "enhanced"
+                            StageKey = "lights"
                         },
                         new
                         {
                             Id = 3,
-                            Name = "Radiant Parol",
-                            RequiredFriends = 15,
+                            Name = "More Details",
+                            RequiredFriends = 6,
                             SortOrder = 3,
-                            StageKey = "radiant"
+                            StageKey = "details"
                         },
                         new
                         {
                             Id = 4,
-                            Name = "Grand Parol",
-                            RequiredFriends = 30,
+                            Name = "Fuller Layers",
+                            RequiredFriends = 16,
                             SortOrder = 4,
+                            StageKey = "fuller"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "Grand Parol",
+                            RequiredFriends = 31,
+                            SortOrder = 5,
                             StageKey = "grand"
                         });
                 });
@@ -387,7 +395,7 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                             DesignKey = "floral",
                             IsEnabled = true,
                             Name = "Floral Bloom",
-                            RequiredFriends = 5
+                            RequiredFriends = 0
                         },
                         new
                         {
@@ -396,7 +404,7 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                             DesignKey = "festival",
                             IsEnabled = true,
                             Name = "Festival Lights",
-                            RequiredFriends = 15
+                            RequiredFriends = 0
                         });
                 });
 

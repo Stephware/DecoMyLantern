@@ -6,13 +6,24 @@ The schema is defined in `src/backend/DecoMyLantern.Api/Models/Database` using E
 |---|---|
 | Identity ApplicationUser | Registered lantern owner |
 | Lanterns | Unique OwnerUserId + SeasonYear, rowversion concurrency |
-| ParolDesigns | Unique DesignKey, 3 seeded themes |
-| GrowthStages | Unique StageKey + RequiredFriends; seeded 0, 5, 15, 30 |
+| ParolDesigns | Unique DesignKey, 3 seeded themes all available from 0 friends; legacy RequiredFriends column retained at 0 |
+| GrowthStages | Unique StageKey + RequiredFriends; visual ranges begin at 0, 1, 6, 16, 31 (not feature unlocks) |
 | ShareLinks | Unique TokenHash; expiry and revocation |
 | GuestVisitors | Unique random browser TokenHash (not verified human identity) |
 | Contributions | Unique (LanternId, GuestVisitorId) and (LanternId, SlotIndex) |
 | Messages | Optional one per contribution, max 500 characters |
 | MessageReports | Message moderation/report tracking |
+
+## Apply the Task 1 migration to an existing database
+
+The **ProgressiveParolGrowth** migration changes seed data only; it does not drop or reset lanterns, contributors, designs, or identity accounts. From the solution root:
+
+```bash
+dotnet tool restore
+dotnet ef database update --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api
+```
+
+This changes the two previously locked design seed values to zero and adds the fifth growth-range row. Do not edit existing data manually as a substitute for the migration.
 
 ## Create the database
 

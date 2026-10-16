@@ -10,7 +10,6 @@ export type Lantern = {
   patternKey: string
   acceptedFriends: number
   growthStage: string
-  nextMilestone: number | null
   unlockAtUtc: string
   createdAtUtc: string
   lights: ContributionLight[]
@@ -20,7 +19,6 @@ export type Design = {
   designKey: string
   name: string
   assetKey: string
-  requiredFriends: number
 }
 
 export class ApiError extends Error {

@@ -34,7 +34,7 @@ function scaledDistance(a: Finger, b: Finger): number {
 export default function LanternScene({ theme, pattern = 'default', contributions = [], previewCount }: Props) {
   const [camera, setCamera] = useState<Camera>({ zoom: 1, x: 0, y: 0 })
   const pointers = useRef<Map<number, Finger>>(new Map())
-  const preview = Array.from({ length: limit(previewCount ?? 0, 0, 60) }, (_, index): LanternLight => ({
+  const preview = Array.from({ length: limit(previewCount ?? 0, 0, 50) }, (_, index): LanternLight => ({
     id: `preview-${index}`,
     slotIndex: index,
     displayName: `Preview light ${index + 1}`,
@@ -111,7 +111,7 @@ export default function LanternScene({ theme, pattern = 'default', contributions
           onPointerCancel={pointerEnd}
         >
           <g transform={transform}>
-            <ParolArtwork theme={theme} stage={stage} pattern={pattern} />
+            <ParolArtwork theme={theme} friendCount={lights.length} pattern={pattern} />
             <g className="parol-contributions">
               {lights.map(light => {
                 const { x, y, radius } = lightPosition(light.slotIndex)
