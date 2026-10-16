@@ -47,6 +47,23 @@ Lantern responses include `id`, `seasonYear`, `designKey`, `paletteKey`, `patter
 - GET `/api/growth-stages` — five descriptive visual ranges (starts at 0, 1, 6, 16, 31 friends); never unlock requirements
 - GET `/api/my/lanterns/{lanternId}/messages` — owner-authenticated Christmas inbox with server-side pre-unlock body redaction; full frontend inbox planned for Phase 4.
 
+## Task 4 — Friend invitations and contributions
+
+A passwordless owner creates a random 256-bit invitation token with `POST /api/my/lantern/invitations`; only its SHA-256 hash is stored in SQL. The frontend builds a share URL of the form `https://bemyparol.site/#/invite/<token>`. The guest submits the token in a **POST JSON body**, not in an HTTP path or query.
+
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| GET | `/api/my/lantern/invitations` | Owner | List current-season link metadata, never plaintext tokens |
+| POST | `/api/my/lantern/invitations` | Owner + CSRF | Issue one new share token and its expiry |
+| DELETE | `/api/my/lantern/invitations/{id}` | Owner + CSRF | Revoke an owned invitation without removing lights |
+| GET | `/api/invitations/csrf` | Public | Set HTTP-only guest cookie and provide CSRF token |
+| POST | `/api/invitations/preview` | Public + CSRF | `{ token }` returns safe public parol and contributed status |
+| POST | `/api/invitations/contribute` | Guest + CSRF | `{ token, displayName, message? }` returns assigned light slot and safe preview |
+
+Name: 1–80 characters after trimming; optional message: at most 500 characters. Guest cookies are random, HTTP-only, and hashed in SQL. Contribution/slot uniqueness indexes and SQL `UPDLOCK` / serializable transaction prevent accidental browser duplicates and slot collisions. Invalid/revoked/expired links yield 404; duplicate submissions yield 409. Guest previews never return message text, owner ID, owner credentials, or other contributors' display names. Links expire at 23:59:59 on December 31 Philippine time. Rate limiting is per API instance pending future production hardening.
+
+See the [Task 4 workflow and integration test guide](task4-friend-invitations.md).
+
 ## Planned for later phases
 
-Share link management, anonymous guest light/message submissions, anti-abuse safeguards, and message reporting UI/API are **not yet implemented**. Do not expose public mutations without invitation verification, duplicate protection, rate limiting, and transactional light-slot assignment.
+Invitation creation/revocation and anonymous contributions are implemented in Task 4. Production distributed abuse controls, real-human identity verification, moderation/reporting UI and completed owner inbox UI are still pending.
