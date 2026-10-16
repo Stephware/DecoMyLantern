@@ -142,7 +142,7 @@ export default function HostDashboard({ host, lantern, designs, onCreate, onSave
                   {designs.map(design => {
                     const palette = THEMES.find(item => item.key === design.designKey)
                     return <button key={design.designKey} type="button" disabled={busy} onClick={() => { setDraftDesign(design.designKey); setNotice('') }} aria-pressed={draftDesign === design.designKey} className={'flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition ' + (draftDesign === design.designKey ? 'border-amber-300 bg-amber-300/10' : 'border-white/10 bg-white/5 hover:border-amber-200/50')}>
-                      {palette && <svg viewBox="100 100 400 470" role="img" aria-label={design.name + ' thumbnail'} className="h-[98px] w-[86px] shrink-0 rounded-xl bg-[#0b1425]"><ParolArtwork theme={palette} friendCount={50} pattern="default" /></svg>}
+                      {palette && <svg viewBox="100 100 400 470" role="img" aria-label={design.name + ' thumbnail'} className="h-[98px] w-[86px] shrink-0 rounded-xl bg-[#0b1425]"><ParolArtwork theme={palette} friendCount={0} pattern="default" /></svg>}
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold">{design.name}</span>
                         <span className="mt-1 block text-xs text-white/50">Available to everyone · No friend requirement</span>
