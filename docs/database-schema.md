@@ -9,9 +9,9 @@ The schema is defined in `src/backend/DecoMyLantern.Api/Models/Database` using E
 | OwnerCredentials | One-to-one owner row; SHA-256 TokenHash/RecoveryHash (unique), session/recovery expiration, rowversion for rotation conflict detection |
 | ParolDesigns | Unique DesignKey, 3 seeded themes all available from 0 friends; legacy RequiredFriends column retained at 0 |
 | GrowthStages | Unique StageKey + RequiredFriends; visual ranges begin at 0, 1, 6, 16, 31 (not feature unlocks) |
-| ShareLinks | Unique TokenHash; expiry and revocation |
-| GuestVisitors | Unique random browser TokenHash (not verified human identity) |
-| Contributions | Unique (LanternId, GuestVisitorId) and (LanternId, SlotIndex) |
+| ShareLinks | Unique SHA-256 TokenHash, expiry and revocation; plaintext link returned only at creation |
+| GuestVisitors | Unique SHA-256 hash of a random guest browser token (not verified human identity) |
+| Contributions | Unique (LanternId, GuestVisitorId) and (LanternId, SlotIndex); slot counter assigned under SQL row lock/transaction |
 | Messages | Optional one per contribution, max 500 characters |
 | MessageReports | Message moderation/report tracking |
 
@@ -25,6 +25,10 @@ dotnet ef database update --project src/backend/DecoMyLantern.Api --startup-proj
 ```
 
 This changes the two previously locked design seed values to zero and adds the fifth growth-range row. Do not edit existing data manually as a substitute for the migration.
+
+## Task 4 — Existing schema reused
+
+ShareLinks, GuestVisitors, Contributions and Messages were already present with uniqueness constraints, so Task 4 does **not** require an additional migration. Ensure that Task 1 and Task 2 migrations have been applied first. For real 51-guest validation, use the guarded `scripts/invitation-smoke.mjs` against a disposable local database.
 
 ## Apply the Task 2 migration
 

@@ -3,6 +3,7 @@ import LanternScene from '../lantern/renderer/LanternScene'
 import ParolArtwork from '../lantern/renderer/ParolArtwork'
 import { stageForFriends } from '../lantern/growth/stages'
 import { THEMES } from '../customization/themes'
+import InvitationManager from '../invitations/InvitationManager'
 import type { Design, Lantern } from '../../lib/api'
 
 type Props = {
@@ -166,11 +167,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                 </div>
                 <button type="button" disabled={!changed || busy || designs.length === 0 || invalidDesign} onClick={() => void run(() => onSave(draftDesign, draftPattern), 'Your lantern customization has been saved.')} className="mt-6 w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Saving…' : invalidDesign ? 'Choose an available design' : changed ? 'Save customization →' : 'All changes saved'}</button>
               </section>
-              <section className="rounded-2xl border border-dashed border-amber-200/25 bg-amber-300/5 p-5">
-                <p className="text-sm font-bold text-amber-100">Invite your friends</p>
-                <p className="mt-2 text-sm leading-6 text-white/55">Sharing links and anonymous guest contributions are part of Phase 3. Your lantern is ready for that feature.</p>
-                <button type="button" disabled className="mt-4 w-full cursor-not-allowed rounded-lg border border-amber-200/20 px-4 py-3 text-xs font-semibold text-amber-100/55">Share link · Coming soon</button>
-              </section>
+              <InvitationManager />
             </aside>
           </div>
         )}

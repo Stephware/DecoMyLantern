@@ -37,6 +37,18 @@ bash database/bootstrap.sh --apply
 ```
 For SQL Server Management Studio users, run `database/create-database.sql` on master and generated `database/schema.sql` on DecoMyLanternDb in SQLCMD mode. The generated migration is the source of truth. **Task 2** adds `OwnerCredentials`: apply it before opening the updated frontend. Do not run the site against production data during testing.
 
+## Invitation flow verification
+
+Create a parol, copy an invitation link, and open it in a private browser. Enter a friend name and an optional Christmas message, then verify that the owner's parol displays a new light and that the guest can no longer contribute from the same browser.
+
+For **destructive, local-only SQL verification** with 51 guests and two simultaneous contributions, first start the API with a disposable, migrated development database, then from the repo root:
+
+```bash
+node scripts/invitation-smoke.mjs --confirm-dev-database
+```
+
+The script refuses non-localhost targets. See [Task 4](task4-friend-invitations.md).
+
 ## Validation
 ```bash
 cd src/frontend && npm run lint && npm run typecheck && npm run test && npm run build

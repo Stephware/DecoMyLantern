@@ -5,6 +5,7 @@ using DecoMyLantern.Api.Repository.Lanterns;
 using DecoMyLantern.Api.Repository.Messages;
 using DecoMyLantern.Api.Services.Designs;
 using DecoMyLantern.Api.Services.GrowthStages;
+using DecoMyLantern.Api.Services.Invitations;
 using DecoMyLantern.Api.Services.Lanterns;
 using DecoMyLantern.Api.Services.Messages;
 using DecoMyLantern.Api.Services.Owner;
@@ -71,6 +72,28 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = 6, Window = TimeSpan.FromHours(1),
             QueueLimit = 0, AutoReplenishment = true
         }));
+    options.AddPolicy("invitation-create", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10, Window = TimeSpan.FromHours(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("invitation-preview", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 120, Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("invitation-contribute", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 80, Window = TimeSpan.FromMinutes(15),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
     options.AddPolicy("owner-recover", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
@@ -89,6 +112,7 @@ builder.Services.AddScoped<IDesignService, DesignService>();
 builder.Services.AddScoped<IGrowthStageService, GrowthStageService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<ILanternService, LanternService>();
+builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IOwnerAccessService, OwnerAccessService>();
 
 var app = builder.Build();
@@ -103,7 +127,8 @@ app.UseRouting();
 app.Use(async (context, next) =>
 {
     if (context.Request.Path.StartsWithSegments("/api/owner") ||
-        context.Request.Path.StartsWithSegments("/api/my"))
+        context.Request.Path.StartsWithSegments("/api/my") ||
+        context.Request.Path.StartsWithSegments("/api/invitations"))
     {
         context.Response.OnStarting(() =>
         {
@@ -114,8 +139,8 @@ app.Use(async (context, next) =>
     }
     await next();
 });
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();

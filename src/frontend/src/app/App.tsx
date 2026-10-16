@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import WelcomePage from '../features/owner/WelcomePage'
 import RecoveryKeyPage from '../features/owner/RecoveryKeyPage'
 import HostDashboard from '../features/dashboard/HostDashboard'
+import GuestInvitationPage from '../features/invitations/GuestInvitationPage'
+import { invitationTokenFromHash } from '../features/invitations/invitationLinks'
 import {
   ApiError,
   createOwner,
@@ -25,6 +27,7 @@ type Screen = 'loading' | 'welcome' | 'recovery-key' | 'owner' | 'error'
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('loading')
+  const [invitationToken, setInvitationToken] = useState<string | null>(() => invitationTokenFromHash(window.location.hash))
   const [owner, setOwner] = useState<Owner | null>(null)
   const [lantern, setLantern] = useState<Lantern | null>(null)
   const [designs, setDesigns] = useState<Design[]>([])
@@ -62,6 +65,13 @@ export default function App() {
   }
 
   useEffect(() => {
+    const onHashChange = () => setInvitationToken(invitationTokenFromHash(window.location.hash))
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  useEffect(() => {
+    if (invitationToken !== null) return
     let mounted = true
     void getOwner().then(currentOwner => {
       if (mounted) void enterDashboard(currentOwner)
@@ -81,7 +91,10 @@ export default function App() {
       if (mounted) setScreen('welcome')
     })
     return () => { mounted = false }
-  }, [])
+  }, [invitationToken])
+
+  // Render the friend-side experience before all owner/login screens.
+  if (invitationToken !== null) return <GuestInvitationPage token={invitationToken} />
 
   if (screen === 'loading') return (
     <div className="flex min-h-screen items-center justify-center bg-[#080e20] px-5 text-center text-amber-100">
