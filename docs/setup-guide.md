@@ -37,10 +37,17 @@ For SQL Server Management Studio users, run `database/create-database.sql` on ma
 
 ## Validation
 ```bash
-cd src/frontend && npm run lint && npm run typecheck && npm run build
+cd src/frontend && npm run lint && npm run typecheck && npm run test && npm run build
 cd ../..
 dotnet restore DecoMyLantern.slnx
 dotnet build DecoMyLantern.slnx --no-restore --configuration Release
 dotnet test DecoMyLantern.slnx --no-build --configuration Release
 ```
-The project is an early scaffold; the GitHub CI checks code quality but does not run a real SQL Server integration test.
+When database models change, also validate EF Core migrations from the repository root:
+
+```bash
+dotnet tool restore
+dotnet ef migrations has-pending-model-changes --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api
+```
+
+**GitHub Actions CI/CD has been removed.** Run and record these checks manually before each pull request. The project is an early scaffold; the checks do not replace real SQL Server integration testing.
