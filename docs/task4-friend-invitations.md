@@ -1,7 +1,7 @@
 # Task 4 — BeMyParol friend invitation and contribution workflow
 
 **Implementation branch:** `feature/task4-friend-invitations`  
-**Dependency:** Task 2 owner-token authentication branch / PR #11; this task is stacked on it, not on unverified `dev`.  
+**Dependency:** Task 2 owner-token authentication and Task 3 capacity tests are merged into `dev`. This PR now targets `dev`.  
 **Status:** Code prepared; manual frontend/backend builds and real SQL Server concurrency tests must pass before deployment.
 
 ## 1. Workflow
@@ -54,7 +54,7 @@ No schema changes were necessary: Task 1 already seeded visual progression and T
 
 ## 4. Developer verification checklist
 
-First, **fully validate and merge Task 2's PR**; Task 4 branches from it. Task 3's separate tests are still awaiting their own PR merge.
+Tasks 2 and 3 are already merged to `dev`. Task 4 is rebased by a normal merge commit and requires its own build, integration, and device checks before public deployment.
 
 Run from the repository root on the Task 4 branch:
 
