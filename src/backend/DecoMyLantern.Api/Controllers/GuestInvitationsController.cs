@@ -62,7 +62,7 @@ public sealed class GuestInvitationsController(
         try
         {
             var result = await service.ContributeAsync(request, visitorToken, cancellationToken);
-            return Created("/api/invitations/preview", result);
+            return StatusCode(StatusCodes.Status201Created, result);
         }
         catch (InvitationException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
     }
