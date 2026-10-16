@@ -1,8 +1,8 @@
 import { useId } from 'react'
 import type { Theme } from '../../customization/themes'
-import type { GrowthStage } from '../growth/stages'
+import { decorationCounts } from '../growth/stages'
 
-type Props = { theme: Theme; stage: GrowthStage; pattern: string }
+type Props = { theme: Theme; friendCount: number; pattern: string }
 
 const CENTER_X = 300
 const CENTER_Y = 302
@@ -26,7 +26,7 @@ function hexColor(color: string, fallback: string): string {
   return /^#[a-fA-F0-9]{6}$/.test(color) ? color : fallback
 }
 
-export default function ParolArtwork({ theme, stage, pattern }: Props) {
+export default function ParolArtwork({ theme, friendCount, pattern }: Props) {
   const uid = useId().replace(/:/g, '')
   const gradient = `${uid}-capiz`
   const edgeGlow = `${uid}-halo`
@@ -34,7 +34,7 @@ export default function ParolArtwork({ theme, stage, pattern }: Props) {
   const [primary, lightTone, rose, leaf] = theme.colors
   const isFloral = theme.key === 'floral'
   const isFestival = theme.key === 'festival'
-  const stageOrder = stage.requiredFriends
+  const accents = decorationCounts(friendCount)
 
   return (
     <g aria-hidden="true">
@@ -70,7 +70,7 @@ export default function ParolArtwork({ theme, stage, pattern }: Props) {
         </g>
       ))}
 
-      {/* The luminous outer silhouette keeps the star recognizable at every milestone. */}
+      {/* The base parol is already complete and beautiful with zero friends. */}
       <polygon points={starPoints(158, 74)} fill={primary} opacity=".32" filter={`url(#${edgeGlow})`} />
       <polygon points={starPoints(158, 74)} fill="#111b30" stroke={lightTone} strokeWidth="7" strokeLinejoin="round" />
       <polygon points={starPoints(147, 72)} fill={`url(#${gradient})`} stroke={primary} strokeWidth="2.5" strokeLinejoin="round" />
@@ -124,35 +124,42 @@ export default function ParolArtwork({ theme, stage, pattern }: Props) {
         </g>
       )}
 
-      {/* Each milestone ADDS a permanent, larger, independent decorative layer. */}
-      {stageOrder >= 5 && (
-        <g data-stage="enhanced" className="parol-layer-rise">
-          <circle cx="300" cy="302" r="180" fill="none" stroke={primary} strokeWidth="1.6" opacity=".8" strokeDasharray="3 8" />
-          {Array.from({ length: 10 }, (_, i) => (
-            <g key={i} transform={`rotate(${i * 36} 300 302)`}>
-              <path d="M300 115 L293 124 L300 135 L307 124 Z" fill={i % 2 ? rose : leaf} stroke={lightTone} strokeWidth="1.7" />
-              <circle cx="300" cy="113" r="3.3" fill={lightTone} />
+      {/* One new detail for each accepted friend from #6 to #15. No full-layer jump. */}
+      {accents.details > 0 && (
+        <g data-layer="details" className="parol-progressive-details">
+          {Array.from({ length: accents.details }, (_, index) => (
+            <g key={index} className="parol-layer-rise" transform={`rotate(${index * 36} 300 302)`}>
+              <path d="M300 113 L293 124 L300 137 L307 124 Z"
+                fill={index % 2 ? rose : leaf} stroke={lightTone} strokeWidth="1.8" />
+              <circle cx="300" cy="109" r="3.3" fill={lightTone} />
             </g>
           ))}
         </g>
       )}
-      {stageOrder >= 15 && (
-        <g data-stage="radiant" className="parol-layer-rise">
-          <circle cx="300" cy="302" r="205" fill="none" stroke={lightTone} strokeWidth="2" opacity=".62" strokeDasharray="5 9" />
-          {Array.from({ length: 20 }, (_, i) => (
-            <g key={i} transform={`rotate(${i * 18} 300 302)`}>
-              <path d="M300 89 Q311 101 300 118 Q289 101 300 89" fill={isFloral ? rose : i % 2 ? leaf : primary} fillOpacity=".78" stroke={lightTone} strokeWidth="1.3" />
+
+      {/* One new fuller-layer ornament for each friend from #16 to #30. */}
+      {accents.fuller > 0 && (
+        <g data-layer="fuller" className="parol-progressive-fuller">
+          {Array.from({ length: accents.fuller }, (_, index) => (
+            <g key={index} className="parol-layer-rise" transform={`rotate(${index * 24 + 6} 300 302)`}>
+              <path d="M300 89 Q314 104 300 121 Q286 104 300 89"
+                fill={isFloral ? rose : index % 2 ? leaf : primary}
+                fillOpacity=".86" stroke={lightTone} strokeWidth="1.6" />
+              <circle cx="300" cy="85" r="2.5" fill={lightTone} opacity=".85" />
             </g>
           ))}
         </g>
       )}
-      {stageOrder >= 30 && (
-        <g data-stage="grand" className="parol-layer-rise">
-          <circle cx="300" cy="302" r="234" fill="none" stroke={primary} strokeWidth="1.3" opacity=".72" />
-          {Array.from({ length: 24 }, (_, i) => (
-            <g key={i} transform={`rotate(${i * 15} 300 302)`}>
-              <path d="M300 65 L293 80 L300 90 L307 80 Z" fill={i % 3 === 0 ? rose : i % 3 === 1 ? leaf : primary} stroke={lightTone} strokeWidth="1.6" />
-              <circle cx="300" cy="59" r="3" fill={lightTone} />
+
+      {/* A growing outer crown: one new accent for each friend from #31 to #50. */}
+      {accents.grand > 0 && (
+        <g data-layer="grand" className="parol-progressive-grand">
+          {Array.from({ length: accents.grand }, (_, index) => (
+            <g key={index} className="parol-layer-rise" transform={`rotate(${index * 18 + 9} 300 302)`}>
+              <path d="M300 58 L292 74 L300 87 L308 74 Z"
+                fill={index % 3 === 0 ? rose : index % 3 === 1 ? leaf : primary}
+                stroke={lightTone} strokeWidth="1.7" />
+              <circle cx="300" cy="52" r="3.7" fill={lightTone} />
             </g>
           ))}
         </g>
