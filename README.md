@@ -4,7 +4,7 @@
 
 The goal is to keep the parol beautiful at every stage: **curated SVG themes + milestone-based structural growth**, rather than stretching an image or forcing a Fibonacci snowflake shape.
 
-> **Development status:** This repository contains the initial UI preview, ASP.NET Core API foundation, SQL Server schema/migrations, and CI. Phase 1 provides host registration/login and saved lantern customization. **Phase 2** adds Classic/Floral/Festival layered SVG artwork, stable indexed contributor lights, 0/5/15/30 growth layers and mobile pinch/drag/fit controls. Invitation acceptance, anonymous contribution submission, and the full Christmas inbox remain **in development**. Live accepted-contribution counts will stay at zero until Phase 3. Do not treat this scaffold as production-ready.
+> **Development status:** This repository contains the initial UI preview, ASP.NET Core API foundation, SQL Server schema/migrations, and manual validation commands. Phase 1 provides host registration/login and saved lantern customization. **Phase 2** adds Classic/Floral/Festival layered SVG artwork, stable indexed contributor lights, 0/5/15/30 growth layers and mobile pinch/drag/fit controls. Invitation acceptance, anonymous contribution submission, and the full Christmas inbox remain **in development**. Live accepted-contribution counts will stay at zero until Phase 3. Do not treat this scaffold as production-ready.
 
 ## How the app is intended to work
 
@@ -27,7 +27,7 @@ Anonymous guest participation is convenient, but a browser token cannot prove th
 | Backend organization | Controllers → Services → Repository → Models/Database |
 | Database | SQL Server with Entity Framework Core 10 |
 | Host authentication | ASP.NET Core Identity |
-| CI | GitHub Actions |
+| Validation | Local/manual lint, type-check, unit test, build, and EF migration checks |
 
 React owns the page layout. The backend follows a familiar **MVC-style folder organization**, but it exposes JSON API endpoints rather than Razor views.
 
@@ -55,7 +55,6 @@ DecoMyLantern/
 ├── tests/                                  # Automated tests
 ├── database/                               # Schema and database setup scripts
 ├── docs/                                   # Development documentation
-├── .github/workflows/                      # CI workflow
 └── DecoMyLantern.slnx
 ```
 
@@ -146,7 +145,7 @@ The dashboard shows real server-side contribution counts (initially zero). Share
 
 **Host API security:** Authentication uses an HTTP-only SameSite cookie. The frontend automatically requests and sends a CSRF token for every POST/PUT operation. Manual API testing requires fetching `GET /api/auth/csrf` and preserving cookies. See the [API contracts](docs/api-contracts.md).
 
-## Run checks before a PR
+## Run manual checks before a PR
 
 **Frontend:**
 
@@ -167,7 +166,14 @@ dotnet build DecoMyLantern.slnx --no-restore --configuration Release
 dotnet test DecoMyLantern.slnx --no-build --configuration Release
 ```
 
-The GitHub Actions workflow automatically runs the frontend and backend checks for pull requests into `dev` and `main`, including EF Core migration consistency checks. **Passing CI does not mean the full app has been deployed or tested against a live SQL Server.**
+**Automated GitHub Actions CI/CD is intentionally removed for faster iteration.** Run the commands above yourself before requesting a merge. When a change affects database entities or EF configurations, also run:
+
+```bash
+dotnet tool restore
+dotnet ef migrations has-pending-model-changes --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api
+```
+
+This migration check requires the usual local development configuration. Manual builds and unit tests do **not** replace end-to-end testing against your configured SQL Server database. Record your results in the PR description; do not claim they passed unless you ran them.
 
 ## Team branch workflow
 
@@ -179,7 +185,7 @@ feature/*  →  dev  →  main
 ```
 
 - `main` — stable/release branch. **Only @Stephware merges release PRs into main. No direct pushes.**
-- `dev` — shared development branch. Invited collaborators can merge **passing feature pull requests** into `dev`. No direct pushes.
+- `dev` — shared development branch. Invited collaborators can merge **manually verified feature pull requests** into `dev`. No direct pushes.
 - `feature/*` / `fix/*` — individual work, always created from the latest `dev`.
 
 ### Start a new task
@@ -201,7 +207,7 @@ git push -u origin feature/short-description
 
 Replace `<files-you-changed>` with specific files or use `git add .` after checking `git status` and ensuring no secrets are included.
 
-On GitHub, open a pull request with **base: `dev`** and **compare: your feature branch**. Wait for `frontend` and `backend` to pass; the team can then use **Squash and merge**.
+On GitHub, open a pull request with **base: `dev`** and **compare: your feature branch**. Share the manual lint, typecheck, test, and build results in the PR description, review the diff, and then use **Squash and merge**. No automated checks will be generated.
 
 ### Bring new dev changes into an active feature
 
@@ -219,9 +225,9 @@ Resolve any conflicts, rerun the relevant checks, and push your branch.
 
 Only the repository owner:
 
-1. Confirms `dev` is stable and CI passes.
+1. Confirms `dev` is stable and the manual checks pass.
 2. Opens a PR with **base: `main`** and **compare: `dev`**.
-3. Verifies release checks and merges the PR into `main` (merge commit is preferred for the release history).
+3. Verifies the manual release checks and merges the PR into `main` (merge commit is preferred for the release history).
 4. Keeps ongoing development on `dev`.
 
 Do not merge feature branches directly to `main`, force-push protected branches, or commit SQL Server database files or credentials.
