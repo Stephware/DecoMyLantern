@@ -9,11 +9,12 @@
 
 A local Node.js 22.16 environment was used to run the repo's **exact Git-blob-matched** `stages.ts`, `lightPositions.ts`, existing `renderer.test.mjs`, and newly added `fifty-friend-capacity.test.mjs` (no project-wide `npm ci` was available).
 
-- **PASS: 14/14 Node tests.** Five existing renderer tests and nine newly added capacity tests, with no failures.
+- **PASS: 15/15 Node tests.** Five existing renderer tests and ten newly added capacity tests, with no failures.
 - **PASS: all counts 0–50** map to expected ranges 0 / 1–5 / 6–15 / 16–30 / 31–50.
 - **PASS: per-friend progression** adds a light at each accepted contribution; from #6 to #50 each also adds exactly one ornament, totaling **10 detail + 15 fuller + 20 crown = 45 ornaments** by #50.
 - **PASS: 50 opaque light cores do not intersect.** Minimum center-to-center distance is **21.53 SVG units**; each solid core has radius **5** (10-unit diameter). The larger translucent glow circles *may overlap by design*.
 - **PASS: all 50 lights remain inside the 600 × 640 SVG viewBox** with at least 20 SVG units of safety margin around the tested halo circles.
+- **PASS: all 45 progressive ornament endpoints stay inside the SVG viewBox** with a safety margin around each ornament's tip.
 - **PASS: sparse persisted slots** are not compacted, preventing existing friends' lights from shifting when a contribution is removed.
 - **PASS: narrow phone canvas geometry** preserves distinct light cores. At **240 px effective SVG width**, minimum center spacing is **8.61 px** versus a **4 px opaque-core diameter**. At effective 295/350 px widths, the center spacing is approximately **10.59/12.56 px**, respectively.
 - **PASS: beyond the target:** #51 and later keep the grand crown's 45 ornaments while their individual light positions continue to be computed. The frontend's **sample preview** is capped at 50; **real accepted contributions are not capped**.
@@ -41,7 +42,7 @@ The decorative SVG base is always present even at zero friends. Design palettes 
 
 ## Added automated regression coverage
 
-- `src/frontend/tests/fifty-friend-capacity.test.mjs` — 9 tests for 0–50 stages, incremental lights/ornaments, core spacing, bounds, mobile scaling geometry, sparse slots, 51+, and malformed inputs.
+- `src/frontend/tests/fifty-friend-capacity.test.mjs` — 10 tests for 0–50 stages, incremental lights/ornaments, core spacing, contributor and ornament bounds, mobile scaling geometry, sparse slots, 51+, and malformed inputs.
 - `src/frontend/tests/renderer.test.mjs` — 5 existing tests, preserved.
 - `src/frontend/package.json` — `npm test` runs **both** `tests/*.test.mjs` files.
 - `tests/DecoMyLantern.Api.Tests/PolicyTests.cs` — adds C# all-counts 0–50 and 51+ growth-stage regression tests.
