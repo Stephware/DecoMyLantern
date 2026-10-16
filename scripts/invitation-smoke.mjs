@@ -73,6 +73,14 @@ assert.equal(invitation.token.length, 43)
 const ownerLinks = ok(await owner.call('/api/my/lantern/invitations'), 200, 'owner invite list')
 assert.ok(ownerLinks.some(link => link.id === invitation.id))
 
+const ownLight = await owner.guestPost('/api/invitations/contribute', {
+  token: invitation.token,
+  displayName: 'The parol owner',
+  message: 'Should not be accepted',
+})
+assert.equal(ownLight.status, 409, 'owner cannot add a guest light to their own parol')
+assert.equal(ok(await owner.call('/api/my/lantern'), 200, 'after self contribution').acceptedFriends, 0)
+
 const guests = []
 async function friend(number) {
   const guest = new Browser()
@@ -128,6 +136,15 @@ assert.equal(still51.acceptedFriends, 51)
 
 const secondOwner = new Browser()
 ok(await secondOwner.ownerPost('/api/owner/create'), 201, 'create second owner')
+
+const secondInvite = ok(await secondOwner.ownerPost('/api/my/lantern/invitations'), 200, 'second owner invitation')
+const firstOwnerAsFriend = ok(
+  await owner.guestPost('/api/invitations/contribute', {
+    token: secondInvite.token,
+    displayName: 'A friend who also owns a parol',
+    message: '',
+  }), 201, 'owner contributes to a friend parol')
+assert.equal(firstOwnerAsFriend.parol.acceptedFriends, 1)
 const unauthorizedRevoke = await secondOwner.ownerDelete(
   `/api/my/lantern/invitations/${invitation.id}`)
 assert.equal(unauthorizedRevoke.status, 404, 'other owner cannot revoke invite')
