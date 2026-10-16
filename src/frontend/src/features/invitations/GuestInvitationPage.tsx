@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { contributeInvitation, previewInvitation, type InvitationPreview } from '../../lib/api'
 import LanternScene from '../lantern/renderer/LanternScene'
 import { THEMES } from '../customization/themes'
+import { isValidInvitationToken } from './invitationLinks'
 
 type Props = { token: string }
 
@@ -16,7 +17,7 @@ export default function GuestInvitationPage({ token }: Props) {
 
   useEffect(() => {
     let active = true
-    if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
+    if (!isValidInvitationToken(token)) {
       setError('This invitation link is invalid. Ask your friend for a new one.')
       setLoading(false)
       return
