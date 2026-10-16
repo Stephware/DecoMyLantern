@@ -40,10 +40,10 @@ export default function WelcomePage({ legacyAvailable, onCreate, onRecover, onUp
           <p className="mb-4 text-xs font-bold uppercase tracking-[0.32em] text-amber-300/80">Bawat ilaw, may kwento</p>
           <h1 className="mx-auto max-w-xl font-serif text-4xl font-semibold leading-[1.13] tracking-tight sm:text-6xl lg:mx-0">Let your friends <span className="text-amber-300">light up your Pasko.</span></h1>
           <p className="mx-auto mt-5 max-w-lg text-sm leading-7 text-white/65 sm:text-base lg:mx-0">
-            Create a Filipino Christmas parol. Friends will soon be able to add a light and a message that stays sealed until Christmas Day.
+            Create a Filipino Christmas parol, invite your friends to add lights, and collect private greetings that stay sealed until Christmas Day.
           </p>
           <div className="mx-auto mt-4 max-w-[400px] lg:mx-0"><LanternScene previewCount={5} theme={THEMES[0]} /></div>
-          <p className="text-xs text-white/40">Sample parol · Invitations are coming in Task 4</p>
+          <p className="text-xs text-white/40">Sample parol · Create yours to invite your friends</p>
         </section>
         <section className="mx-auto w-full max-w-md rounded-[30px] border border-white/10 bg-[#131e35]/95 p-6 shadow-2xl shadow-black/20 sm:p-9">
           <h2 className="font-serif text-3xl font-semibold">{showRecovery ? 'Restore your parol' : 'Your parol starts here'}</h2>
