@@ -26,7 +26,7 @@ The backend computes `growthStage` using `GrowthPolicy.StageFor(acceptedFriends)
 
 `GET /api/my/lantern` and `PUT /api/my/lantern` include `lights: [{ id, slotIndex, displayName }]`.
 
-- `SlotIndex` is persisted for each accepted contribution. The guest submission workflow that assigns slots remains Task 4.
+- `SlotIndex` is persisted for each accepted contribution. Task 4 now implements guest submissions with transactional, concurrency-safe slot allocation.
 - `lightPosition(slotIndex)` computes coordinates from **only** the stable slot index, not from the current number of contributions, their order, the design, or the visual range.
 - Removed contributions leave gaps in the sequence, without moving others. The database enforces uniqueness on `(LanternId, SlotIndex)`.
 - `LanternScene` uses real `contributions` for the owner view; `previewCount` explicitly creates **sample lights only** and never mutates the backend or unlocks content.
