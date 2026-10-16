@@ -5,11 +5,7 @@ import {
   revokeInvitation,
   type InvitationInfo,
 } from '../../lib/api'
-
-function invitationUrl(token: string): string {
-  // The fragment is never sent as an HTTP URL/path or referrer to the server.
-  return `${window.location.origin}/#/invite/${encodeURIComponent(token)}`
-}
+import { invitationUrl } from './invitationLinks'
 
 export default function InvitationManager() {
   const [links, setLinks] = useState<InvitationInfo[]>([])
@@ -32,7 +28,7 @@ export default function InvitationManager() {
     setNotice('')
     try {
       const issued = await createInvitation()
-      setUrl(invitationUrl(issued.token))
+      setUrl(invitationUrl(window.location.origin, issued.token))
       setLinks(await getInvitations())
       setNotice('Your invitation is ready. Copy and share the link below.')
     } catch (caught) {
