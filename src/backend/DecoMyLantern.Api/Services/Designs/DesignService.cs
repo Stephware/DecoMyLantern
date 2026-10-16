@@ -12,6 +12,6 @@ public sealed class DesignService(IDesignRepository repository) : IDesignService
 {
     public async Task<IReadOnlyList<DesignDto>> GetEnabledAsync(CancellationToken cancellationToken) =>
         (await repository.GetEnabledAsync(cancellationToken))
-            .Select(x => new DesignDto(x.DesignKey, x.Name, x.AssetKey, x.RequiredFriends))
+            .Select(x => new DesignDto(x.DesignKey, x.Name, x.AssetKey))
             .ToList();
 }
