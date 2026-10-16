@@ -4,11 +4,11 @@
 
 The parol looks complete from **zero friends** and becomes progressively richer with every contribution. Visual ranges describe the artwork; they are not gates or unlock requirements.
 
-> **Development status:** This repository contains the initial UI preview, ASP.NET Core API foundation, SQL Server schema/migrations, and manual validation commands. Phase 1 provides host registration/login and saved lantern customization. **Phase 2** adds Classic/Floral/Festival layered SVG artwork, stable indexed contributor lights, and mobile pinch/drag/fit controls. **Task 1 of the BeMyParol redesign** replaces unlock thresholds with five continuous growth ranges (0, 1–5, 6–15, 16–30, 31–50) and makes all enabled designs immediately available. Invitation acceptance, anonymous contribution submission, and the full Christmas inbox remain **in development**. Live accepted-contribution counts will stay at zero until Phase 3. Do not treat this scaffold as production-ready.
+> **Development status:** This repository contains the initial UI preview, ASP.NET Core API foundation, SQL Server schema/migrations, and manual validation commands. Phase 1 originally implemented email/password accounts and saved lanterns; **Task 2 replaces the login flow with anonymous, revocable owner tokens and a recovery key**, while keeping existing lantern data and owner relationships. **Phase 2** adds Classic/Floral/Festival layered SVG artwork, stable indexed contributor lights, and mobile pinch/drag/fit controls. **Task 1 of the BeMyParol redesign** replaces unlock thresholds with five continuous growth ranges (0, 1–5, 6–15, 16–30, 31–50) and makes all enabled designs immediately available. Invitation acceptance, anonymous contribution submission, and the full Christmas inbox remain **in development**. Live accepted-contribution counts will stay at zero until Phase 3. Do not treat this scaffold as production-ready.
 
 ## How the app is intended to work
 
-- **Hosts** register/log in and create **one lantern per Christmas season**.
+- **Owners** create a seasonal parol without signing up or logging in. The API gives the browser a secure HTTP-only owner cookie and shows a private recovery key once.
 - **Friends** open a shared link directly, without creating an account, then contribute a light and optionally leave a message.
 - Each accepted contribution occupies a stable light position. Friends #6–50 also progressively add an outer ornament; visual ranges start at 0, 1, 6, 16, and 31 friends.
 - Hosts can choose any enabled parol design at any friend count, including zero.
@@ -26,7 +26,7 @@ Anonymous guest participation is convenient, but a browser token cannot prove th
 | Backend | ASP.NET Core Web API / .NET 10 / C# |
 | Backend organization | Controllers → Services → Repository → Models/Database |
 | Database | SQL Server with Entity Framework Core 10 |
-| Host authentication | ASP.NET Core Identity |
+| Owner access | Hashed 256-bit random tokens in SQL Server, HTTP-only cookie, one-time recovery key; Identity database retained for existing foreign keys |
 | Validation | Local/manual lint, type-check, unit test, build, and EF migration checks |
 
 React owns the page layout. The backend follows a familiar **MVC-style folder organization**, but it exposes JSON API endpoints rather than Razor views.
@@ -95,7 +95,7 @@ Replace the placeholders with your **own development SQL Server connection**. Th
 
 **Never commit real database passwords, tokens, `.env` files, or other secrets.**
 
-Create/update the database using the **committed EF Core migrations** (Task 1 includes a data-only migration for design availability and new stage seeds):
+Create/update the database using the **committed EF Core migrations**. Task 1 updates design and stage seeds; Task 2 adds the `OwnerCredentials` table without deleting prior user/parol data:
 
 ```bash
 dotnet tool restore
@@ -139,11 +139,15 @@ On Windows PowerShell, replace the copy command with `Copy-Item .env.example .en
 
 Open **http://localhost:5173** in your browser. Vite proxies `/api` to `http://localhost:5050`.
 
-Open the site to **register or log in**, create your seasonal lantern, explore three SVG design collections (all available immediately), choose decorative patterns, and save your changes to SQL Server. Drag or pinch the parol to examine details; use **Fit** to recenter. The Design studio selector lets you preview 0/3/10/23/40/50 lights without changing stored data. Log out and log back in to confirm saved choices persist.
+Open the site and choose **Create my parol**. No email/password is needed. **Copy your private recovery key and keep it safe before continuing.** The owner session persists in a secure HTTP-only browser cookie across refreshes. Use **Recovery key** in the dashboard to generate a replacement (the old code then stops working). Use **Leave parol** to revoke the browser session; recovering access afterward requires your recovery key. You can still explore three SVG collections and preview 0/3/10/23/40/50 lights without changing real contributions.
 
 The dashboard shows real server-side contribution counts (initially zero). Share links and anonymous guest submission will arrive in Phase 3; the complete Christmas inbox experience will arrive in Phase 4.
 
-**Host API security:** Authentication uses an HTTP-only SameSite cookie. The frontend automatically requests and sends a CSRF token for every POST/PUT operation. Manual API testing requires fetching `GET /api/auth/csrf` and preserving cookies. See the [API contracts](docs/api-contracts.md).
+**Owner API security:** The server authenticates by looking up the SHA-256 hash of a 256-bit random browser token in SQL on each protected request. The token is only sent in an HTTP-only SameSite=Strict cookie (Secure on HTTPS/production); React does not read or persist it. All writes require a fresh CSRF token from `GET /api/owner/csrf`. Only public catalogs are cached for two minutes — never owner identity or recovery codes. See the [API contracts](docs/api-contracts.md).
+
+## Existing-user migration and recovery
+
+Existing users and lantern data are retained. If you have a still-valid old `Deco.Host` cookie, use **Transfer my existing parol** to issue a new owner token and recovery key. Without that valid old cookie, a previous email/password alone cannot access the new system; plan a separately verified migration before public rollout. Newly created parols can be restored with the private recovery key. **If both your browser cookie and recovery key are lost, there is no built-in recovery mechanism.** Owner tokens have a 400-day lifetime; recovery keys expire after 730 days. Do not share a recovery key in the public friend invitation link. HTTPS is required in production.
 
 ## Run manual checks before a PR
 
