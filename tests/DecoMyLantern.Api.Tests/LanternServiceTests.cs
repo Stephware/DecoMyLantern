@@ -85,6 +85,50 @@ public sealed class LanternServiceTests
         Assert.Equal(400, exception.StatusCode);
     }
 
+    [Theory]
+    [InlineData(0, "base")]
+    [InlineData(1, "lights")]
+    [InlineData(5, "lights")]
+    [InlineData(6, "details")]
+    [InlineData(15, "details")]
+    [InlineData(16, "fuller")]
+    [InlineData(30, "fuller")]
+    [InlineData(31, "grand")]
+    [InlineData(49, "grand")]
+    [InlineData(50, "grand")]
+    [InlineData(51, "grand")]
+    public async Task Owner_lantern_response_includes_all_active_friends_without_a_50_cap(
+        int acceptedFriends, string expectedStage)
+    {
+        var repository = new FakeRepository { AcceptedCount = acceptedFriends };
+        var service = new LanternService(repository, TimeProvider.System);
+        var ownerId = Guid.NewGuid();
+        await service.CreateAsync(ownerId, CancellationToken.None);
+
+        var lantern = await service.GetCurrentAsync(ownerId, CancellationToken.None);
+        Assert.NotNull(lantern);
+        Assert.Equal(acceptedFriends, lantern.AcceptedFriends);
+        Assert.Equal(expectedStage, lantern.GrowthStage);
+        Assert.Equal(acceptedFriends, lantern.Lights.Count);
+        Assert.Equal(Enumerable.Range(0, acceptedFriends), lantern.Lights.Select(x => x.SlotIndex));
+    }
+
+    [Fact]
+    public async Task Fifty_sparsely_numbered_friend_slots_remain_unchanged_in_response()
+    {
+        var expected = Enumerable.Range(0, 50).Select(i => i * 2).ToArray();
+        var repository = new FakeRepository { SlotIndexes = expected };
+        var service = new LanternService(repository, TimeProvider.System);
+        var ownerId = Guid.NewGuid();
+        await service.CreateAsync(ownerId, CancellationToken.None);
+
+        var lantern = await service.GetCurrentAsync(ownerId, CancellationToken.None);
+        Assert.NotNull(lantern);
+        Assert.Equal(50, lantern.AcceptedFriends);
+        Assert.Equal("grand", lantern.GrowthStage);
+        Assert.Equal(expected, lantern.Lights.Select(x => x.SlotIndex));
+    }
+
     [Fact]
     public async Task Returns_each_persisted_contribution_slot_without_renumbering()
     {
