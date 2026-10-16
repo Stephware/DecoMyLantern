@@ -171,8 +171,11 @@ public sealed class InvitationService(
             await database.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            // Re-read public data only after commit. No private message is returned.
-            var preview = await PreviewAsync(request.Token, guestToken, cancellationToken);
+            // Re-read public data after commit, using the link validated inside
+            // the transaction. If the owner revokes the link immediately after
+            // acceptance, the guest still receives success for their saved light.
+            // This response never contains private message text.
+            var preview = await PublicPreviewAsync(link, guestToken, cancellationToken);
             return new GuestContributionResultDto(contribution.Id, slot,
                 !string.IsNullOrEmpty(body), preview);
         }
