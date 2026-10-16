@@ -93,6 +93,28 @@ test('all 50 glow halos fit within the SVG viewBox with generous padding', () =>
   }
 })
 
+test('all 45 progressive outer ornaments remain inside the full SVG at 50 friends', () => {
+  // Full-ring centers/radii from ParolArtwork's rotated 10, 15 and 20 bands.
+  const rings = [
+    { count: 10, radius: 193, offset: 0, step: 36 },
+    { count: 15, radius: 217, offset: 6, step: 24 },
+    { count: 20, radius: 250, offset: 9, step: 18 },
+  ]
+  let checked = 0
+  for (const ring of rings) {
+    for (let index = 0; index < ring.count; index++) {
+      const radians = ((ring.offset + index * ring.step) - 90) * Math.PI / 180
+      const x = CENTER.x + Math.cos(radians) * ring.radius
+      const y = CENTER.y + Math.sin(radians) * ring.radius
+      // Extra 5 units allow for the small endpoint circles and strokes.
+      assert.ok(x - 5 >= 20 && x + 5 <= SVG.width - 20)
+      assert.ok(y - 5 >= 20 && y + 5 <= SVG.height - 20)
+      checked++
+    }
+  }
+  assert.equal(checked, 45)
+})
+
 test('responsive SVG scaling maintains distinguishable inner cores at mobile widths', () => {
   const closest = minimumSpacing(Array.from({ length: DESIGN_TARGET_FRIENDS }, (_, i) => i))
   for (const width of MOBILE_CANVAS_WIDTHS) {
