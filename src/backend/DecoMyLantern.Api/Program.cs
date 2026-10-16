@@ -91,7 +91,7 @@ builder.Services.AddRateLimiter(options =>
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 20, Window = TimeSpan.FromMinutes(15),
+            PermitLimit = 80, Window = TimeSpan.FromMinutes(15),
             QueueLimit = 0, AutoReplenishment = true
         }));
     options.AddPolicy("owner-recover", context => RateLimitPartition.GetFixedWindowLimiter(
@@ -139,8 +139,8 @@ app.Use(async (context, next) =>
     }
     await next();
 });
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
