@@ -478,3 +478,33 @@ END;
 COMMIT;
 GO
 
+
+-- Data-only BeMyParol progressive-growth migration (idempotent, matching EF Core migration).
+-- EF migration remains the source of truth; regenerate this SQL with database/bootstrap.sh
+-- after verifying the migration using the local .NET SDK.
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261016160000_ProgressiveParolGrowth'
+)
+BEGIN
+    UPDATE [ParolDesigns] SET [RequiredFriends] = 0
+    WHERE [Id] = 'c54deae0-8e9c-4a63-ae19-88989b0f3012';
+    UPDATE [ParolDesigns] SET [RequiredFriends] = 0
+    WHERE [Id] = 'c54deae0-8e9c-4a63-ae19-88989b0f3013';
+
+    UPDATE [GrowthStages] SET [Name] = N'Complete Base' WHERE [Id] = 1;
+    UPDATE [GrowthStages] SET [Name] = N'Added Lights', [RequiredFriends] = 1, [StageKey] = N'lights' WHERE [Id] = 2;
+    UPDATE [GrowthStages] SET [Name] = N'More Details', [RequiredFriends] = 6, [StageKey] = N'details' WHERE [Id] = 3;
+    UPDATE [GrowthStages] SET [Name] = N'Fuller Layers', [RequiredFriends] = 16, [StageKey] = N'fuller' WHERE [Id] = 4;
+
+    SET IDENTITY_INSERT [GrowthStages] ON;
+    INSERT INTO [GrowthStages] ([Id], [Name], [RequiredFriends], [SortOrder], [StageKey])
+    VALUES (5, N'Grand Parol', 31, 5, N'grand');
+    SET IDENTITY_INSERT [GrowthStages] OFF;
+
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261016160000_ProgressiveParolGrowth', N'10.0.4');
+END;
+COMMIT;
+GO
