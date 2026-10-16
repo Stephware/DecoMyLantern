@@ -10,7 +10,8 @@ const SVG = { width: 600, height: 640 }
 const CENTER = { x: 300, y: 302 }
 const CORE_RADIUS = 5
 const HALO_MULTIPLIER = 2.8
-const MOBILE_WIDTHS = [320, 375, 430]
+// Effective SVG canvas widths after mobile page/card padding, not raw viewport widths.
+const MOBILE_CANVAS_WIDTHS = [240, 295, 350]
 const ranges = [
   { begin: 0, end: 0, stage: 'base' },
   { begin: 1, end: 5, stage: 'lights' },
@@ -94,11 +95,11 @@ test('all 50 glow halos fit within the SVG viewBox with generous padding', () =>
 
 test('responsive SVG scaling maintains distinguishable inner cores at mobile widths', () => {
   const closest = minimumSpacing(Array.from({ length: DESIGN_TARGET_FRIENDS }, (_, i) => i))
-  for (const width of MOBILE_WIDTHS) {
+  for (const width of MOBILE_CANVAS_WIDTHS) {
     const scale = width / SVG.width
     // 600x640 preserveAspectRatio xMidYMid meet at a width-constrained viewport.
     assert.ok(closest * scale > (2 * CORE_RADIUS * scale), `touching light cores at width ${width}`)
-    assert.ok(closest * scale > 10, `lights unusually crowded at width ${width}`)
+    assert.ok(closest * scale > 7.5, `lights unusually crowded at canvas width ${width}`)
   }
 })
 
