@@ -211,7 +211,7 @@ git push -u origin feature/short-description
 
 Replace `<files-you-changed>` with specific files or use `git add .` after checking `git status` and ensuring no secrets are included.
 
-On GitHub, open a pull request with **base: `dev`** and **compare: your feature branch**. Share the manual lint, typecheck, test, and build results in the PR description, review the diff, and then use **Squash and merge**. No automated checks will be generated.
+On GitHub, open a pull request with **base: `dev`** and **compare: your feature branch**. Share the manual lint, typecheck, test, and build results in the PR description, review the diff, and then use **Create a merge commit** (the standard **Merge pull request** option). Do not use **Squash and merge** or **Rebase and merge**. No automated checks will be generated.
 
 ### Bring new dev changes into an active feature
 
@@ -231,7 +231,7 @@ Only the repository owner:
 
 1. Confirms `dev` is stable and the manual checks pass.
 2. Opens a PR with **base: `main`** and **compare: `dev`**.
-3. Verifies the manual release checks and merges the PR into `main` (merge commit is preferred for the release history).
+3. Verifies the manual release checks and merges the PR into `main` using **Create a merge commit** (required, not merely preferred).
 4. Keeps ongoing development on `dev`.
 
 Do not merge feature branches directly to `main`, force-push protected branches, or commit SQL Server database files or credentials.

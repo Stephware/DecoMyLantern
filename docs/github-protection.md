@@ -17,6 +17,10 @@ Target only `main`; Active; no bypass. Require pull request; **do not require st
 ## Step 5 — verify
 Test with a developer account: a manually reviewed `feature/* -> dev` PR can be merged without GitHub Actions checks, but direct push to `dev` fails, PR merge to `main` fails for collaborators, and direct push to `main` fails. As owner, test `dev -> main` via a manually verified PR.
 
+## Repository merge method (merge commits only)
+
+In **Settings → General → Pull Requests**, keep **Allow merge commits** enabled and **disable both Allow squash merging and Allow rebase merging**. For every approved, manually tested PR into `dev` or `main`, use **Merge pull request / Create a merge commit**, retaining the feature branch's commit history. Rulesets and this Markdown file do not change GitHub's repository-level merge-method settings; a repository administrator must save these options in GitHub Settings. Do not use the squash/rebase options, even if they're available in the UI.
+
 ## Important manual settings change for Task 5
 
 Removing `.github/workflows/ci.yml` does **not** automatically remove existing GitHub branch-protection/ruleset requirements. In the GitHub repository, visit **Settings → Rules → Rulesets** (and **Settings → Branches** if legacy protection rules are in use). Edit rules targeting `dev` and `main` and remove required `frontend` and `backend` status checks. Otherwise, PR merges may remain blocked waiting for checks that will no longer run. **Keep pull-request requirements and protections against force pushes/deletions.**
