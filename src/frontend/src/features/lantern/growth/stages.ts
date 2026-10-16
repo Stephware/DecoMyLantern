@@ -5,6 +5,9 @@ export type GrowthStage = {
   minFriends: number
 }
 
+// Full visual crown target, not a limit on real accepted contributions.
+export const DESIGN_TARGET_FRIENDS = 50
+
 export const STAGES: readonly GrowthStage[] = [
   { key: 'base', name: 'Complete Base', minFriends: 0 },
   { key: 'lights', name: 'Added Lights', minFriends: 1 },

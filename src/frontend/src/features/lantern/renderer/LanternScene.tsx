@@ -1,6 +1,6 @@
 import { useRef, useState, type PointerEvent } from 'react'
 import type { Theme } from '../../customization/themes'
-import { stageForFriends } from '../growth/stages'
+import { DESIGN_TARGET_FRIENDS, stageForFriends } from '../growth/stages'
 import ParolArtwork from './ParolArtwork'
 import { lightPosition } from './lightPositions'
 
@@ -34,7 +34,7 @@ function scaledDistance(a: Finger, b: Finger): number {
 export default function LanternScene({ theme, pattern = 'default', contributions = [], previewCount }: Props) {
   const [camera, setCamera] = useState<Camera>({ zoom: 1, x: 0, y: 0 })
   const pointers = useRef<Map<number, Finger>>(new Map())
-  const preview = Array.from({ length: limit(previewCount ?? 0, 0, 50) }, (_, index): LanternLight => ({
+  const preview = Array.from({ length: limit(previewCount ?? 0, 0, DESIGN_TARGET_FRIENDS) }, (_, index): LanternLight => ({
     id: `preview-${index}`,
     slotIndex: index,
     displayName: `Preview light ${index + 1}`,

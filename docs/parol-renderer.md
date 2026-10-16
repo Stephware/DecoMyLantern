@@ -18,7 +18,7 @@ All three SVG collections — **Classic Gold**, **Floral Bloom**, and **Festival
 
 These ranges are descriptions, **not unlock thresholds**. In particular, going from 5 to 6, 15 to 16, and 30 to 31 adds **one ornament**, not a whole completed ring at once. The base star remains untouched.
 
-**50 is a design target, not a backend contribution cap.** At counts above 50, the complete grand crown remains and additional real lights still render. Task 3's 0–50 geometry tests are in a separate PR; real multi-guest SQL Server concurrency and on-device performance still require verification.
+**50 is a design target, not a backend contribution cap.** Task 3's geometry tests cover 0–50 and 51+ coordinates; Task 4 now provides the real guest submission API and a local database smoke script. Actual mobile visual testing and concurrent database testing remain to be run.
 
 The backend computes `growthStage` using `GrowthPolicy.StageFor(acceptedFriends)`. The frontend's `stageForFriends` mirrors its five ranges for display. `decorationCounts` derives accent counts from the **number of accepted, non-removed contributions**; no sample or client-supplied friend count can change saved owner data.
 
@@ -26,7 +26,7 @@ The backend computes `growthStage` using `GrowthPolicy.StageFor(acceptedFriends)
 
 `GET /api/my/lantern` and `PUT /api/my/lantern` include `lights: [{ id, slotIndex, displayName }]`.
 
-- `SlotIndex` is persisted for each accepted contribution. Task 4 now implements guest submissions with transactional, concurrency-safe slot allocation.
+- `SlotIndex` is persisted for each accepted contribution. Task 4 implements guest submissions with serializable transactions and stable slot allocation.
 - `lightPosition(slotIndex)` computes coordinates from **only** the stable slot index, not from the current number of contributions, their order, the design, or the visual range.
 - Removed contributions leave gaps in the sequence, without moving others. The database enforces uniqueness on `(LanternId, SlotIndex)`.
 - `LanternScene` uses real `contributions` for the owner view; `previewCount` explicitly creates **sample lights only** and never mutates the backend or unlocks content.
@@ -54,4 +54,4 @@ From `src/frontend` run `npm ci`, `npm run test`, `npm run lint`, `npm run typec
 
 From the root run `dotnet restore DecoMyLantern.slnx`, `dotnet build DecoMyLantern.slnx --configuration Release`, `dotnet test DecoMyLantern.slnx --configuration Release`, and `dotnet ef migrations has-pending-model-changes --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api` after `dotnet tool restore`.
 
-Manually preview **0, 3, 10, 23, 40, 50** sample lights for each design on both desktop and phone. With zero real contributions, verify that Classic, Floral, and Festival can each be saved and restored after a page reload. Task 2 adds passwordless token-backed owner access, while Task 4 adds real guest submissions and invitation links. End-to-end 50-friend SQL Server testing can now be performed with the guarded development smoke script described in [Task 4](task4-friend-invitations.md).
+Manually preview **0, 3, 10, 23, 40, 50** sample lights for each design on both desktop and phone. With zero real contributions, verify that Classic, Floral, and Festival can each be saved and restored after a page reload. Task 2 owner-token access has merged, and Task 4 adds invitation and guest submission handling. Real SQL Server 50-friend and concurrent request tests remain pending. See [Task 4](task4-friend-invitations.md).
