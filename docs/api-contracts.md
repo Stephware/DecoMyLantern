@@ -24,19 +24,19 @@ To POST/PUT from an API client, first GET `/api/auth/csrf` with cookie persisten
 | --- | --- | --- | --- |
 | GET | `/api/my/lantern` | Host | Current Philippine-season lantern; 404 until created |
 | POST | `/api/my/lantern` | Host + CSRF | Create the current season's default Classic lantern; 201 or 409 if already exists |
-| PUT | `/api/my/lantern` | Host + CSRF | Update selected design and visual pattern; applies design unlock rules |
+| PUT | `/api/my/lantern` | Host + CSRF | Update selected design and visual pattern; all enabled designs are selectable immediately |
 
 PUT JSON: `{ "designKey": "classic", "patternKey": "rings" }`.
 
-Supported `patternKey` values: `default`, `rings`, `rays`. Supported designs currently seeded: `classic` (0), `floral` (5), `festival` (15 accepted friends). Pattern and selected design are persisted in the existing `Lanterns` table.
+Supported `patternKey` values: `default`, `rings`, `rays`. Supported designs currently seeded: `classic`, `floral`, `festival` — all available at zero friends. Pattern and selected design are persisted in the existing `Lanterns` table.
 
-Lantern responses include `id`, `seasonYear`, `designKey`, `paletteKey`, `patternKey`, `acceptedFriends`, `growthStage`, `nextMilestone`, `unlockAtUtc`, and `createdAtUtc`. These are computed from server-side ownership and real accepted contribution rows, never from client-submitted friend counts. Unique DB index protects one lantern per host per season.
+Lantern responses include `id`, `seasonYear`, `designKey`, `paletteKey`, `patternKey`, `acceptedFriends`, `growthStage`, `unlockAtUtc`, and `createdAtUtc`. These are computed from server-side ownership and real accepted contribution rows, never from client-submitted friend counts. Unique DB index protects one lantern per host per season.
 
 ## Existing public/read-only endpoints
 
 - GET `/api/health` — liveness
-- GET `/api/designs` — enabled parol designs
-- GET `/api/growth-stages` — structural growth milestones
+- GET `/api/designs` — enabled parol designs (`designKey`, `name`, `assetKey`); no friend requirement
+- GET `/api/growth-stages` — five descriptive visual ranges (starts at 0, 1, 6, 16, 31 friends); never unlock requirements
 - GET `/api/my/lanterns/{lanternId}/messages` — owner-authenticated Christmas inbox with server-side pre-unlock body redaction; full frontend inbox planned for Phase 4.
 
 ## Planned for later phases
