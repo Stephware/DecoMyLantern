@@ -23,9 +23,10 @@
 3. The server validates the hashed secret, expiry and revocation; returns the current parol theme/pattern, number of accepted lights, and public light positions. It **never** returns message bodies, owner identity, credentials, or other contributors' names.
 4. The visitor enters a **required display name** (1–80 trimmed characters) and an **optional Christmas note** (up to 500 trimmed characters), then selects **Add my light**.
 5. The API enforces CSRF and rate limiting and uses a randomly generated persistent **HTTP-only guest cookie** to identify the visitor. SQL stores only its hash in `GuestVisitors`.
-6. All contribution writes run in a **serializable SQL Server transaction**. An `UPDLOCK, HOLDLOCK` on the lantern row serializes `NextSlotIndex` allocation, and unique indexes on `(LanternId, GuestVisitorId)` and `(LanternId, SlotIndex)` prevent duplicate browser-visitor contributions and slot collisions.
-7. The transaction persists the contribution, assigned light position index, and optional private message together. A success response includes updated **public** parol data but **not** message text. The friend sees confirmation; the owner sees the accepted light after refreshing.
-8. The server's existing Christmas inbox logic reveals stored message bodies **only to the authenticated owner, on/after December 25 00:00 Philippine Standard Time**. Guests never access this inbox.
+6. An owner can contribute to **another owner's parol** while signed in; contributions to their **own** parol are rejected with 409. The guest cookie is separate from the owner session.
+7. All contribution writes run in a **serializable SQL Server transaction**. An `UPDLOCK, HOLDLOCK` on the lantern row serializes `NextSlotIndex` allocation, and unique indexes on `(LanternId, GuestVisitorId)` and `(LanternId, SlotIndex)` prevent duplicate browser-visitor contributions and slot collisions.
+8. The transaction persists the contribution, assigned light position index, and optional private message together. A success response includes updated **public** parol data but **not** message text. The friend sees confirmation; the owner sees the accepted light after refreshing.
+9. The server's existing Christmas inbox logic reveals stored message bodies **only to the authenticated owner, on/after December 25 00:00 Philippine Standard Time**. Guests never access this inbox.
 
 **Caveat:** A browser cookie is not a real human identity. A visitor who deletes their cookie or switches devices can appear as a new visitor. This implementation reduces accidental duplicates but cannot guarantee unique real-world individuals. Additional spam/abuse protections should be added before a high-traffic public launch.
 
@@ -76,7 +77,7 @@ Run the API against a **disposable local SQL Server database** with all Task 1/2
 node scripts/invitation-smoke.mjs --confirm-dev-database
 ```
 
-The script deliberately creates two new internal owners and **51 guest contributions**. It checks 49 sequential + two concurrent contributions (49→50→51), 51 unique stable slots, duplicate rejection, unauthorized revocation, private inbox authorization, and link revocation without deleting prior lights. **Never point it at production.**
+The script deliberately creates two new internal owners and **51 guest contributions**. It checks 49 sequential + two concurrent contributions (49→50→51), 51 unique stable slots, duplicate rejection, owner self-contribution rejection, signed-in owners contributing to their friends, unauthorized revocation, private inbox authorization, and link revocation without deleting prior lights. **Never point it at production.**
 
 Then visually inspect the flow manually on desktop and mobile (320, 375 and 430 px): copy/share, open invitation in a separate private browser, theme consistency, text legibility, guest acceptance, one-light confirmation, no private message exposure, and owner refresh showing the added light. Verify that reloading the same link shows `Already contributed`; also try a revoked link, an invalid link, and the same link after the seasonal expiry in a controlled-clock test environment.
 
