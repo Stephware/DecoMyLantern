@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import LanternScene from '../lantern/renderer/LanternScene'
+import FriendIdentityPreview from '../lantern/preview/FriendIdentityPreview'
 import ParolArtwork from '../lantern/renderer/ParolArtwork'
 import { stageForFriends } from '../lantern/growth/stages'
 import { THEMES } from '../customization/themes'
@@ -26,6 +27,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
   const [draftPattern, setDraftPattern] = useState(lantern?.patternKey ?? 'default')
   const [busy, setBusy] = useState(false)
   const [previewCount, setPreviewCount] = useState<number | null>(null)
+  const [showIdentityPreview, setShowIdentityPreview] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -113,14 +115,31 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-300/75">A parol of friendship</p>
                     <h2 className="mt-2 font-serif text-2xl sm:text-3xl">Your growing lantern</h2>
                   </div>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/65">{previewCount === null ? 'Your real contribution lights' : 'Design studio · Sample lights only'}</span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/65">{showIdentityPreview ? 'Experimental rings · Not saved' : previewCount === null ? 'Your real contribution lights' : 'Design studio · Sample lights only'}</span>
                 </div>
-                <div className="mx-auto max-w-[620px]"><LanternScene theme={theme} pattern={draftPattern} contributions={previewCount === null ? lantern.lights : []} previewCount={previewCount === null ? undefined : previewCount} /></div>
-                <div className="mt-1 flex flex-wrap items-center justify-center gap-2" aria-label="Preview visual growth ranges">
-                  <button type="button" onClick={() => setPreviewCount(null)} aria-pressed={previewCount === null} className={'rounded-full border px-3 py-2 text-xs font-semibold transition ' + (previewCount === null ? 'border-amber-300 bg-amber-300/15 text-amber-100' : 'border-white/10 text-white/55 hover:border-white/25')}>My lantern</button>
-                  {[0, 3, 10, 23, 40, 50].map(count => <button key={count} type="button" onClick={() => setPreviewCount(count)} aria-pressed={previewCount === count} className={'rounded-full border px-3 py-2 text-xs font-semibold transition ' + (previewCount === count ? 'border-amber-300 bg-amber-300/15 text-amber-100' : 'border-white/10 text-white/55 hover:border-white/25')}>{count} lights</button>)}
+                <div className="mt-3 mb-4 flex flex-wrap items-center justify-center gap-3">
+                  <button type="button"
+                    aria-pressed={showIdentityPreview}
+                    onClick={() => { setShowIdentityPreview(value => !value); setPreviewCount(null) }}
+                    className={'rounded-xl border px-5 py-3 text-sm font-semibold transition ' +
+                      (showIdentityPreview
+                        ? 'border-amber-300 bg-amber-300/15 text-amber-100'
+                        : 'border-amber-300/55 bg-amber-300/10 text-amber-200 hover:border-amber-300')}>
+                    {showIdentityPreview ? '← Return to my parol' : 'Test +1 friend rings & identity →'}
+                  </button>
                 </div>
-                <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Only accepted guest contributions appear here. Lights keep their positions through every growth stage.' : 'Visual demonstration only. Preview lights do not alter your real friend count or saved parol.'}</p>
+                {showIdentityPreview ? (
+                  <FriendIdentityPreview theme={theme} pattern={draftPattern} />
+                ) : (
+                  <>
+                    <div className="mx-auto max-w-[620px]"><LanternScene theme={theme} pattern={draftPattern} contributions={previewCount === null ? lantern.lights : []} previewCount={previewCount === null ? undefined : previewCount} /></div>
+                    <div className="mt-1 flex flex-wrap items-center justify-center gap-2" aria-label="Preview visual growth ranges">
+                      <button type="button" onClick={() => setPreviewCount(null)} aria-pressed={previewCount === null} className={'rounded-full border px-3 py-2 text-xs font-semibold transition ' + (previewCount === null ? 'border-amber-300 bg-amber-300/15 text-amber-100' : 'border-white/10 text-white/55 hover:border-white/25')}>My lantern</button>
+                      {[0, 3, 10, 23, 40, 50].map(count => <button key={count} type="button" onClick={() => setPreviewCount(count)} aria-pressed={previewCount === count} className={'rounded-full border px-3 py-2 text-xs font-semibold transition ' + (previewCount === count ? 'border-amber-300 bg-amber-300/15 text-amber-100' : 'border-white/10 text-white/55 hover:border-white/25')}>{count} lights</button>)}
+                    </div>
+                    <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Only accepted guest contributions appear here. Lights keep their positions through every growth stage.' : 'Visual demonstration only. Preview lights do not alter your real friend count or saved parol.'}</p>
+                  </>
+                )}
                 <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-[#0b1325]/80 p-4 sm:grid-cols-3 sm:p-5">
                   <div><p className="text-2xl font-bold text-amber-200">{accepted}</p><p className="mt-1 text-xs text-white/50">Accepted lights</p></div>
                   <div><p className="text-lg font-semibold text-white">{stageForFriends(accepted).name}</p><p className="mt-1 text-xs text-white/50">Visual progression</p></div>
