@@ -1,64 +1,72 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { lightPosition } from '../src/features/lantern/renderer/lightPositions.ts'
-import { stageForFriends, decorationCounts } from '../src/features/lantern/growth/stages.ts'
+import { stageForFriends, nextDesignMilestone, STAGES } from '../src/features/lantern/growth/stages.ts'
+import {
+  OUTER_RECIPES, outerShellPath, outerFitZoom, outerRadiusForFriends,
+  shellCountForFriends, motifCountForFriends,
+} from '../src/features/lantern/growth/outerGrowth.ts'
 
-test('the five visual ranges are complete base, lights, details, fuller and grand', () => {
-  const cases = [
-    [0, 'base'], [1, 'lights'], [5, 'lights'], [6, 'details'],
-    [15, 'details'], [16, 'fuller'], [30, 'fuller'], [31, 'grand'],
-    [50, 'grand'], [51, 'grand'], [120, 'grand'],
+test('design milestones unlock at 0, 3, 10, 23, 40 and 50 friends', () => {
+  assert.deepEqual(STAGES.map(x => x.minFriends), [0, 3, 10, 23, 40, 50])
+  const examples = [
+    [0, 'base'], [1, 'base'], [2, 'base'], [3, 'floral'],
+    [9, 'floral'], [10, 'festival'], [22, 'festival'],
+    [23, 'celestial'], [39, 'celestial'], [40, 'fiesta'],
+    [49, 'fiesta'], [50, 'sampaguita'], [120, 'sampaguita'],
   ]
-  for (const [count, expected] of cases) {
-    assert.equal(stageForFriends(count).key, expected)
+  for (const [count, key] of examples) assert.equal(stageForFriends(count).key, key)
+  assert.equal(nextDesignMilestone(49).minFriends, 50)
+  assert.equal(nextDesignMilestone(50), null)
+})
+
+test('every friend from 0 to 120 changes the entire silhouette', () => {
+  for (const key of Object.keys(OUTER_RECIPES)) {
+    let previous = null
+    for (let count = 0; count <= 120; count++) {
+      const path = outerShellPath(count, key)
+      assert.ok(path.startsWith('M '))
+      assert.ok(path.endsWith(' Z'))
+      assert.ok(!path.includes('NaN'))
+      assert.ok(!path.includes('Infinity'))
+      if (previous !== null) assert.notEqual(path, previous, `${key}: friend ${count}`)
+      previous = path
+    }
   }
 })
 
-test('every friend adds a light or one new decorative accent through 50 friends', () => {
-  assert.deepEqual(decorationCounts(0), { details: 0, fuller: 0, grand: 0 })
-  assert.deepEqual(decorationCounts(5), { details: 0, fuller: 0, grand: 0 })
-  assert.deepEqual(decorationCounts(6), { details: 1, fuller: 0, grand: 0 })
-  assert.deepEqual(decorationCounts(15), { details: 10, fuller: 0, grand: 0 })
-  assert.deepEqual(decorationCounts(16), { details: 10, fuller: 1, grand: 0 })
-  assert.deepEqual(decorationCounts(30), { details: 10, fuller: 15, grand: 0 })
-  assert.deepEqual(decorationCounts(31), { details: 10, fuller: 15, grand: 1 })
-  assert.deepEqual(decorationCounts(50), { details: 10, fuller: 15, grand: 20 })
-  assert.deepEqual(decorationCounts(51), decorationCounts(50))
+test('six parol design families produce different artwork at the same friend count', () => {
+  const keys = Object.keys(OUTER_RECIPES)
+  assert.equal(keys.length, 6)
+  const paths = keys.map(key => outerShellPath(23, key))
+  assert.equal(new Set(paths).size, 6)
+})
 
-  for (let friends = 1; friends <= 50; friends++) {
-    const before = decorationCounts(friends - 1)
-    const after = decorationCounts(friends)
-    const total = value => value.details + value.fuller + value.grand
-    // Friends #1–5 get a light; #6–50 get a light plus exactly one outer accent.
-    assert.equal(total(after) - total(before), friends <= 5 ? 0 : 1)
+test('outer shells grow and auto-fit without a fixed ring or 50-friend cap', () => {
+  assert.equal(shellCountForFriends(0, 'classic'), 1)
+  for (let count = 1; count <= 120; count++) {
+    assert.ok(outerRadiusForFriends(count) > outerRadiusForFriends(count - 1))
+    assert.ok(outerFitZoom(count) <= outerFitZoom(count - 1) + 1e-10)
+    assert.ok((outerRadiusForFriends(count) + 20) * outerFitZoom(count) <= 280)
+    assert.ok(motifCountForFriends(count) % 5 === 0)
+    assert.ok(motifCountForFriends(count) <= 40)
   }
 })
 
-test('light coordinates depend only on the persisted slot and survive sparse removals', () => {
+test('contributor light locations remain bound to immutable persisted slots', () => {
   const original = lightPosition(17)
   assert.deepEqual(lightPosition(17), original)
   assert.notDeepEqual(lightPosition(18), original)
   assert.deepEqual([0, 8, 17].map(lightPosition)[2], original)
 })
 
-test('at least the first 120 light slots are distinct and inside finite coordinates', () => {
-  const seen = new Set()
-  for (let i = 0; i < 120; i++) {
-    const light = lightPosition(i)
-    assert.ok(Number.isFinite(light.x))
-    assert.ok(Number.isFinite(light.y))
-    assert.ok(light.radius > 0)
-    assert.ok(Math.hypot(light.x - 300, light.y - 302) <= 132.0001)
-    const key = `${light.x.toFixed(4)}:${light.y.toFixed(4)}`
-    assert.equal(seen.has(key), false)
-    seen.add(key)
+test('invalid friend counts, layers and light slots are rejected', () => {
+  for (const invalid of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => lightPosition(invalid), RangeError)
+    assert.throws(() => stageForFriends(invalid), RangeError)
+    assert.throws(() => outerRadiusForFriends(invalid), RangeError)
+    assert.throws(() => outerShellPath(invalid, 'floral'), RangeError)
+    assert.throws(() => shellCountForFriends(invalid, 'classic'), RangeError)
   }
-})
-
-test('negative or non-integer stage counts and contribution slots are rejected', () => {
-  for (const value of [-1, 0.5, NaN, Infinity]) {
-    assert.throws(() => lightPosition(value), RangeError)
-    assert.throws(() => stageForFriends(value), RangeError)
-    assert.throws(() => decorationCounts(value), RangeError)
-  }
+  assert.throws(() => outerShellPath(10, 'classic', 4), RangeError)
 })
