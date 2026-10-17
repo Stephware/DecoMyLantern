@@ -181,11 +181,11 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                 <div className="space-y-3">
                   {designs.map(design => {
                     const palette = THEMES.find(item => item.key === design.designKey)
-                    return <button key={design.designKey} type="button" disabled={busy || (design.requiredFriends > unlockProgress && lantern?.designKey !== design.designKey)} onClick={() => { setDraftDesign(design.designKey); setNotice('') }} aria-pressed={draftDesign === design.designKey} className={'flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-55 ' + (draftDesign === design.designKey ? 'border-amber-300 bg-amber-300/10' : 'border-white/10 bg-white/5 hover:border-amber-200/50')}>
+                    return <button key={design.designKey} type="button" disabled={busy} onClick={() => { setDraftDesign(design.designKey); setNotice('') }} aria-pressed={draftDesign === design.designKey} className={'flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-55 ' + (draftDesign === design.designKey ? 'border-amber-300 bg-amber-300/10' : 'border-white/10 bg-white/5 hover:border-amber-200/50')}>
                       {palette && <svg viewBox="100 100 400 470" role="img" aria-label={design.name + ' thumbnail'} className="h-[98px] w-[86px] shrink-0 rounded-xl bg-[#0b1425]"><ProceduralOuterShell theme={palette} friendCount={0} pattern="default" /><ParolArtwork theme={palette} pattern="default" /></svg>}
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold">{design.name}</span>
-                        <span className="mt-1 block text-xs text-white/50">{design.requiredFriends <= unlockProgress ? 'Unlocked · Ready to select' : lantern?.designKey === design.designKey ? 'Previously selected · Kept unlocked' : `Locked · Needs ${design.requiredFriends} friends` }</span>
+                        <span className="mt-1 block text-xs text-white/50">{design.requiredFriends <= unlockProgress ? 'Unlocked · Ready to select' : lantern?.designKey === design.designKey ? 'Previously selected · Kept unlocked' : `Preview only · Unlocks at ${design.requiredFriends} friends` }</span>
                         <span className="mt-2 flex gap-1">{palette?.colors.map((color, index) => <span key={index} className="h-2.5 w-2.5 rounded-full border border-white/20" style={{ backgroundColor: color }} />)}</span>
                       </span>
                       <span aria-hidden="true" className="text-sm text-amber-300">{draftDesign === design.designKey ? '●' : '○'}</span>
@@ -200,7 +200,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                     <span aria-hidden="true" className="text-amber-300">{draftPattern === option.key ? '●' : '○'}</span>
                   </button>)}
                 </div>
-                <button type="button" disabled={!changed || busy || designs.length === 0 || invalidDesign} onClick={() => void run(() => onSave(draftDesign, draftPattern), 'Your lantern customization has been saved.')} className="mt-6 w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Saving…' : invalidDesign ? 'Choose an available design' : changed ? 'Save customization →' : 'All changes saved'}</button>
+                <button type="button" disabled={!changed || busy || designs.length === 0 || invalidDesign} onClick={() => void run(() => onSave(draftDesign, draftPattern), 'Your lantern customization has been saved.')} className="mt-6 w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Saving…' : invalidDesign ? `Locked until ${selectedDesign?.requiredFriends ?? 'more'} friends` : changed ? 'Save customization →' : 'All changes saved'}</button>
               </section>
               <InvitationManager />
             </aside>
