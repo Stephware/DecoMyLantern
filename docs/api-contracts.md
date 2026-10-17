@@ -43,7 +43,7 @@ Lantern responses include `id`, `seasonYear`, `designKey`, `paletteKey`, `patter
 ## Existing public/read-only endpoints
 
 - GET `/api/health` — liveness
-- GET `/api/designs` — enabled parol designs (`designKey`, `name`, `assetKey`); no friend requirement
+- GET `/api/designs` — enabled catalog (`designKey`, `name`, `assetKey`, `requiredFriends`); 0/3/10/23/40/50 unlock requirements are enforced by PUT `/api/my/lantern`
 - GET `/api/growth-stages` — six design unlock milestones (0, 3, 10, 23, 40, 50 friends)
 - GET `/api/my/lanterns/{lanternId}/messages` — owner-authenticated Christmas inbox with server-side pre-unlock body redaction; full frontend inbox planned for Phase 4.
 
