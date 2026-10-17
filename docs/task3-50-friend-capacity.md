@@ -10,7 +10,7 @@
 A local Node.js 22.16 environment was used to run the repo's **exact Git-blob-matched** `stages.ts`, `lightPositions.ts`, existing `renderer.test.mjs`, and newly added `fifty-friend-capacity.test.mjs` (no project-wide `npm ci` was available).
 
 - **PASS: 15/15 Node tests.** Five existing renderer tests and ten newly added capacity tests, with no failures.
-- **PASS: all counts 0–50** map to expected ranges 0 / 1–5 / 6–15 / 16–30 / 31–50.
+- **Historical Task 3 result:** the prior renderer used 0 / 1–5 / 6–15 / 16–30 / 31–50 ranges. This was replaced by six design-unlock milestones at 0 / 3 / 10 / 23 / 40 / 50 in the living-parol branch. Run the updated tests before claiming a new pass.
 - **PASS: per-friend progression** adds a light at each accepted contribution; from #6 to #50 each also adds exactly one ornament, totaling **10 detail + 15 fuller + 20 crown = 45 ornaments** by #50.
 - **PASS: 50 opaque light cores do not intersect.** Minimum center-to-center distance is **21.53 SVG units**; each solid core has radius **5** (10-unit diameter). The larger translucent glow circles *may overlap by design*.
 - **PASS: all 50 lights remain inside the 600 × 640 SVG viewBox** with at least 20 SVG units of safety margin around the tested halo circles.
@@ -51,7 +51,7 @@ The decorative SVG base is always present even at zero friends. Design palettes 
 ## Still required before production readiness
 
 1. **Run the full repo tests locally:** from `src/frontend`, run `npm ci && npm run test && npm run lint && npm run typecheck && npm run build`. At repository root run `dotnet restore DecoMyLantern.slnx && dotnet build DecoMyLantern.slnx --configuration Release && dotnet test DecoMyLantern.slnx --configuration Release`. Record output in the PR.
-2. **Visual browser/device inspection:** on actual desktop and mobile browsers, open the owner Design Studio and select **0, 3, 10, 23, 40, 50 sample lights**. Repeat with Classic/Floral/Festival themes and each supported pattern; check for clipping, visual overcrowding, label legibility, usable Fit and pinch zoom, screen overflow, and accessibility. Check narrow 320 px phones and at least 375 px and 430 px viewports. Frontend automated geometry tests do not replace this.
+2. **Visual browser/device inspection:** on actual desktop and mobile browsers, use **+ Add test friend** and jump to **0, 3, 10, 23, 40, 50, 60 sample friends**. Repeat with all six design families and each supported pattern; check for clipping, overlap, legibility, Fit/zoom, accessibility, and narrow phone widths (320, 375, 430 px). Frontend geometry tests do not replace this.
 3. **Real DB/API integration:** once Task 4 adds the guest contribution API, accept 50 real contributions to a single parol and check uniqueness, accepted counts, contribution persistence, removal handling, 51st-friend behavior, and idempotency across requests.
 4. **Concurrent submissions:** simulate guests submitting simultaneously, including the 49→50 and 50→51 transitions. These API endpoints and concurrency behavior cannot be tested yet because guest acceptance is not implemented.
 5. **Browser-performance profiling:** measure actual render/interaction responsiveness at 0, 30, 50 and 51+ contributors on low-end phones. No frame-rate, memory-use, or Google Cloud load-test figures are claimed here.
