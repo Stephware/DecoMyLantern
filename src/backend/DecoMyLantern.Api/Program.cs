@@ -21,7 +21,14 @@ builder.Services.AddMemoryCache();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Identity's scheme name is static readonly, so use a named policy in
+    // controller attributes while keeping the framework's scheme value here.
+    options.AddPolicy(OwnerSession.LegacyUpgradePolicy, policy =>
+        policy.AddAuthenticationSchemes(IdentityConstants.ApplicationScheme)
+            .RequireAuthenticatedUser());
+});
 
 // Keep Identity's data model and cookie validation only for a one-time upgrade
 // of existing logged-in parol owners. Do NOT map any registration/login endpoints.
