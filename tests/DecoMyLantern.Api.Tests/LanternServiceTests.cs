@@ -196,7 +196,7 @@ public sealed class LanternServiceTests
         public int[]? SlotIndexes { get; set; }
 
         public Task<Lantern?> FindByOwnerAndSeasonAsync(Guid ownerId, int year, CancellationToken cancellationToken) =>
-            Task.FromResult(lanterns.FirstOrDefault(lantern => lantern.OwnerUserId == ownerId && lantern.SeasonYear == year) is { } found
+            Task.FromResult<Lantern?>(lanterns.FirstOrDefault(lantern => lantern.OwnerUserId == ownerId && lantern.SeasonYear == year) is { } found
                 ? ApplyReachedCount(found)
                 : null);
 
