@@ -54,15 +54,18 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
       {/* Balanced repeated motifs make each new contour look handcrafted. */}
       {Array.from({ length: motifs }, (_, index) => {
         const { x, y } = outerMotifPosition(friendCount, index)
-        const color = index % 3 === 0 ? accent : index % 3 === 1 ? leaf : gold
+        // Repeat the same color rhythm in each of five sectors so symmetry
+        // never breaks when a new friend changes motif density.
+        const sectorSlot = index % (motifs / 5)
+        const color = sectorSlot % 3 === 0 ? accent : sectorSlot % 3 === 1 ? leaf : gold
         return (
           <g key={index} data-motif={recipe.motif}>
             <path d={outerPetalPath(friendCount, recipe.key, index)}
-              fill={recipe.wave === 'lace' ? 'none' : index % 2 ? color : petalFill}
+              fill={recipe.wave === 'lace' ? 'none' : sectorSlot % 2 ? color : petalFill}
               fillOpacity={recipe.wave === 'petal' ? '.38' : '.27'}
-              stroke={index % 2 ? gold : cream}
+              stroke={sectorSlot % 2 ? gold : cream}
               strokeOpacity=".74" strokeWidth="1.35" strokeLinejoin="round"/>
-            <circle cx={x} cy={y} r={index % 5 === 0 ? 3.4 : 2.1}
+            <circle cx={x} cy={y} r={sectorSlot === 0 ? 3.4 : 2.1}
               fill={cream} opacity=".91"/>
           </g>
         )
