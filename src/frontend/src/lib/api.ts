@@ -28,6 +28,7 @@ export type Lantern = {
   paletteKey: string
   patternKey: string
   acceptedFriends: number
+  maxReachedFriends: number
   growthStage: string
   unlockAtUtc: string
   createdAtUtc: string
@@ -38,6 +39,7 @@ export type Design = {
   designKey: string
   name: string
   assetKey: string
+  requiredFriends: number
 }
 
 export class ApiError extends Error {

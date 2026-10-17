@@ -1,17 +1,17 @@
 # BeMyParol (formerly Deco My Lantern)
 
-**BeMyParol** is a mobile-first web project inspired by Filipino Christmas *parols*. Each accepted guest contribution adds a light to someone's lantern; friends #6–50 also add one new outer ornament each. No minimum number of friends is needed for any design.
+**BeMyParol** is a mobile-first Filipino Christmas *parol* experience. Every accepted friend keeps a recognizable light inside the star and **changes the entire symmetric outer silhouette**—petals, lace, diamonds, rays and decorative points—not one literal concentric ring. Friend milestones at **0, 3, 10, 23, 40 and 50** unlock six selectable design families.
 
-The parol looks complete from **zero friends** and becomes progressively richer with every contribution. Visual ranges describe the artwork; they are not gates or unlock requirements.
+The parol looks complete even with **zero friends**. Its outer structure recomposes deterministically after every contribution, and the camera automatically fits the growth. Design unlocks are separate from ongoing visual evolution; friends can continue joining past 50.
 
-> **Development status:** This repository contains the initial UI preview, ASP.NET Core API foundation, SQL Server schema/migrations, and manual validation commands. Phase 1 originally implemented email/password accounts and saved lanterns; **Task 2 replaces the login flow with anonymous, revocable owner tokens and a recovery key**, while keeping existing lantern data and owner relationships. **Phase 2** adds Classic/Floral/Festival layered SVG artwork, stable indexed contributor lights, and mobile pinch/drag/fit controls. **Task 1 of the BeMyParol redesign** replaces unlock thresholds with five continuous growth ranges (0, 1–5, 6–15, 16–30, 31–50) and makes all enabled designs immediately available. **Task 4** adds account-free guest invitations, contribution lights and optional sealed messages; the full owner Christmas inbox UI remains **in development**. Contribution counts now update when guests use invitation links. Real SQL Server integration, abuse protections and browser testing are still required before public launch.
+> **Development status:** Passwordless owner access and guest invitations exist. The living, six-family procedural design system and milestone unlocks are under development in this feature branch. The owner Christmas inbox UI and production abuse controls remain incomplete; full .NET, SQL Server and browser validation are required before release.
 
 ## How the app is intended to work
 
 - **Owners** create a seasonal parol without signing up or logging in. The API gives the browser a secure HTTP-only owner cookie and shows a private recovery key once.
 - **Friends** open a unique invitation link without creating an account, see a guest-only page, then contribute one light per browser visitor and optionally leave a sealed Christmas message.
-- Each accepted contribution occupies a stable light position. Friends #6–50 also progressively add an outer ornament; visual ranges start at 0, 1, 6, 16, and 31 friends.
-- Hosts can choose any enabled parol design at any friend count, including zero.
+- Each accepted contribution has a stable inner-star light. Its arrival also redraws the outer decorative silhouette with balanced radial ornamentation.
+- Owners can switch among designs unlocked by their reached friend milestones (0/3/10/23/40/50). A previously selected design stays available.
 - Messages are private to the lantern owner and stay sealed until **December 25, 12:00 AM Philippine Standard Time (UTC+8)**. For Christmas 2026, the server-side unlock is `2026-12-24T16:00:00Z`.
 
 Anonymous guest participation is convenient, but a browser token cannot prove that two contributions came from different people. Duplicate-submission checks, rate limits, moderation, and other safeguards must be finished before public launch.
@@ -139,7 +139,7 @@ On Windows PowerShell, replace the copy command with `Copy-Item .env.example .en
 
 Open **http://localhost:5173** in your browser. Vite proxies `/api` to `http://localhost:5050`.
 
-Open the site and choose **Create my parol**. No email/password is needed. **Copy your private recovery key and keep it safe before continuing.** The owner session persists in a secure HTTP-only browser cookie across refreshes. Use **Recovery key** in the dashboard to generate a replacement (the old code then stops working). Use **Leave parol** to revoke the browser session; recovering access afterward requires your recovery key. You can still explore three SVG collections and preview 0/3/10/23/40/50 lights without changing real contributions.
+Open the site and choose **Create my parol**. No email/password is needed. **Copy your private recovery key and keep it safe before continuing.** The owner session persists in a secure HTTP-only browser cookie across refreshes. Use **Recovery key** in the dashboard to generate a replacement (the old code then stops working). Use **Leave parol** to revoke the browser session; recovering access afterward requires your recovery key. You can preview six evolving design families, simulate individual friends using the +1 friend button, and jump to 0/3/10/23/40/50 friend milestones without changing real contributions.
 
 The dashboard displays real accepted contributions. Owners can create, copy and revoke invitation links. The Christmas inbox still needs its full owner UI; message bodies remain server-protected until December 25.
 
@@ -247,6 +247,7 @@ Do not merge feature branches directly to `main`, force-push protected branches,
 - [Detailed local setup](docs/setup-guide.md)
 - [Architecture](docs/architecture.md)
 - [Parol renderer and light-slot rules](docs/parol-renderer.md)
+- [Living parol design system and unlock milestones](docs/living-parol-design.md)
 - [Task 3: 50-friend growth capacity checks](docs/task3-50-friend-capacity.md)
 - [Task 4: Friend invitation and contribution workflow](docs/task4-friend-invitations.md)
 - [Database and migrations](docs/database-schema.md)

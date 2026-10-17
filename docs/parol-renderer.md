@@ -1,57 +1,42 @@
-# BeMyParol — continuous per-friend growth
+# BeMyParol — living procedural outer design
 
-## Design principle
+## Final visual behavior
 
-**A user with zero friends still has a complete, beautiful parol.** Every accepted guest contribution adds a real, individually positioned light. A larger friend circle makes the parol increasingly elaborate, but no parol design, color collection, or pattern is locked behind contribution counts.
+The ring experiment informed the growth mechanics, but the **production artwork is not an expanding set of circles**. Each accepted friend triggers a new, balanced radial composition of the outer parol. A zero-friend parol is complete. Every subsequent count from 1 through 50 and beyond changes its outer contour, scale and repeating motifs.
 
-All three SVG collections — **Classic Gold**, **Floral Bloom**, and **Festival Lights** — remain selectable with **zero** accepted friends. They use the same 600 × 640 coordinate system and stable light positions.
+Six owner-selectable families have independent design grammars:
 
-## Five descriptive visual ranges
+| Design | Unlock requirement | Outer structure |
+|---|---:|---|
+| Classic Gold | 0 friends | Faceted diamonds and warm gold points |
+| Floral Bloom | 3 friends | Rounded petals and flowing floral arcs |
+| Festival Lights | 10 friends | Layered festival fans and bursts |
+| Celestial Lace | 23 friends | Fine celestial lace/star points |
+| Radiant Fiesta | 40 friends | Bright symmetrical sunbursts |
+| Sampaguita Glow | 50 friends | Jasmine petals and soft luminous layers |
 
-| Accepted friends | Stage key | Appearance |
-| --- | --- | --- |
-| 0 | `base` | Complete five-point capiz star, tails, motifs and luminous center |
-| 1–5 | `lights` | Each friend adds their own luminous light |
-| 6–15 | `details` | Each new friend adds a light **plus one** detail-ring diamond (up to 10) |
-| 16–30 | `fuller` | Each new friend adds a light **plus one** fuller-layer petal (up to 15) |
-| 31–50 | `grand` | Each new friend adds a light **plus one** crown ornament (up to 20) |
+The unlock milestone is not a limit on contributions. Growth continues after 50 friends, with logarithmic radius expansion to avoid unbounded viewport size.
 
-These ranges are descriptions, **not unlock thresholds**. In particular, going from 5 to 6, 15 to 16, and 30 to 31 adds **one ornament**, not a whole completed ring at once. The base star remains untouched.
+## Identity and camera
 
-**50 is a design target, not a backend contribution cap.** Task 3's geometry tests cover 0–50 and 51+ coordinates; Task 4 now provides the real guest submission API and a local database smoke script. Actual mobile visual testing and concurrent database testing remain to be run.
+- Every accepted `Contribution` keeps its original immutable `SlotIndex` and a corresponding **individual inner-star light**. Outer petals/rays are not themselves permanent friend identities, so the shell is free to recompose.
+- Selecting a light highlights it and displays its saved guest name to the owner. In anonymous guest previews, this is a generic label and never reveals names or sealed Christmas messages.
+- `LanternScene` computes a fit zoom from the outer extent, including the fixed silk tassels, and re-centers when the friend count changes. Manual drag/pinch/zoom and Fit continue working.
+- `ParolArtwork` draws the fixed core. `ProceduralOuterShell` draws the living outside. `outerGrowth.ts` is the deterministic style/geometry engine.
+- Preview buttons on the owner's dashboard simulate 0–60 friends in memory. **They do not write to SQL Server** and do not unlock any design or submit a guest contribution.
 
-The backend computes `growthStage` using `GrowthPolicy.StageFor(acceptedFriends)`. The frontend's `stageForFriends` mirrors its five ranges for display. `decorationCounts` derives accent counts from the **number of accepted, non-removed contributions**; no sample or client-supplied friend count can change saved owner data.
+## Database and compatibility
 
-## Individual contributor lights remain stable
+`20261017230000_LivingParolDesigns` updates only design and growth-stage seed rows. Existing three design GUIDs are unchanged; their currently saved lantern selections remain valid. No SQL table is dropped. Both new saves and direct API calls enforce `RequiredFriends`; `NextSlotIndex` retains historical friend progress when an individual contribution is removed.
 
-`GET /api/my/lantern` and `PUT /api/my/lantern` include `lights: [{ id, slotIndex, displayName }]`.
+Before applying the migration, compare `ConnectionStrings:DefaultConnection` with the SQL client instance and verify **DecoMyLanternDb**, not `master`. Prefer `dotnet ef database update` after backup rather than manually re-running the entire SQL script.
 
-- `SlotIndex` is persisted for each accepted contribution. Task 4 implements guest submissions with serializable transactions and stable slot allocation.
-- `lightPosition(slotIndex)` computes coordinates from **only** the stable slot index, not from the current number of contributions, their order, the design, or the visual range.
-- Removed contributions leave gaps in the sequence, without moving others. The database enforces uniqueness on `(LanternId, SlotIndex)`.
-- `LanternScene` uses real `contributions` for the owner view; `previewCount` explicitly creates **sample lights only** and never mutates the backend or unlocks content.
+## Verification checklist
 
-## Mobile interactions
+From the frontend directory: `npm ci && npm run test && npm run lint && npm run typecheck && npm run build`.
 
-`LanternScene` supports drag, pinch-to-zoom, Zoom In, Zoom Out and Fit. The SVG viewBox is 600 × 640 with enough room for the designed outer crown and tails. Animations respect `prefers-reduced-motion`.
+From solution root: `dotnet build DecoMyLantern.slnx && dotnet test DecoMyLantern.slnx`; then `dotnet ef migrations has-pending-model-changes --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api`.
 
-**Note:** Container-measured dynamic auto-fit scaling is a *separate requested frontend enhancement* and is **not** claimed as implemented by Task 1. Its implementation belongs to the later frontend work, not this backend growth task.
+Review desktop/mobile at 0, 1, 2, 3, 10, 23, 40, 50 and 60 friends; all six designs, explicit locked/unlocked gallery states and the +1 friend preview. Verify previously saved parols retain their selected designs, guest names remain private, and manual fit/zoom stays functional.
 
-## Database migration
-
-`20261016160000_ProgressiveParolGrowth` is a **seed-data-only EF Core migration**. It changes legacy `ParolDesigns.RequiredFriends` values to zero, replaces the old four descriptive `GrowthStages` seed rows with five updated ones, and preserves IDs and all existing lantern/contribution data.
-
-Update your local database after pulling `dev`:
-
-```bash
-dotnet tool restore
-dotnet ef database update --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api
-```
-
-## Manual validation
-
-From `src/frontend` run `npm ci`, `npm run test`, `npm run lint`, `npm run typecheck`, and `npm run build`.
-
-From the root run `dotnet restore DecoMyLantern.slnx`, `dotnet build DecoMyLantern.slnx --configuration Release`, `dotnet test DecoMyLantern.slnx --configuration Release`, and `dotnet ef migrations has-pending-model-changes --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api` after `dotnet tool restore`.
-
-Manually preview **0, 3, 10, 23, 40, 50** sample lights for each design on both desktop and phone. With zero real contributions, verify that Classic, Floral, and Festival can each be saved and restored after a page reload. Task 2 owner-token access has merged, and Task 4 adds invitation and guest submission handling. Real SQL Server 50-friend and concurrent request tests remain pending. See [Task 4](task4-friend-invitations.md).
+See [living parol design architecture](living-parol-design.md).

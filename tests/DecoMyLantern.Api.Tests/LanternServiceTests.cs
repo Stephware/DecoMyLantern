@@ -33,29 +33,57 @@ public sealed class LanternServiceTests
     }
 
     [Fact]
-    public async Task Owner_can_select_every_enabled_design_with_zero_friends()
+    public async Task Each_design_requires_its_friend_milestone_and_retains_valid_selection()
     {
         var repository = new FakeRepository();
         var service = new LanternService(repository, TimeProvider.System);
         var ownerId = Guid.NewGuid();
         await service.CreateAsync(ownerId, CancellationToken.None);
 
-        // Old seeded RequiredFriends values must never restrict design selection.
-        foreach (var key in new[] { "floral", "festival", "classic" })
+        // A direct API update must not bypass the design gallery's lock.
+        var locked = await Assert.ThrowsAsync<LanternOperationException>(() =>
+            service.UpdateAsync(ownerId,
+                new UpdateLanternRequest { DesignKey = "floral", PatternKey = "rings" },
+                CancellationToken.None));
+        Assert.Equal(409, locked.StatusCode);
+
+        foreach (var (friends, key) in new[] {
+            (0, "classic"), (3, "floral"), (10, "festival"),
+            (23, "celestial"), (40, "fiesta"), (50, "sampaguita")
+        })
         {
+            repository.AcceptedCount = friends;
             var updated = await service.UpdateAsync(ownerId,
-                new UpdateLanternRequest { DesignKey = key, PatternKey = "rings" }, CancellationToken.None);
+                new UpdateLanternRequest { DesignKey = key, PatternKey = "rings" },
+                CancellationToken.None);
             Assert.Equal(key, updated.DesignKey);
-            Assert.Equal("rings", updated.PatternKey);
-            Assert.Equal("base", updated.GrowthStage);
-            Assert.Equal(0, updated.AcceptedFriends);
+            Assert.Equal(friends, updated.AcceptedFriends);
         }
 
-        repository.AcceptedCount = 6;
-        var growing = await service.GetCurrentAsync(ownerId, CancellationToken.None);
-        Assert.NotNull(growing);
-        Assert.Equal("details", growing.GrowthStage);
-        Assert.Equal(6, growing.AcceptedFriends);
+        repository.AcceptedCount = 0;
+        // Existing selections are grandfathered, including when old lights are removed.
+        var preserved = await service.UpdateAsync(ownerId,
+            new UpdateLanternRequest { DesignKey = "sampaguita", PatternKey = "rays" },
+            CancellationToken.None);
+        Assert.Equal("sampaguita", preserved.DesignKey);
+        Assert.Equal("rays", preserved.PatternKey);
+    }
+
+    [Fact]
+    public async Task NextSlotIndex_keeps_a_design_unlocked_after_a_light_is_removed()
+    {
+        var repository = new FakeRepository { AcceptedCount = 40, ReachedCount = 40 };
+        var service = new LanternService(repository, TimeProvider.System);
+        var ownerId = Guid.NewGuid();
+        await service.CreateAsync(ownerId, CancellationToken.None);
+        repository.AcceptedCount = 1;
+
+        var unlocked = await service.UpdateAsync(ownerId,
+            new UpdateLanternRequest { DesignKey = "fiesta", PatternKey = "default" },
+            CancellationToken.None);
+        Assert.Equal("fiesta", unlocked.DesignKey);
+        Assert.Equal(40, unlocked.MaxReachedFriends);
+        Assert.Equal(1, unlocked.AcceptedFriends);
     }
 
     [Fact]
@@ -87,16 +115,18 @@ public sealed class LanternServiceTests
 
     [Theory]
     [InlineData(0, "base")]
-    [InlineData(1, "lights")]
-    [InlineData(5, "lights")]
-    [InlineData(6, "details")]
-    [InlineData(15, "details")]
-    [InlineData(16, "fuller")]
-    [InlineData(30, "fuller")]
-    [InlineData(31, "grand")]
-    [InlineData(49, "grand")]
-    [InlineData(50, "grand")]
-    [InlineData(51, "grand")]
+    [InlineData(1, "base")]
+    [InlineData(2, "base")]
+    [InlineData(3, "floral")]
+    [InlineData(9, "floral")]
+    [InlineData(10, "festival")]
+    [InlineData(22, "festival")]
+    [InlineData(23, "celestial")]
+    [InlineData(39, "celestial")]
+    [InlineData(40, "fiesta")]
+    [InlineData(49, "fiesta")]
+    [InlineData(50, "sampaguita")]
+    [InlineData(51, "sampaguita")]
     public async Task Owner_lantern_response_includes_all_active_friends_without_a_50_cap(
         int acceptedFriends, string expectedStage)
     {
@@ -125,7 +155,7 @@ public sealed class LanternServiceTests
         var lantern = await service.GetCurrentAsync(ownerId, CancellationToken.None);
         Assert.NotNull(lantern);
         Assert.Equal(50, lantern.AcceptedFriends);
-        Assert.Equal("grand", lantern.GrowthStage);
+        Assert.Equal("sampaguita", lantern.GrowthStage);
         Assert.Equal(expected, lantern.Lights.Select(x => x.SlotIndex));
     }
 
@@ -141,7 +171,7 @@ public sealed class LanternServiceTests
         Assert.NotNull(lantern);
         Assert.Equal(3, lantern.AcceptedFriends);
         Assert.Equal(new[] { 0, 8, 21 }, lantern.Lights.Select(light => light.SlotIndex));
-        Assert.Equal("lights", lantern.GrowthStage);
+        Assert.Equal("floral", lantern.GrowthStage);
 
         var saved = await service.UpdateAsync(ownerId,
             new UpdateLanternRequest { DesignKey = "classic", PatternKey = "rings" }, CancellationToken.None);
@@ -154,15 +184,27 @@ public sealed class LanternServiceTests
         private readonly List<ParolDesign> designs =
         [
             new ParolDesign { Id = Guid.NewGuid(), DesignKey = "classic", Name = "Classic Gold", IsEnabled = true, RequiredFriends = 0 },
-            new ParolDesign { Id = Guid.NewGuid(), DesignKey = "floral", Name = "Floral Bloom", IsEnabled = true, RequiredFriends = 5 },
-            new ParolDesign { Id = Guid.NewGuid(), DesignKey = "festival", Name = "Festival Lights", IsEnabled = true, RequiredFriends = 15 }
+            new ParolDesign { Id = Guid.NewGuid(), DesignKey = "floral", Name = "Floral Bloom", IsEnabled = true, RequiredFriends = 3 },
+            new ParolDesign { Id = Guid.NewGuid(), DesignKey = "festival", Name = "Festival Lights", IsEnabled = true, RequiredFriends = 10 },
+            new ParolDesign { Id = Guid.NewGuid(), DesignKey = "celestial", Name = "Celestial Lace", IsEnabled = true, RequiredFriends = 23 },
+            new ParolDesign { Id = Guid.NewGuid(), DesignKey = "fiesta", Name = "Radiant Fiesta", IsEnabled = true, RequiredFriends = 40 },
+            new ParolDesign { Id = Guid.NewGuid(), DesignKey = "sampaguita", Name = "Sampaguita Glow", IsEnabled = true, RequiredFriends = 50 }
         ];
 
         public int AcceptedCount { get; set; }
+        public int ReachedCount { get; set; }
         public int[]? SlotIndexes { get; set; }
 
         public Task<Lantern?> FindByOwnerAndSeasonAsync(Guid ownerId, int year, CancellationToken cancellationToken) =>
-            Task.FromResult(lanterns.FirstOrDefault(lantern => lantern.OwnerUserId == ownerId && lantern.SeasonYear == year));
+            Task.FromResult<Lantern?>(lanterns.FirstOrDefault(lantern => lantern.OwnerUserId == ownerId && lantern.SeasonYear == year) is { } found
+                ? ApplyReachedCount(found)
+                : null);
+
+        private Lantern ApplyReachedCount(Lantern lantern)
+        {
+            lantern.NextSlotIndex = Math.Max(lantern.NextSlotIndex, ReachedCount);
+            return lantern;
+        }
 
         public Task<ParolDesign?> FindEnabledDesignAsync(string key, CancellationToken cancellationToken) =>
             Task.FromResult(designs.FirstOrDefault(design => design.DesignKey == key && design.IsEnabled));
