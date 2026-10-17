@@ -1,8 +1,7 @@
 import { useId } from 'react'
 import type { Theme } from '../../customization/themes'
-import { decorationCounts } from '../growth/stages'
 
-type Props = { theme: Theme; friendCount: number; pattern: string }
+type Props = { theme: Theme; friendCount?: number; pattern: string }
 
 const CENTER_X = 300
 const CENTER_Y = 302
@@ -26,15 +25,14 @@ function hexColor(color: string, fallback: string): string {
   return /^#[a-fA-F0-9]{6}$/.test(color) ? color : fallback
 }
 
-export default function ParolArtwork({ theme, friendCount, pattern }: Props) {
+export default function ParolArtwork({ theme, pattern }: Props) {
   const uid = useId().replace(/:/g, '')
   const gradient = `${uid}-capiz`
   const edgeGlow = `${uid}-halo`
   const light = `${uid}-center`
   const [primary, lightTone, rose, leaf] = theme.colors
-  const isFloral = theme.key === 'floral'
-  const isFestival = theme.key === 'festival'
-  const accents = decorationCounts(friendCount)
+  const isFloral = theme.key === 'floral' || theme.key === 'sampaguita'
+  const isFestival = theme.key === 'festival' || theme.key === 'fiesta'
 
   return (
     <g aria-hidden="true">
@@ -124,46 +122,7 @@ export default function ParolArtwork({ theme, friendCount, pattern }: Props) {
         </g>
       )}
 
-      {/* One new detail for each accepted friend from #6 to #15. No full-layer jump. */}
-      {accents.details > 0 && (
-        <g data-layer="details" className="parol-progressive-details">
-          {Array.from({ length: accents.details }, (_, index) => (
-            <g key={index} className="parol-layer-rise" transform={`rotate(${index * 36} 300 302)`}>
-              <path d="M300 113 L293 124 L300 137 L307 124 Z"
-                fill={index % 2 ? rose : leaf} stroke={lightTone} strokeWidth="1.8" />
-              <circle cx="300" cy="109" r="3.3" fill={lightTone} />
-            </g>
-          ))}
-        </g>
-      )}
-
-      {/* One new fuller-layer ornament for each friend from #16 to #30. */}
-      {accents.fuller > 0 && (
-        <g data-layer="fuller" className="parol-progressive-fuller">
-          {Array.from({ length: accents.fuller }, (_, index) => (
-            <g key={index} className="parol-layer-rise" transform={`rotate(${index * 24 + 6} 300 302)`}>
-              <path d="M300 89 Q314 104 300 121 Q286 104 300 89"
-                fill={isFloral ? rose : index % 2 ? leaf : primary}
-                fillOpacity=".86" stroke={lightTone} strokeWidth="1.6" />
-              <circle cx="300" cy="85" r="2.5" fill={lightTone} opacity=".85" />
-            </g>
-          ))}
-        </g>
-      )}
-
-      {/* A growing outer crown: one new accent for each friend from #31 to #50. */}
-      {accents.grand > 0 && (
-        <g data-layer="grand" className="parol-progressive-grand">
-          {Array.from({ length: accents.grand }, (_, index) => (
-            <g key={index} className="parol-layer-rise" transform={`rotate(${index * 18 + 9} 300 302)`}>
-              <path d="M300 58 L292 74 L300 87 L308 74 Z"
-                fill={index % 3 === 0 ? rose : index % 3 === 1 ? leaf : primary}
-                stroke={lightTone} strokeWidth="1.7" />
-              <circle cx="300" cy="52" r="3.7" fill={lightTone} />
-            </g>
-          ))}
-        </g>
-      )}
+      {/* Growth lives in ProceduralOuterShell, independent of the selected core. */}
 
       {/* Shared luminous rosette above the glass but behind contributed lights. */}
       <circle cx="300" cy="302" r="37" fill="#142338" fillOpacity=".9" stroke={lightTone} strokeWidth="3" />
