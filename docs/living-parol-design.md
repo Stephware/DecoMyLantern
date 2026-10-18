@@ -4,8 +4,8 @@ The outer parol is **not one circle or ring per friend**. Every accepted contrib
 
 ## Rules
 
-- **Zero friends still looks complete**: the central parol and a small symmetrical, illuminated outer shell are rendered immediately.
-- **Every +1 friend changes the outer structure**: contour radius, tips, petal shape and repeating ornament placement are derived from count. Fivefold symmetry and capped motif density prevent awkward lopsided gaps.
+- **Zero friends still looks complete**: a five-pointed illuminated star is framed by five capiz-glass beams, five motif windows, embossed metal edging, gold latticework, 40 bulbs, 30 scallop trims, and 25 small puntetas. No blank circular outlines.
+- **Every +1 friend changes the artwork**: the scalloped shell, pointed tips and petal geometry recompose. Each friend also contributes exactly five additional tiny glass inlays (one in each of the five sectors) through 50 friends. Bead trim, diamond tessellation and little star jewels become more intricate as the parol grows; fivefold symmetry prevents stray ornaments.
 - **The outer form may rearrange**: it does not permanently assign outer petals/rays to individual people.
 - **Friend identity is stable**: each accepted contribution keeps its immutable SQL `SlotIndex` and the corresponding inner-star light. The owner may highlight the light by name. Public guest previews still hide real contributor names and sealed messages.
 - **No arbitrary growth cap**: 50 is the *last design unlock*, not the final friend. Outer radius continues gently beyond 50 and the SVG camera adjusts automatically.
@@ -18,7 +18,7 @@ The outer parol is **not one circle or ring per friend**. Every accepted contrib
 | Concern | Source |
 |---|---|
 | Pure radial grammar, geometry and camera fit | `src/frontend/src/features/lantern/growth/outerGrowth.ts` |
-| Decorated outer silhouette | `src/frontend/src/features/lantern/renderer/ProceduralOuterShell.tsx` |
+| Capiz beams, floral/jewel motif windows, siku-siku lattice, palimbun, puntetas, inlays and bulbs | `src/frontend/src/features/lantern/renderer/ProceduralOuterShell.tsx` |
 | Central star and persistent identity lights | `ParolArtwork.tsx`, `LanternScene.tsx`, `lightPositions.ts` |
 | Preview-only +1 friend controls | `HostDashboard.tsx` |
 | Unlocks, ownership and progression metadata | `GrowthPolicy.cs`, `LanternService.cs`, `DesignDto.cs` |
