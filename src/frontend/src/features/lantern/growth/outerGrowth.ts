@@ -153,6 +153,19 @@ export function festivalMotifPoint(layerIndex: number, sector: number, sectors =
   return festivalPointAt(layerIndex, angle)
 }
 
+/** A motif sits in the physical middle of its own structural band. */
+export function bandMotifPoint(friendNumber: number, sector: number, sectors = 10): Point {
+  growthZoneForLayer(friendNumber)
+  if (!Number.isSafeInteger(sectors) || sectors < 1 ||
+      !Number.isSafeInteger(sector) || sector < 0 || sector >= sectors) {
+    throw new RangeError('Invalid band motif sector.')
+  }
+  const angle = -Math.PI / 2 + TAU * (sector + .5) / sectors
+  const a = festivalPointAt(friendNumber - 1, angle)
+  const b = festivalPointAt(friendNumber, angle)
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+}
+
 /** Panel geometry spanning only what has actually been contributed so far. */
 export function regionPanelPath(firstLayer: number, lastLayer: number, sector: number): string {
   if (!Number.isSafeInteger(firstLayer) || firstLayer < 1 ||
