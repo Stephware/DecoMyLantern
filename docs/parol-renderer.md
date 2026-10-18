@@ -1,48 +1,11 @@
-# BeMyParol — 50 friends, 50 actual five-pointed star layers
+# BeMyParol — growing San Fernando-inspired festival lantern
 
-## Growth
+The owner starts with a **complete mini festival parol**: an illuminated circular/floral tambor, glass mosaic and diamonds, capiz windows, floral starburst and decorative trim. **No tails, tassels, dangling ribbons or cord.** The parol is already complete at zero accepted friends.
 
-The central parol is complete at **zero friends**. It uses a five-point star with an outer tip radius of 158 SVG units and notch radius 74. Every accepted friend contributes one connected decorative five-point star band, spaced 14 SVG units outward. Band N is defined by the difference between star polygons N and N − 1, and divided into ten capiz-glass facet panels. Therefore **50 friends create precisely 50 filled outer star layers**, not a single expanding circle and not fifty disconnected ornaments.
+Exactly **one structurally connected ornamental band** appears for each accepted friend. The bands form five different patterns, **1–10 angular siku-siku diamonds, 11–20 capiz mosaic, 21–35 palimbun-inspired flowers and fans, 36–45 ceremonial starbursts, and 46–50 ornate puntetas edging**. Every band includes 20 stained-glass facets and small repeating jewels. Panels can span several adjoining bands to create real festival-style flowers and intricate geometry rather than 50 bare concentric outlines. At 50 friends there are exactly 50 filled layers, and new friend layers continue beyond 50.
 
-New bands have metallic edges, alternating capiz colors, tip and notch jewels, and full fivefold symmetry; every fifth band also carries capiz-style floral medallions. As the structure grows, the hanging cord and five ribbons follow the outermost star instead of the fixed center. The zoom calculation fits the entire star and moving tassels within the 600 × 640 SVG viewBox.
+The owner can choose six themes unlocked at 0, 3, 10, 23, 40 and 50 friends. Each theme keeps the same layer count but uses a distinctive motif identity. The theme unlocks are checked by the backend, and individual identity lights in the tambor keep their immutable persisted `SlotIndex`. Their names/messages remain subject to the existing guest privacy policy.
 
-## Contributor identity
+The owner dashboard's **+ Add test friend / −1 friend / Reset / milestone jump** controls are in-memory only and never save contributions or unlock new styles.
 
-- The decoration's band count comes from the actual accepted contributions or, explicitly, a non-saving test count.
-- A real friend's **separate light** inside the original star is positioned only by their immutable `Contribution.SlotIndex`. Removed contributions leave gaps in slot indices and never reposition another person's light.
-- Guest invitation previews display only generic contributor labels, not other guests' real names or private messages.
-- The owner preview buttons simulate 0–60 friends in React state without API calls; real contributions still require the invitation workflow.
-
-## Design collections
-
-| Design | Unlock count | Per-layer ornament |
-|---|---:|---|
-| Classic Gold | 0 | Faceted gold diamonds |
-| Floral Bloom | 3 | Rose petals |
-| Festival Lights | 10 | Colorful glass fans |
-| Celestial Lace | 23 | Celestial star inlays |
-| Radiant Fiesta | 40 | Warm sun motifs |
-| Sampaguita Glow | 50 | Jasmine flowers |
-
-Every collection uses the **same count-to-layer invariant**. Design unlocks are handled by the backend and remain separate from ring/band geometry. Friend count continues beyond 50.
-
-## Local checks
-
-```bash
-# repo root
-dotnet tool restore
-dotnet build DecoMyLantern.slnx
-dotnet test DecoMyLantern.slnx
-dotnet ef migrations has-pending-model-changes --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api
-
-cd src/frontend
-npm ci
-npm test
-npm run lint
-npm run typecheck
-npm run build
-```
-
-In the design studio, test +1 friend sequentially and jump to 50; zoom into individual bands and validate the parol's star silhouette, fivefold symmetry, light selection and moving tassels. Review a narrow mobile viewport as well as desktop. Full local builds, browser screenshots and live SQL verification must pass before merging the draft PR.
-
-See [living parol architecture](living-parol-design.md).
+Full local setup and validation instructions are in [living parol design](living-parol-design.md). The renderer change is frontend-only and does not require a new database migration; any existing pending six-theme data migration must still be checked against **DecoMyLanternDb**, not SQL Server `master`.
