@@ -165,15 +165,76 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
                 const color = palette[(sector % 5 + regionIndex) % palette.length]
                 const inner = festivalMotifPoint(region.from - 1, sector, 10)
                 const outer = festivalMotifPoint(end, sector, 10)
+                const midIndex = Math.floor((region.from + end) / 2)
+                const center = bandMotifPoint(midIndex, sector)
+                const fillSize = Math.min(1.15, .35 + (end - region.from + 1) / 12)
+                const control = bandMotifPoint(midIndex, sector)
                 return (
                   <g key={sector}>
                     <path d={regionPanelPath(region.from, end, sector)}
                       fill={region.zone === 'palimbun' ? motifFill : color}
                       fillOpacity={region.zone === 'palimbun' ? '.24' : '.13'}
                       stroke={ivory} strokeOpacity=".39" strokeWidth="1.5"/>
+                    {/* A coherent large-scale design appears INSIDE each
+                        region as its bands arrive, rather than just a thin border. */}
+                    <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 36 + 18}) scale(${fillSize})`}>
+                      {region.zone === 'siku' && (
+                        <g>
+                          <path d="M 0 -25 L 15 0 L 0 25 L -15 0 Z"
+                            fill={color} fillOpacity=".68" stroke={ivory} strokeWidth="1.9"/>
+                          <path d="M 0 -22 L 0 22 M -13 0 L 13 0"
+                            stroke={primary} strokeWidth="1.6"/>
+                          <path d="M -12 0 L 0 -12 L 12 0 L 0 12 Z"
+                            fill="none" stroke={ivory} strokeWidth="1.2"/>
+                        </g>
+                      )}
+                      {region.zone === 'mosaic' && (
+                        <g>
+                          <path d="M -12 18 Q -21 -3 0 -26 Q 21 -3 12 18 Z"
+                            fill={color} fillOpacity=".73" stroke={ivory} strokeWidth="1.9"/>
+                          <path d="M 0 -25 L 0 18 M -9 11 Q 0 -2 9 11"
+                            fill="none" stroke={primary} strokeWidth="1.5"/>
+                          <circle cy="-5" r="3.5" fill={ivory}/>
+                        </g>
+                      )}
+                      {region.zone === 'palimbun' && (
+                        <g>
+                          {Array.from({ length: 5 }, (_, petal) => (
+                            <ellipse key={petal} cx="0" cy="-14" rx="11" ry="23"
+                              transform={`rotate(${petal * 72})`}
+                              fill={petal % 2 ? rose : color} fillOpacity=".67"
+                              stroke={ivory} strokeWidth="1.8"/>
+                          ))}
+                          <circle r="10" fill={primary} stroke={ivory} strokeWidth="2"/>
+                          <circle r="4" fill="#fff9e0"/>
+                        </g>
+                      )}
+                      {region.zone === 'ceremonial' && (
+                        <g>
+                          {Array.from({ length: 8 }, (_, fan) => (
+                            <path key={fan} d="M -5 -7 L -8 -26 L 0 -33 L 8 -26 L 5 -7 Z"
+                              transform={`rotate(${fan * 45})`}
+                              fill={fan % 2 ? rose : color} fillOpacity=".76"
+                              stroke={ivory} strokeWidth="1.5"/>
+                          ))}
+                          <circle r="9" fill="#253546" stroke={ivory} strokeWidth="1.7"/>
+                          <circle r="4.5" fill={primary}/>
+                        </g>
+                      )}
+                      {region.zone === 'puntetas' && (
+                        <g>
+                          <path d="M 0 -25 L 6 -8 L 24 0 L 6 8 L 0 25 L -6 8 L -24 0 L -6 -8 Z"
+                            fill={color} fillOpacity=".78" stroke={ivory} strokeWidth="1.8"/>
+                          <path d="M 0 -21 L 0 21 M -20 0 L 20 0"
+                            stroke={primary} strokeWidth="1.7"/>
+                          <circle r="6" fill={ivory} stroke={rose} strokeWidth="1.3"/>
+                        </g>
+                      )}
+                    </g>
                     {end - region.from >= 2 && (
                       <path d={`M ${inner.x.toFixed(2)} ${inner.y.toFixed(2)}
-                        Q 300 302 ${outer.x.toFixed(2)} ${outer.y.toFixed(2)}`}
+                        Q ${control.x.toFixed(2)} ${control.y.toFixed(2)}
+                          ${outer.x.toFixed(2)} ${outer.y.toFixed(2)}`}
                         fill="none" stroke={region.zone === 'siku' ? primary : ivory}
                         strokeOpacity=".38" strokeWidth=".95"/>
                     )}
