@@ -136,7 +136,7 @@ export default function LanternScene({
           <g transform={transform} style={{
             transition: pointers.current.size === 0 ? 'transform 420ms ease-out' : 'none',
           }}>
-            <ProceduralOuterShell theme={theme} friendCount={friendCount} pattern={pattern} />
+            <ProceduralOuterShell key={friendCount} theme={theme} friendCount={friendCount} pattern={pattern} />
             <ParolArtwork theme={theme} pattern={pattern} />
             <g className="parol-contributions">
               {lights.map(light => {
