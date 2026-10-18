@@ -41,7 +41,6 @@ export type OrnamentPlan = {
   scallops: number
   filigreePairs: number
   panelSeams: number
-  illuminatedPetals: number
   starlets: number
 }
 
@@ -58,7 +57,6 @@ export function ornamentPlanForFriends(count: number): OrnamentPlan {
     scallops: 30 + Math.floor(capped / 8) * 5,
     filigreePairs: 1 + Math.floor(capped / 8),
     panelSeams: 2 + Math.floor(capped / 13),
-    illuminatedPetals: 5 + Math.floor(capped / 10) * 5,
     starlets: 5 + Math.floor(capped / 12) * 5,
   }
 }
@@ -169,6 +167,26 @@ export function outerMotifPosition(
   const a = -Math.PI / 2 + (motifIndex * TAU) / total
   const radius = outerRadiusForFriends(count) - 13
   return { x: CENTER_X + radius * Math.cos(a), y: CENTER_Y + radius * Math.sin(a) }
+}
+
+/**
+ * Each new friend illuminates five matching foil inlays (one per sector),
+ * maintaining fivefold balance. The first 50 groups fill the ornamental glass
+ * band; above that, the shell and edge lighting still evolve continuously.
+ */
+export function friendInlayPosition(
+  friendIndex: number,
+  sector: number,
+): { x: number; y: number } {
+  validateCount(friendIndex)
+  if (!Number.isSafeInteger(sector) || sector < 0 || sector >= 5) {
+    throw new RangeError('Inlays must be placed in one of five parol sectors.')
+  }
+  const column = friendIndex % 10
+  const row = Math.floor(friendIndex / 10)
+  const angle = (-90 + sector * 72 + 36 - 15 + column * 3.35) * Math.PI / 180
+  const radius = 173 + row * 6.6
+  return polarPoint(radius, angle)
 }
 
 export function polarPoint(radius: number, angleRadians: number): { x: number; y: number } {
