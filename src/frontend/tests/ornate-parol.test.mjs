@@ -1,38 +1,80 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
-  BASE_STAR_RADIUS, FRIEND_LAYER_SPACING, STAR_NOTCH_RATIO,
-  OUTER_RECIPES, friendStarLayers, friendStarBandPath,
-  friendStarFacetPath, starVertices, starOutlinePath,
-  starTipPosition, starNotchPosition,
-  lowerRibbonAnchors, outerRadiusForFriends, outerFitZoom,
+  BASE_FESTIVAL_RADIUS,
+  FRIEND_LAYER_SPACING,
+  GROWTH_REGIONS,
+  OUTER_RECIPES,
+  PANEL_SEGMENTS,
+  bandMotifPoint,
+  festivalBandPath,
+  festivalFacetPath,
+  festivalLayers,
+  festivalMaxExtent,
+  festivalOutlinePath,
+  festivalPointAt,
+  growthZoneForLayer,
+  outerFitZoom,
+  outerRadiusForFriends,
+  regionPanelPath,
 } from '../src/features/lantern/growth/outerGrowth.ts'
 
-test('exactly one complete outer star band appears per accepted friend', () => {
-  for (const count of [0, 1, 2, 3, 10, 23, 40, 49, 50, 51, 60, 120]) {
-    const layers = friendStarLayers(count)
+const styles = Object.keys(OUTER_RECIPES)
+
+test('zero friends is a complete mini festival parol and never has a tail', () => {
+  assert.equal(BASE_FESTIVAL_RADIUS, 164)
+  assert.equal(festivalLayers(0).length, 0)
+  const core = readFileSync(new URL('../src/features/lantern/renderer/ParolArtwork.tsx', import.meta.url), 'utf8')
+  const shell = readFileSync(new URL('../src/features/lantern/renderer/ProceduralOuterShell.tsx', import.meta.url), 'utf8')
+  assert.ok(core.includes('data-testid="festival-mini-parol"'))
+  assert.ok(core.includes('hybrid central starflower'))
+  assert.ok(core.includes('Angular siku-siku tessellation'))
+  assert.ok(shell.includes('data-testid="festival-regional-patterns"'))
+  assert.ok(!core.includes('Five silk tails'))
+  assert.ok(!shell.includes('outer-tassels'))
+  assert.ok(!shell.includes('lowerRibbonAnchors'))
+  assert.ok(!shell.includes('Hanging filament and cap'))
+})
+
+test('every friend adds precisely one connected filled decorative layer', () => {
+  for (const count of [0, 1, 2, 3, 10, 20, 23, 35, 40, 45, 46, 50, 51, 60, 120]) {
+    const layers = festivalLayers(count)
     assert.equal(layers.length, count)
     for (let i = 0; i < count; i++) {
       assert.equal(layers[i].friendNumber, i + 1)
       assert.equal(layers[i].innerRadius, outerRadiusForFriends(i))
       assert.equal(layers[i].outerRadius, outerRadiusForFriends(i + 1))
-      assert.equal(layers[i].outerRadius - layers[i].innerRadius, FRIEND_LAYER_SPACING)
+      assert.ok(Math.abs(layers[i].outerRadius - layers[i].innerRadius - FRIEND_LAYER_SPACING) < 1e-9)
+      assert.equal(layers[i].zone, growthZoneForLayer(i + 1))
+      const band = festivalBandPath(i + 1)
+      assert.equal((band.match(/M /g) ?? []).length, 2)
+      assert.equal((band.match(/ Z/g) ?? []).length, 2)
+      assert.ok(!/(NaN|Infinity)/.test(band))
     }
   }
-  assert.equal(friendStarLayers(50).length, 50)
+  assert.equal(festivalLayers(50).length, 50)
+  assert.equal(festivalLayers(51).length, 51)
 })
 
-test('every star layer is a FILLED, star-shaped band without an empty gap', () => {
-  assert.equal(BASE_STAR_RADIUS, 158)
-  assert.equal(BASE_STAR_RADIUS * STAR_NOTCH_RATIO, 74)
-  for (let friend = 1; friend <= 120; friend++) {
-    const band = friendStarBandPath(friend)
-    assert.equal((band.match(/M /g) ?? []).length, 2)
-    assert.equal((band.match(/ Z/g) ?? []).length, 2)
-    assert.ok(band.startsWith(starOutlinePath(outerRadiusForFriends(friend))))
-    assert.ok(band.includes(starOutlinePath(outerRadiusForFriends(friend - 1))))
-    for (let segment = 0; segment < 10; segment++) {
-      const facet = friendStarFacetPath(friend, segment)
+test('five distinct ornamental regions cover every one of the first 50 layers', () => {
+  assert.deepEqual(GROWTH_REGIONS.map(({ from, to }) => [from, to]),
+    [[1, 10], [11, 20], [21, 35], [36, 45], [46, 50]])
+  const zones = new Set(GROWTH_REGIONS.map(x => x.zone))
+  assert.equal(zones.size, 5)
+  for (const region of GROWTH_REGIONS) {
+    for (let friend = region.from; friend <= region.to; friend++) {
+      assert.equal(growthZoneForLayer(friend), region.zone)
+    }
+  }
+  assert.equal(growthZoneForLayer(51), 'puntetas')
+})
+
+test('all 20 glass facets per layer are finite and connected', () => {
+  assert.equal(PANEL_SEGMENTS, 20)
+  for (const count of [1, 2, 10, 23, 40, 50, 60]) {
+    for (let sector = 0; sector < PANEL_SEGMENTS; sector++) {
+      const facet = festivalFacetPath(count, sector)
       assert.ok(facet.startsWith('M '))
       assert.ok(facet.endsWith(' Z'))
       assert.equal((facet.match(/ L /g) ?? []).length, 3)
@@ -41,63 +83,55 @@ test('every star layer is a FILLED, star-shaped band without an empty gap', () =
   }
 })
 
-test('five-pointed contours are nested with ten alternating vertices', () => {
-  for (let count = 0; count <= 120; count++) {
-    const verts = starVertices(outerRadiusForFriends(count))
-    assert.equal(verts.length, 10)
-    for (let i = 0; i < 10; i++) {
-      const distance = Math.hypot(verts[i].x - 300, verts[i].y - 302)
-      const expected = outerRadiusForFriends(count) * (i % 2 ? STAR_NOTCH_RATIO : 1)
-      assert.ok(Math.abs(distance - expected) < 1e-8)
-      if (count > 0) {
-        const previous = starVertices(outerRadiusForFriends(count - 1))[i]
-        assert.ok(distance > Math.hypot(previous.x - 300, previous.y - 302))
+test('all decorative boundaries stay nested without transparent radial gaps', () => {
+  for (let count = 1; count <= 60; count++) {
+    for (let step = 0; step < 360; step += 2) {
+      const angle = step * Math.PI / 180
+      const a = festivalPointAt(count - 1, angle)
+      const b = festivalPointAt(count, angle)
+      const before = Math.hypot(a.x - 300, a.y - 302)
+      const after = Math.hypot(b.x - 300, b.y - 302)
+      assert.ok(after > before, `layer ${count}, angle ${step} has a radial gap or overlap`)
+    }
+  }
+})
+
+test('completed or growing regions contain coherent flower/diamond panels', () => {
+  for (const region of GROWTH_REGIONS) {
+    for (const end of [region.from, region.from + Math.floor((region.to - region.from) / 2), region.to]) {
+      for (let sector = 0; sector < 10; sector++) {
+        const path = regionPanelPath(region.from, end, sector)
+        assert.ok(path.startsWith('M '))
+        assert.ok(path.endsWith(' Z'))
+        assert.ok(!/(NaN|Infinity)/.test(path))
+        const p = bandMotifPoint(end, sector)
+        assert.ok(Number.isFinite(p.x) && Number.isFinite(p.y))
       }
     }
   }
 })
 
-test('each friend adds five symmetric tip jewels and five notch jewels', () => {
-  for (let friend = 1; friend <= 80; friend++) {
-    const tips = Array.from({ length: 5 }, (_, sector) => starTipPosition(friend, sector))
-    const notches = Array.from({ length: 5 }, (_, sector) => starNotchPosition(friend, sector))
-    assert.equal(new Set(tips.map(x => `${x.x.toFixed(6)}:${x.y.toFixed(6)}`)).size, 5)
-    assert.equal(new Set(notches.map(x => `${x.x.toFixed(6)}:${x.y.toFixed(6)}`)).size, 5)
-    for (const set of [tips, notches]) {
-      const distances = set.map(p => Math.hypot(p.x - 300, p.y - 302))
-      for (const r of distances) assert.ok(Math.abs(r - distances[0]) < 1e-8)
-    }
+test('festival silhouette stays round/floral and fits even past 50 friends', () => {
+  for (const count of [0, 1, 3, 10, 23, 40, 50, 51, 60, 120]) {
+    const path = festivalOutlinePath(count)
+    assert.ok(path.startsWith('M '))
+    assert.ok(path.endsWith(' Z'))
+    assert.ok(!/(NaN|Infinity)/.test(path))
+    assert.ok(outerFitZoom(count) > 0)
+    assert.ok(festivalMaxExtent(count) * outerFitZoom(count) < 281)
   }
+  assert.ok(outerFitZoom(50) > .35)
+  assert.notEqual(festivalOutlinePath(0), festivalOutlinePath(50))
+  assert.equal(styles.length, 6)
+  assert.equal(new Set(Object.values(OUTER_RECIPES).map(x => x.motif)).size, 6)
 })
 
-test('the hanger and five tassels follow the outermost star, never the center', () => {
-  for (const count of [0, 1, 10, 23, 40, 50, 120]) {
-    const anchors = lowerRibbonAnchors(count)
-    assert.equal(anchors.length, 5)
-    assert.equal(anchors[0].x + anchors[4].x, 600)
-    assert.equal(anchors[1].x + anchors[3].x, 600)
-    assert.equal(anchors[2].x, 300)
-    assert.ok(anchors[0].y > anchors[2].y)
-    assert.ok((outerRadiusForFriends(count) + 76) * outerFitZoom(count) <= 281)
-    assert.ok((outerRadiusForFriends(count) * Math.sin(54 * Math.PI / 180) + 164) *
-      outerFitZoom(count) <= 289)
+test('invalid and fractional friend counts cannot enter the renderer', () => {
+  for (const invalid of [-1, NaN, Infinity, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => festivalLayers(invalid), RangeError)
+    assert.throws(() => festivalOutlinePath(invalid), RangeError)
   }
-  assert.ok(lowerRibbonAnchors(50)[0].y > lowerRibbonAnchors(0)[0].y)
-})
-
-test('six collection motifs remain distinct even though each is a star parol', () => {
-  const motifs = Object.values(OUTER_RECIPES).map(x => x.motif)
-  assert.equal(motifs.length, 6)
-  assert.equal(new Set(motifs).size, 6)
-})
-
-test('invalid counts and star sectors are rejected', () => {
-  for (const invalid of [-1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
-    assert.throws(() => friendStarLayers(invalid), RangeError)
-    assert.throws(() => outerRadiusForFriends(invalid), RangeError)
-  }
-  assert.throws(() => friendStarBandPath(0), RangeError)
-  assert.throws(() => friendStarFacetPath(1, 10), RangeError)
-  assert.throws(() => starTipPosition(1, 5), RangeError)
-  assert.throws(() => starNotchPosition(1, 5), RangeError)
+  assert.throws(() => festivalBandPath(0), RangeError)
+  assert.throws(() => festivalFacetPath(1, PANEL_SEGMENTS), RangeError)
+  assert.throws(() => regionPanelPath(0, 3, 2), RangeError)
 })
