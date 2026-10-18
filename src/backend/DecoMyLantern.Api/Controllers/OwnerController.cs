@@ -74,7 +74,7 @@ public sealed class OwnerController(
 
     // Transitional support for existing signed-in hosts. No new email/password
     // registration or login route remains available.
-    [Authorize(AuthenticationSchemes = IdentityConstants.ApplicationScheme)]
+    [Authorize(AuthenticationSchemes = "Identity.Application")]
     [HttpGet("legacy-csrf")]
     public IActionResult LegacyCsrf()
     {
@@ -82,7 +82,7 @@ public sealed class OwnerController(
         return Ok(new { token = antiforgery.GetAndStoreTokens(HttpContext).RequestToken });
     }
 
-    [Authorize(AuthenticationSchemes = IdentityConstants.ApplicationScheme)]
+    [Authorize(AuthenticationSchemes = "Identity.Application")]
     [HttpGet("legacy-available")]
     public IActionResult LegacyAvailable()
     {
@@ -90,7 +90,7 @@ public sealed class OwnerController(
         return TryOwner(out _) ? Ok(new { available = true }) : Unauthorized();
     }
 
-    [Authorize(AuthenticationSchemes = IdentityConstants.ApplicationScheme)]
+    [Authorize(AuthenticationSchemes = "Identity.Application")]
     [EnableRateLimiting("owner-recover")]
     [HttpPost("upgrade-legacy")]
     public async Task<IActionResult> UpgradeLegacy(CancellationToken cancellationToken)
