@@ -1,124 +1,161 @@
 import { useId } from 'react'
 import type { Theme } from '../../customization/themes'
+import {
+  BASE_FESTIVAL_RADIUS,
+  festivalOutlinePath,
+} from '../growth/outerGrowth'
 
 type Props = { theme: Theme; friendCount?: number; pattern: string }
 
 const CENTER_X = 300
 const CENTER_Y = 302
-const RADIANS = Math.PI / 180
+const TAU = Math.PI * 2
 
-function point(radius: number, angle: number): [number, number] {
-  return [
-    CENTER_X + Math.cos(angle * RADIANS) * radius,
-    CENTER_Y + Math.sin(angle * RADIANS) * radius,
-  ]
+function polar(radius: number, angle: number): { x: number; y: number } {
+  return {
+    x: CENTER_X + radius * Math.cos(angle),
+    y: CENTER_Y + radius * Math.sin(angle),
+  }
 }
 
 function starPoints(outer: number, inner: number): string {
-  return Array.from({ length: 10 }, (_, i) => {
-    const [x, y] = point(i % 2 === 0 ? outer : inner, -90 + i * 36)
+  return Array.from({ length: 20 }, (_, index) => {
+    const angle = -Math.PI / 2 + index * Math.PI / 10
+    const radius = index % 2 === 0 ? outer : inner
+    const { x, y } = polar(radius, angle)
     return `${x.toFixed(2)},${y.toFixed(2)}`
   }).join(' ')
 }
 
-function hexColor(color: string, fallback: string): string {
-  return /^#[a-fA-F0-9]{6}$/.test(color) ? color : fallback
-}
-
+/**
+ * The zero-friend parol is already a complete miniature Ligligan Parul:
+ * a round/floral illuminated frame, capiz mosaic, siku-siku diamonds,
+ * ten surrounding fan windows, and a hybrid starburst-floral tambor.
+ * Not a lone star waiting for outer layers. No tail or hanging ribbon.
+ */
 export default function ParolArtwork({ theme, pattern }: Props) {
   const uid = useId().replace(/:/g, '')
-  const gradient = `${uid}-capiz`
-  const edgeGlow = `${uid}-halo`
-  const light = `${uid}-center`
-  const [primary, lightTone, rose, leaf] = theme.colors
-  const isFloral = theme.key === 'floral' || theme.key === 'sampaguita'
-  const isFestival = theme.key === 'festival' || theme.key === 'fiesta'
+  const [gold, ivory, rose, jade] = theme.colors
+  const colors = [gold, rose, jade, ivory] as const
+  const capiz = `url(#${uid}-base-glass)`
+  const centerGlow = `url(#${uid}-tambor-glow)`
+  const baseOutline = festivalOutlinePath(0)
 
   return (
-    <g aria-hidden="true">
+    <g data-testid="festival-mini-parol" data-base-radius={BASE_FESTIVAL_RADIUS}
+      aria-hidden="true">
       <defs>
-        <linearGradient id={gradient} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={hexColor(lightTone, '#fff0c4')} stopOpacity=".97" />
-          <stop offset="46%" stopColor={hexColor(primary, '#e6ad4f')} stopOpacity=".78" />
-          <stop offset="100%" stopColor={hexColor(rose, '#ab4d56')} stopOpacity=".45" />
-        </linearGradient>
-        <radialGradient id={light}>
-          <stop offset="0%" stopColor="#fffdf2" />
-          <stop offset="28%" stopColor={lightTone} />
-          <stop offset="70%" stopColor={primary} />
-          <stop offset="100%" stopColor={rose} stopOpacity=".45" />
+        <radialGradient id={`${uid}-base-glass`}>
+          <stop offset="0%" stopColor={ivory} stopOpacity=".78"/>
+          <stop offset="45%" stopColor={gold} stopOpacity=".5"/>
+          <stop offset="100%" stopColor={jade} stopOpacity=".45"/>
         </radialGradient>
-        <filter id={edgeGlow} x="-55%" y="-55%" width="210%" height="210%">
-          <feGaussianBlur stdDeviation="5" />
+        <radialGradient id={`${uid}-tambor-glow`}>
+          <stop offset="0%" stopColor="#fffef4"/>
+          <stop offset="27%" stopColor={ivory}/>
+          <stop offset="68%" stopColor={gold} stopOpacity=".8"/>
+          <stop offset="100%" stopColor={rose} stopOpacity=".1"/>
+        </radialGradient>
+        <filter id={`${uid}-base-glow`} x="-35%" y="-35%" width="170%" height="170%">
+          <feGaussianBlur stdDeviation="3"/>
         </filter>
       </defs>
+      <path d={baseOutline} fill="#293448" stroke={ivory}
+        strokeWidth="5" strokeLinejoin="round" />
+      <path d={baseOutline} fill="none" stroke={gold} strokeWidth="10"
+        strokeOpacity=".26" filter={`url(#${uid}-base-glow)`}/>
 
-      {/* The hanging cord and silk tassels now attach to the outermost
-          friend layer in ProceduralOuterShell, not to the fixed center. */}
-
-      {/* The base parol is already complete and beautiful with zero friends. */}
-      <polygon points={starPoints(158, 74)} fill={primary} opacity=".32" filter={`url(#${edgeGlow})`} />
-      <polygon points={starPoints(158, 74)} fill="#111b30" stroke={lightTone} strokeWidth="7" strokeLinejoin="round" />
-      <polygon points={starPoints(147, 72)} fill={`url(#${gradient})`} stroke={primary} strokeWidth="2.5" strokeLinejoin="round" />
-      <polygon points={starPoints(128, 61)} fill="#142237" fillOpacity=".74" stroke={lightTone} strokeWidth="2" strokeLinejoin="round" />
-
-      {/* Five capiz-glass rays form the shared base; motifs distinguish each collection. */}
-      {Array.from({ length: 5 }, (_, i) => (
-        <g key={i} transform={`rotate(${i * 72} ${CENTER_X} ${CENTER_Y})`}>
-          <path d="M300 299 L274 232 L300 164 L326 232 Z" fill={i % 2 ? leaf : rose} fillOpacity={isFestival ? '.68' : '.38'} stroke={lightTone} strokeWidth="1.6" />
-          <path d="M300 170 L300 292 M278 234 L322 234" fill="none" stroke={lightTone} strokeWidth="1.4" opacity=".8" />
-          <path d="M300 184 Q279 226 300 275 Q321 226 300 184" fill="none" stroke={primary} strokeWidth="2" opacity=".8" />
-          {isFloral ? (
-            <g>
-              <ellipse cx="288" cy="213" rx="12" ry="21" fill={rose} fillOpacity=".75" stroke={lightTone} strokeWidth="1.4" transform="rotate(-26 288 213)" />
-              <ellipse cx="312" cy="213" rx="12" ry="21" fill={rose} fillOpacity=".75" stroke={lightTone} strokeWidth="1.4" transform="rotate(26 312 213)" />
-              <ellipse cx="300" cy="199" rx="10" ry="20" fill={lightTone} fillOpacity=".66" stroke={primary} strokeWidth="1.2" />
-              <circle cx="300" cy="221" r="6" fill={primary} />
-              <path d="M300 261 Q281 250 281 235 M300 261 Q319 250 319 235" fill="none" stroke={leaf} strokeWidth="2.4" />
-            </g>
-          ) : isFestival ? (
-            <g>
-              {[-18, -9, 0, 9, 18].map((dx, k) => <path key={dx} d={`M${300 + dx} 240 l8 -12 -8 -12 -8 12z`} fill={theme.colors[k % theme.colors.length]} stroke={lightTone} strokeWidth=".75" />)}
-              <path d="M282 257 L300 237 L318 257" fill="none" stroke={rose} strokeWidth="3" strokeLinejoin="round" />
-              <circle cx="300" cy="198" r="6" fill={leaf} stroke={lightTone} strokeWidth="1.7" />
-            </g>
-          ) : (
-            <g>
-              <path d="M300 194 L285 229 L300 259 L315 229 Z" fill={lightTone} fillOpacity=".44" stroke={primary} strokeWidth="2" />
-              <path d="M285 229 L315 229 M300 194 L300 259" stroke={lightTone} strokeWidth="1.3" />
-              <circle cx="300" cy="223" r="5" fill={rose} stroke={lightTone} strokeWidth="1.5" />
-            </g>
-          )}
+      {/* A compact wreath of twenty dyed capiz floral windows. Every sector
+          touches its neighbors so the mini lantern reads as complete. */}
+      {Array.from({ length: 20 }, (_, sector) => (
+        <g key={sector} transform={`rotate(${sector * 18} 300 302)`}>
+          <path d="M 289 164 L 300 146 L 311 164 L 312 198 L 300 211 L 288 198 Z"
+            fill={colors[Math.floor(sector / 2) % colors.length]}
+            fillOpacity=".62" stroke={ivory} strokeWidth="1.45"/>
+          <path d="M 300 152 L 300 206 M 290 187 L 310 187"
+            fill="none" stroke={gold} strokeWidth=".9" opacity=".76"/>
+          <path d="M 290 159 Q 300 147 310 159"
+            fill="none" stroke={ivory} strokeWidth=".95" opacity=".76"/>
+          <circle cx="300" cy="154" r={sector % 5 === 0 ? 3.2 : 2}
+            fill={ivory} stroke={gold} strokeWidth=".65"/>
         </g>
       ))}
 
-      <polygon points={starPoints(105, 44)} fill="none" stroke={lightTone} strokeWidth="3.5" strokeLinejoin="round" opacity=".85" />
-      <polygon points={starPoints(91, 44)} fill="none" stroke={primary} strokeWidth="2" opacity=".82" />
+      {/* Angular siku-siku tessellation between the outer glass windows and
+          the tambor: colored diamonds, crossed foil ribs and jewel points. */}
+      {Array.from({ length: 10 }, (_, sector) => (
+        <g key={sector} transform={`rotate(${sector * 36} 300 302)`}>
+          <path d="M 300 196 L 319 216 L 300 247 L 281 216 Z"
+            fill={sector % 2 ? jade : rose}
+            fillOpacity=".7" stroke={ivory} strokeWidth="1.6"/>
+          <path d="M 300 201 L 300 241 M 284 217 L 316 217"
+            fill="none" stroke={gold} strokeWidth="1.2" opacity=".88"/>
+          <path d="M 288 232 Q 300 210 312 232"
+            fill="none" stroke={ivory} strokeWidth="1.1" opacity=".75"/>
+          <circle cx="300" cy="215" r="3.1" fill={ivory} stroke={gold} strokeWidth=".8"/>
+        </g>
+      ))}
 
-      {/* Optional user-selected geometry is independent of the growth milestone. */}
+      {/* Ten embroidered fan windows around the hybrid central starflower. */}
+      {Array.from({ length: 10 }, (_, sector) => (
+        <g key={sector} transform={`rotate(${sector * 36} 300 302)`}>
+          <path d="M 284 248 Q 276 229 300 208 Q 324 229 316 248
+            L 300 269 Z"
+            fill={capiz} stroke={ivory} strokeWidth="1.7"
+            strokeLinejoin="round"/>
+          <path d="M 300 211 L 300 264 M 289 240 L 300 213 L 311 240"
+            fill="none" stroke={rose} strokeWidth="1.25" opacity=".8"/>
+          <path d="M 287 251 Q 300 235 313 251"
+            fill="none" stroke={gold} strokeWidth="1.2"/>
+          <circle cx="300" cy="229" r="2.3" fill={gold}/>
+        </g>
+      ))}
+
+      {/* A floral tambor with a compact twenty-ray starburst:
+          both geometrically strong and soft like real festival parols. */}
+      <circle cx={CENTER_X} cy={CENTER_Y} r="63"
+        fill="#263548" stroke={gold} strokeWidth="3.2" />
+      <polygon points={starPoints(58, 33)} fill={rose}
+        fillOpacity=".67" stroke={ivory} strokeWidth="2.4"/>
+      <polygon points={starPoints(48, 28)} fill={capiz}
+        stroke={gold} strokeWidth="1.4"/>
+      {Array.from({ length: 10 }, (_, sector) => (
+        <g key={sector} transform={`rotate(${sector * 36} 300 302)`}>
+          <ellipse cx="300" cy="275" rx="7.5" ry="18"
+            fill={sector % 2 === 0 ? rose : jade}
+            fillOpacity=".86" stroke={ivory} strokeWidth="1.3"/>
+          <path d="M 300 262 L 300 288"
+            fill="none" stroke={gold} strokeWidth=".9"/>
+        </g>
+      ))}
+      <circle cx={CENTER_X} cy={CENTER_Y} r="29"
+        fill="#343445" stroke={ivory} strokeWidth="2.5"/>
+      {Array.from({ length: 10 }, (_, sector) => (
+        <ellipse key={sector} cx={CENTER_X} cy={CENTER_Y - 14}
+          rx="5" ry="11" transform={`rotate(${sector * 36} 300 302)`}
+          fill={sector % 2 ? ivory : gold}
+          fillOpacity=".85" stroke={rose} strokeWidth=".8"/>
+      ))}
+      <circle cx={CENTER_X} cy={CENTER_Y} r="12"
+        fill={centerGlow} stroke={ivory} strokeWidth="2"/>
+      <circle cx={CENTER_X} cy={CENTER_Y} r="5" fill="#fffdf3"/>
+
+      {/* Inlay trim around the round/floral OUTER boundary, not tassels. */}
+      {Array.from({ length: 40 }, (_, sector) => {
+        const angle = -Math.PI / 2 + sector * TAU / 40
+        const { x, y } = polar(151, angle)
+        return <circle key={sector} cx={x} cy={y} r={sector % 5 === 0 ? 2.7 : 1.65}
+          fill={ivory} stroke={gold} strokeWidth=".6"/>
+      })}
       {pattern === 'rings' && (
-        <g fill="none" stroke={lightTone} strokeWidth="1.8" opacity=".7">
-          <circle cx={CENTER_X} cy={CENTER_Y} r="115" strokeDasharray="4 8" />
-          <circle cx={CENTER_X} cy={CENTER_Y} r="122" strokeDasharray="1.5 11" />
-        </g>
+        <circle cx={CENTER_X} cy={CENTER_Y} r="123" fill="none"
+          stroke={ivory} strokeWidth="1.4" strokeDasharray="2 6" opacity=".84"/>
       )}
-      {pattern === 'rays' && (
-        <g stroke={primary} strokeWidth="2.2" strokeLinecap="round" opacity=".78">
-          {Array.from({ length: 20 }, (_, i) => (
-            <path key={i} d="M300 176 L300 164" transform={`rotate(${i * 18} 300 302)`} />
-          ))}
-        </g>
-      )}
-
-      {/* Growth lives in ProceduralOuterShell, independent of the selected core. */}
-
-      {/* Shared luminous rosette above the glass but behind contributed lights. */}
-      <circle cx="300" cy="302" r="37" fill="#142338" fillOpacity=".9" stroke={lightTone} strokeWidth="3" />
-      {Array.from({ length: 10 }, (_, i) => (
-        <ellipse key={i} cx="300" cy="276" rx="8" ry="20" fill={i % 2 ? rose : primary} fillOpacity=".86" stroke={lightTone} strokeWidth="1.2" transform={`rotate(${i * 36} 300 302)`} />
+      {pattern === 'rays' && Array.from({ length: 20 }, (_, sector) => (
+        <path key={sector} d="M 300 191 L 300 178"
+          transform={`rotate(${sector * 18} 300 302)`}
+          fill="none" stroke={ivory} strokeWidth="2" opacity=".8"/>
       ))}
-      <circle cx="300" cy="302" r="18" fill={`url(#${light})`} stroke="#fff8de" strokeWidth="3" />
-      <circle cx="300" cy="302" r="6" fill="#fffbee" />
     </g>
   )
 }
