@@ -18,7 +18,7 @@ type Props = {
 
 const PATTERNS = [
   { key: 'default', label: 'Traditional', detail: 'Original star accents' },
-  { key: 'rings', label: 'Filigree trim', detail: 'Delicate foil and bead detailing' },
+  { key: 'rings', label: 'Filigree trim', detail: 'Fine luminous outlines between decorative regions' },
   { key: 'rays', label: 'Radiant rays', detail: 'A brighter starburst' },
 ] as const
 
@@ -151,11 +151,11 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                   </div>
                   {previewCount !== null && (
                     <p role="status" className="text-center text-xs font-semibold text-amber-200">
-                      {previewCount} simulated friends · {previewCount} decorated outer layers · No data saved
+                      {previewCount} simulated friends · {previewCount} decorative festival layers · Not saved
                     </p>
                   )}
                 </div>
-                <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Every friend adds one complete filled and illuminated outer STAR layer. There are no empty circles; 50 friends means 50 decorative star layers.' : 'Preview only: +1 friend adds an entire decorative outer star layer. Nothing here saves a contribution, sends an invitation, or unlocks a design.'}</p>
+                <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Begins as a complete mini festival lantern. Every friend adds one connected, illuminated geometric, floral, fan, or festival-edge layer.' : 'Preview only: +1 friend adds a full decorative layer. At 50 friends, five connected ornamental regions form a grand festival lantern. No data is saved.'}</p>
                 <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-[#0b1325]/80 p-4 sm:grid-cols-3 sm:p-5">
                   <div><p className="text-2xl font-bold text-amber-200">{accepted}</p><p className="mt-1 text-xs text-white/50">Accepted friends</p></div>
                   <div><p className="text-lg font-semibold text-white">{stageForFriends(unlockProgress).name}</p><p className="mt-1 text-xs text-white/50">Highest unlocked design</p></div>
@@ -176,7 +176,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
               <section className="rounded-3xl border border-white/10 bg-[#14213a]/90 p-5 shadow-xl sm:p-6">
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-300/75">Personalize</p>
                 <h2 className="mt-2 font-serif text-2xl">Make it yours</h2>
-                <p className="mb-6 mt-2 text-sm leading-6 text-white/55">Each accepted friend reshapes the outer silhouette. New selectable parol designs unlock at 0, 3, 10, 23, 40 and 50 friends.</p>
+                <p className="mb-6 mt-2 text-sm leading-6 text-white/55">A complete, tail-free festival parol grows with each friend through connected diamonds, capiz mosaics, flowers, fans, and illuminated edging. New design families unlock at 0, 3, 10, 23, 40 and 50 friends.</p>
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-white/60">Design & color palette</h3>
                 <div className="space-y-3">
                   {designs.map(design => {
