@@ -74,7 +74,7 @@ export function outerFitZoom(count: number): number {
   const outer = outerRadiusForFriends(count)
   // Tassels extend 290 units down from the center. Preserve space for
   // decorative punta tips + their glow as the perimeter grows.
-  return Math.min(1, 286 / Math.max(298, outer + 30))
+  return Math.min(1, 280 / Math.max(298, outer + 34))
 }
 
 export function growthPhase(count: number): number {
