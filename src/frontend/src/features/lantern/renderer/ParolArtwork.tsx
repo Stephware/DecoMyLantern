@@ -70,13 +70,13 @@ export default function ParolArtwork({ theme, pattern }: Props) {
       {Array.from({ length: 20 }, (_, sector) => (
         <g key={sector} transform={`rotate(${sector * 18} 300 302)`}>
           <path d="M 289 164 L 300 146 L 311 164 L 312 198 L 300 211 L 288 198 Z"
-            fill={colors[Math.floor(sector / 2) % colors.length]}
+            fill={colors[sector % colors.length]}
             fillOpacity=".62" stroke={ivory} strokeWidth="1.45"/>
           <path d="M 300 152 L 300 206 M 290 187 L 310 187"
             fill="none" stroke={gold} strokeWidth=".9" opacity=".76"/>
           <path d="M 290 159 Q 300 147 310 159"
             fill="none" stroke={ivory} strokeWidth=".95" opacity=".76"/>
-          <circle cx="300" cy="154" r={sector % 5 === 0 ? 3.2 : 2}
+          <circle cx="300" cy="154" r={sector % 4 === 0 ? 3.2 : 2}
             fill={ivory} stroke={gold} strokeWidth=".65"/>
         </g>
       ))}
@@ -144,7 +144,7 @@ export default function ParolArtwork({ theme, pattern }: Props) {
       {Array.from({ length: 40 }, (_, sector) => {
         const angle = -Math.PI / 2 + sector * TAU / 40
         const { x, y } = polar(151, angle)
-        return <circle key={sector} cx={x} cy={y} r={sector % 5 === 0 ? 2.7 : 1.65}
+        return <circle key={sector} cx={x} cy={y} r={sector % 8 === 0 ? 2.7 : 1.65}
           fill={ivory} stroke={gold} strokeWidth=".6"/>
       })}
       {pattern === 'rings' && (
