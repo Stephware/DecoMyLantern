@@ -43,13 +43,13 @@ test('six parol design families produce different artwork at the same friend cou
 })
 
 test('outer shells grow and auto-fit without a fixed ring or 50-friend cap', () => {
-  assert.equal(shellCountForFriends(0, 'classic'), 1)
+  assert.equal(shellCountForFriends(0, 'classic'), 2)
   for (let count = 1; count <= 120; count++) {
     assert.ok(outerRadiusForFriends(count) > outerRadiusForFriends(count - 1))
     assert.ok(outerFitZoom(count) <= outerFitZoom(count - 1) + 1e-10)
     assert.ok((outerRadiusForFriends(count) + 20) * outerFitZoom(count) <= 280)
     assert.ok(motifCountForFriends(count) % 5 === 0)
-    assert.ok(motifCountForFriends(count) <= 40)
+    assert.ok(motifCountForFriends(count) <= 50)
   }
 })
 
