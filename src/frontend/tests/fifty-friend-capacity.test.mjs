@@ -36,7 +36,7 @@ test('all counts 0–50 have a valid and unique six-family shell', () => {
       const layers = shellCountForFriends(count, key)
       assert.ok(layers >= 1 && layers <= recipe.contourCount + 1)
       const motifs = motifCountForFriends(count)
-      assert.ok(motifs >= 5 && motifs <= 40)
+      assert.ok(motifs >= 25 && motifs <= 50)
       assert.ok(outerPetalPath(count, key, 0).endsWith(' Z'))
       assert.ok((outerRadiusForFriends(count) + 20) * outerFitZoom(count) <= 280)
     }
