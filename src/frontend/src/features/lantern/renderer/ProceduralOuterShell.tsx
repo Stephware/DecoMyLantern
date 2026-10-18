@@ -18,7 +18,6 @@ import {
 
 type Props = { theme: Theme; friendCount: number; pattern: string }
 const TAU = Math.PI * 2
-const CENTER_X = 300
 const CENTER_Y = 302
 
 /**
