@@ -1,7 +1,10 @@
 /**
- * A traditional-parol-inspired radial drawing grammar. Every count produces
- * a complete, repeatable fivefold composition; no friend is assigned one ring
- * or one random ornament. The central identity lights are a separate layer.
+ * BeMyParol: every accepted friend creates one REAL decorated, nested,
+ * five-pointed outer star layer. These bands share edges, leaving no hollow
+ * circular frame around the original star.
+ *
+ * Only the count changes layer geometry. Contributed light positions continue
+ * to depend exclusively on persisted Contribution.SlotIndex.
  */
 export type OuterDesignKey =
   | 'classic' | 'floral' | 'festival'
@@ -9,200 +12,153 @@ export type OuterDesignKey =
 
 export type OuterDesignRecipe = {
   key: OuterDesignKey
-  petals: number
-  wave: 'facet' | 'petal' | 'lace' | 'burst'
-  fullness: number
-  contourCount: number
-  motif: 'diamond' | 'flower' | 'fan' | 'star' | 'sun' | 'jasmine'
+  motif: 'diamond' | 'petal' | 'fan' | 'star' | 'sun' | 'jasmine'
+  name: string
 }
 
 export const OUTER_RECIPES: Readonly<Record<OuterDesignKey, OuterDesignRecipe>> = {
-  classic: { key: 'classic', petals: 10, wave: 'facet', fullness: 0.8, contourCount: 3, motif: 'diamond' },
-  floral: { key: 'floral', petals: 10, wave: 'petal', fullness: 1.12, contourCount: 3, motif: 'flower' },
-  festival: { key: 'festival', petals: 20, wave: 'burst', fullness: 0.9, contourCount: 3, motif: 'fan' },
-  celestial: { key: 'celestial', petals: 20, wave: 'lace', fullness: 0.9, contourCount: 3, motif: 'star' },
-  fiesta: { key: 'fiesta', petals: 15, wave: 'burst', fullness: 1.12, contourCount: 3, motif: 'sun' },
-  sampaguita: { key: 'sampaguita', petals: 10, wave: 'petal', fullness: 1.04, contourCount: 3, motif: 'jasmine' },
+  classic: { key: 'classic', motif: 'diamond', name: 'Classic Gold' },
+  floral: { key: 'floral', motif: 'petal', name: 'Floral Bloom' },
+  festival: { key: 'festival', motif: 'fan', name: 'Festival Lights' },
+  celestial: { key: 'celestial', motif: 'star', name: 'Celestial Lace' },
+  fiesta: { key: 'fiesta', motif: 'sun', name: 'Radiant Fiesta' },
+  sampaguita: { key: 'sampaguita', motif: 'jasmine', name: 'Sampaguita Glow' },
 }
 
-const CENTER_X = 300
-const CENTER_Y = 302
-const TAU = Math.PI * 2
+export const STAR_CENTER = { x: 300, y: 302 } as const
+export const BASE_STAR_RADIUS = 158
+export const FRIEND_LAYER_SPACING = 14
+// Match the existing capiz core's 158-point/74-notch star proportions.
+export const STAR_NOTCH_RATIO = 74 / BASE_STAR_RADIUS
+const TWO_PI = Math.PI * 2
 
-function validateCount(count: number): void {
-  if (!Number.isSafeInteger(count) || count < 0) {
-    throw new RangeError('Accepted friend count must be a non-negative safe integer.')
+export type StarPoint = { x: number; y: number }
+export type FriendStarLayer = {
+  friendNumber: number
+  innerRadius: number
+  outerRadius: number
+}
+
+export function assertFriendCount(friendCount: number): void {
+  if (!Number.isSafeInteger(friendCount) || friendCount < 0) {
+    throw new RangeError('Friend count must be a non-negative safe integer.')
   }
 }
 
-export type OrnamentPlan = {
-  /** Always entire groups of five, maintaining bilateral/radial balance. */
-  bulbs: number
-  scallops: number
-  filigreePairs: number
-  panelSeams: number
-  starlets: number
+export function friendStarLayers(friendCount: number): readonly FriendStarLayer[] {
+  assertFriendCount(friendCount)
+  return Array.from({ length: friendCount }, (_, index) => ({
+    friendNumber: index + 1,
+    innerRadius: outerRadiusForFriends(index),
+    outerRadius: outerRadiusForFriends(index + 1),
+  }))
 }
 
-/**
- * Baseline is richly decorated even without contributors.
- * Friend milestones add *sets* of handcraft-style ornamentation, with
- * continuous geometry changes between them instead of sparse isolated bits.
- */
-export function ornamentPlanForFriends(count: number): OrnamentPlan {
-  validateCount(count)
-  const capped = Math.min(count, 80)
-  return {
-    bulbs: 40 + Math.floor(capped / 5) * 5,
-    scallops: 30 + Math.floor(capped / 8) * 5,
-    filigreePairs: 1 + Math.floor(capped / 8),
-    panelSeams: 2 + Math.floor(capped / 13),
-    starlets: 5 + Math.floor(capped / 12) * 5,
+export function outerRadiusForFriends(friendCount: number): number {
+  assertFriendCount(friendCount)
+  // No saturation at 50. Exactly one new external band for each friend.
+  return BASE_STAR_RADIUS + friendCount * FRIEND_LAYER_SPACING
+}
+
+export function outerFitZoom(friendCount: number): number {
+  const radius = outerRadiusForFriends(friendCount)
+  // The top cap + hanging loop is at radius + 72. The lowest ribbons start
+  // on the two bottom star points (sin 54°) and descend roughly 140 units.
+  const topExtent = radius + 76
+  const bottomExtent = radius * Math.sin(54 * Math.PI / 180) + 164
+  const horizontalExtent = radius * Math.cos(18 * Math.PI / 180) + 18
+  return Math.min(1, 281 / topExtent, 289 / bottomExtent, 283 / horizontalExtent)
+}
+
+export function starVertices(radius: number): readonly StarPoint[] {
+  if (!Number.isFinite(radius) || radius < 0) {
+    throw new RangeError('Star radius must be finite and non-negative.')
   }
-}
-
-/** Growth stays legible at 50 instead of zooming the artwork into a dot. */
-export function outerRadiusForFriends(count: number): number {
-  validateCount(count)
-  return 215 + 0.8 * Math.min(count, 50) +
-    (count > 50 ? 13 * Math.log1p((count - 50) / 18) : 0)
-}
-
-export function outerFitZoom(count: number): number {
-  const outer = outerRadiusForFriends(count)
-  // Tassels extend 290 units down from the center. Preserve space for
-  // decorative punta tips + their glow as the perimeter grows.
-  return Math.min(1, 280 / Math.max(298, outer + 34))
-}
-
-export function growthPhase(count: number): number {
-  validateCount(count)
-  return count % 10
-}
-
-export function shellCountForFriends(count: number, key: OuterDesignKey): number {
-  validateCount(count)
-  const recipe = OUTER_RECIPES[key]
-  return Math.min(recipe.contourCount, 2 + Math.floor(count / 20))
-}
-
-export function motifCountForFriends(count: number): number {
-  validateCount(count)
-  return Math.min(50, 25 + Math.floor(count / 5) * 5)
-}
-
-/** Strong graphic edges for facets, rounded lobes for capiz flowers. */
-function radialWave(angle: number, recipe: OuterDesignRecipe): number {
-  const cycle = angle * recipe.petals
-  if (recipe.wave === 'facet') return 1 - (2 * Math.acos(Math.cos(cycle)) / Math.PI)
-  if (recipe.wave === 'petal') return 2 * Math.pow((1 + Math.cos(cycle)) / 2, 1.65) - 1
-  if (recipe.wave === 'lace') return 0.72 * Math.cos(cycle) + 0.18 * Math.cos(2 * cycle)
-  return 0.73 * Math.cos(cycle) + 0.24 * Math.cos(2 * cycle)
-}
-
-/**
- * Scalloped metalwork perimeter (puntetas). The path is closed, cyclic,
- * deterministic and evolves *every* time a friend is accepted.
- */
-export function outerShellPath(
-  count: number,
-  key: OuterDesignKey,
-  layerIndex = 0,
-): string {
-  validateCount(count)
-  if (!Number.isSafeInteger(layerIndex) || layerIndex < 0 || layerIndex > 3) {
-    throw new RangeError('Invalid procedural shell layer.')
-  }
-  const recipe = OUTER_RECIPES[key]
-  const base = outerRadiusForFriends(count) - layerIndex * (11 + recipe.fullness * 2)
-  const phase = growthPhase(count)
-  const amplitude = (5.3 + phase * 0.18 + Math.min(count, 50) * 0.035) *
-    recipe.fullness * (1 - layerIndex * 0.08)
-  const samples = recipe.petals * 18
-  const points = Array.from({ length: samples }, (_, i) => {
-    const a = -Math.PI / 2 + (i * TAU) / samples
-    const radius = base + amplitude * radialWave(a + Math.PI / 2, recipe)
-    return `${(CENTER_X + radius * Math.cos(a)).toFixed(2)} ${(CENTER_Y + radius * Math.sin(a)).toFixed(2)}`
-  })
-  return `M ${points.join(' L ')} Z`
-}
-
-export function outerPetalPath(
-  count: number,
-  key: OuterDesignKey,
-  motifIndex: number,
-): string {
-  validateCount(count)
-  if (!Number.isSafeInteger(motifIndex) || motifIndex < 0) {
-    throw new RangeError('Invalid motif index.')
-  }
-  const recipe = OUTER_RECIPES[key]
-  const total = motifCountForFriends(count)
-  const a = -Math.PI / 2 + (motifIndex * TAU) / total
-  const radius = outerRadiusForFriends(count)
-  const half = (Math.PI / total) * (recipe.wave === 'petal' ? .86 : .67)
-  const xy = (r: number, angle: number) =>
-    `${(CENTER_X + r * Math.cos(angle)).toFixed(2)} ${(CENTER_Y + r * Math.sin(angle)).toFixed(2)}`
-  const base = radius - 23
-  const tip = radius + 4 + recipe.fullness * 5
-  const start = xy(base, a - half)
-  const end = xy(base, a + half)
-  const controlL = xy(radius + 4, a - half * .5)
-  const controlR = xy(radius + 4, a + half * .5)
-  if (recipe.wave === 'petal' || recipe.wave === 'lace') {
-    return `M ${start} Q ${controlL} ${xy(tip, a)} Q ${controlR} ${end} Z`
-  }
-  return `M ${start} L ${controlL} L ${xy(tip, a)} L ${controlR} L ${end} Z`
-}
-
-export function outerMotifPosition(
-  count: number,
-  motifIndex: number,
-): { x: number; y: number } {
-  validateCount(count)
-  const total = motifCountForFriends(count)
-  if (!Number.isSafeInteger(motifIndex) || motifIndex < 0 || motifIndex >= total) {
-    throw new RangeError('Invalid motif index.')
-  }
-  const a = -Math.PI / 2 + (motifIndex * TAU) / total
-  const radius = outerRadiusForFriends(count) - 13
-  return { x: CENTER_X + radius * Math.cos(a), y: CENTER_Y + radius * Math.sin(a) }
-}
-
-/**
- * Each new friend illuminates five matching foil inlays (one per sector),
- * maintaining fivefold balance. The first 50 groups fill the ornamental glass
- * band; above that, the shell and edge lighting still evolve continuously.
- */
-export function friendInlayPosition(
-  friendIndex: number,
-  sector: number,
-): { x: number; y: number } {
-  validateCount(friendIndex)
-  if (!Number.isSafeInteger(sector) || sector < 0 || sector >= 5) {
-    throw new RangeError('Inlays must be placed in one of five parol sectors.')
-  }
-  const column = friendIndex % 10
-  const row = Math.floor(friendIndex / 10)
-  const angle = (-90 + sector * 72 + 36 - 15 + column * 3.35) * Math.PI / 180
-  const radius = 173 + row * 6.6
-  return polarPoint(radius, angle)
-}
-
-export function polarPoint(radius: number, angleRadians: number): { x: number; y: number } {
-  return {
-    x: CENTER_X + radius * Math.cos(angleRadians),
-    y: CENTER_Y + radius * Math.sin(angleRadians),
-  }
-}
-
-/** A flat repeating 5-way enamel star with 10 vertices, used in glass inlays. */
-export function insetStarPoints(
-  centerX: number, centerY: number, outerRadius: number, innerRadius: number,
-): string {
   return Array.from({ length: 10 }, (_, index) => {
     const angle = -Math.PI / 2 + index * Math.PI / 5
-    const r = index % 2 === 0 ? outerRadius : innerRadius
-    return `${(centerX + Math.cos(angle) * r).toFixed(2)},${(centerY + Math.sin(angle) * r).toFixed(2)}`
-  }).join(' ')
+    const r = index % 2 === 0 ? radius : radius * STAR_NOTCH_RATIO
+    return {
+      x: STAR_CENTER.x + Math.cos(angle) * r,
+      y: STAR_CENTER.y + Math.sin(angle) * r,
+    }
+  })
+}
+
+export function starOutlinePath(radius: number): string {
+  const vertices = starVertices(radius)
+  return 'M ' + vertices.map(({ x, y }) => `${x.toFixed(3)} ${y.toFixed(3)}`).join(' L ') + ' Z'
+}
+
+/** One unbroken filled star-shaped band, with a star-shaped transparent hole. */
+export function friendStarBandPath(friendNumber: number): string {
+  if (!Number.isSafeInteger(friendNumber) || friendNumber < 1) {
+    throw new RangeError('Star layers are numbered from one.')
+  }
+  return `${starOutlinePath(outerRadiusForFriends(friendNumber))} ${starOutlinePath(outerRadiusForFriends(friendNumber - 1))}`
+}
+
+/** Each layer is a mosaic of ten connected quadrilaterals, not a bare ring. */
+export function friendStarFacetPath(friendNumber: number, segment: number): string {
+  if (!Number.isSafeInteger(friendNumber) || friendNumber < 1) {
+    throw new RangeError('Star layers are numbered from one.')
+  }
+  if (!Number.isSafeInteger(segment) || segment < 0 || segment >= 10) {
+    throw new RangeError('A five-point star has exactly ten edge segments.')
+  }
+  const inner = starVertices(outerRadiusForFriends(friendNumber - 1))
+  const outer = starVertices(outerRadiusForFriends(friendNumber))
+  const next = (segment + 1) % 10
+  const corners = [inner[segment], outer[segment], outer[next], inner[next]]
+  return 'M ' + corners.map(({ x, y }) => `${x.toFixed(3)} ${y.toFixed(3)}`).join(' L ') + ' Z'
+}
+
+export function starTipPosition(
+  friendNumber: number,
+  sector: number,
+  fraction = 0.5,
+): StarPoint {
+  if (!Number.isSafeInteger(friendNumber) || friendNumber < 1) {
+    throw new RangeError('Star layers are numbered from one.')
+  }
+  if (!Number.isSafeInteger(sector) || sector < 0 || sector >= 5) {
+    throw new RangeError('A star has five major tips.')
+  }
+  if (!Number.isFinite(fraction) || fraction < 0 || fraction > 1) {
+    throw new RangeError('Fraction must be between zero and one.')
+  }
+  const radius = outerRadiusForFriends(friendNumber - 1) + FRIEND_LAYER_SPACING * fraction
+  const angle = -Math.PI / 2 + sector * TWO_PI / 5
+  return { x: STAR_CENTER.x + Math.cos(angle) * radius,
+    y: STAR_CENTER.y + Math.sin(angle) * radius }
+}
+
+export function starNotchPosition(
+  friendNumber: number,
+  sector: number,
+): StarPoint {
+  if (!Number.isSafeInteger(friendNumber) || friendNumber < 1) {
+    throw new RangeError('Star layers are numbered from one.')
+  }
+  if (!Number.isSafeInteger(sector) || sector < 0 || sector >= 5) {
+    throw new RangeError('A star has five notches.')
+  }
+  const angle = -Math.PI / 2 + (sector + 0.5) * TWO_PI / 5
+  const radius = (outerRadiusForFriends(friendNumber - 1) +
+    FRIEND_LAYER_SPACING / 2) * STAR_NOTCH_RATIO
+  return { x: STAR_CENTER.x + Math.cos(angle) * radius,
+    y: STAR_CENTER.y + Math.sin(angle) * radius }
+}
+
+export function lowerRibbonAnchors(friendCount: number): readonly StarPoint[] {
+  const radius = outerRadiusForFriends(friendCount)
+  // Five string attachments follow the V-shaped lower outline of the
+  // outermost star, rather than remaining fixed under the original core.
+  return [-2, -1, 0, 1, 2].map(index => {
+    const proportion = Math.abs(index) / 2
+    return {
+      x: STAR_CENTER.x + (index / 2) * radius * Math.cos(54 * Math.PI / 180),
+      y: STAR_CENTER.y + radius * (
+        STAR_NOTCH_RATIO * (1 - proportion) + Math.sin(54 * Math.PI / 180) * proportion),
+    }
+  })
 }
