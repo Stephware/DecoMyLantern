@@ -18,7 +18,7 @@ type Props = {
 
 const PATTERNS = [
   { key: 'default', label: 'Traditional', detail: 'Original star accents' },
-  { key: 'rings', label: 'Celestial rings', detail: 'Soft circular detailing' },
+  { key: 'rings', label: 'Filigree trim', detail: 'Delicate foil and bead detailing' },
   { key: 'rays', label: 'Radiant rays', detail: 'A brighter starburst' },
 ] as const
 
@@ -182,7 +182,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                   {designs.map(design => {
                     const palette = THEMES.find(item => item.key === design.designKey)
                     return <button key={design.designKey} type="button" disabled={busy} onClick={() => { setDraftDesign(design.designKey); setNotice('') }} aria-pressed={draftDesign === design.designKey} className={'flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-55 ' + (draftDesign === design.designKey ? 'border-amber-300 bg-amber-300/10' : 'border-white/10 bg-white/5 hover:border-amber-200/50')}>
-                      {palette && <svg viewBox="100 100 400 470" role="img" aria-label={design.name + ' thumbnail'} className="h-[98px] w-[86px] shrink-0 rounded-xl bg-[#0b1425]"><ProceduralOuterShell theme={palette} friendCount={0} pattern="default" /><ParolArtwork theme={palette} pattern="default" /></svg>}
+                      {palette && <svg viewBox="0 0 600 640" role="img" aria-label={design.name + ' thumbnail'} className="h-[98px] w-[86px] shrink-0 rounded-xl bg-[#0b1425]"><ProceduralOuterShell theme={palette} friendCount={0} pattern="default" /><ParolArtwork theme={palette} pattern="default" /></svg>}
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold">{design.name}</span>
                         <span className="mt-1 block text-xs text-white/50">{design.requiredFriends <= unlockProgress ? 'Unlocked · Ready to select' : lantern?.designKey === design.designKey ? 'Previously selected · Kept unlocked' : `Preview only · Unlocks at ${design.requiredFriends} friends` }</span>
