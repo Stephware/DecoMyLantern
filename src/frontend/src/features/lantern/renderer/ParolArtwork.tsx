@@ -53,20 +53,8 @@ export default function ParolArtwork({ theme, pattern }: Props) {
         </filter>
       </defs>
 
-      {/* Hanging filament and cap, drawn behind the ornament. */}
-      <path d="M300 19 C294 48 305 88 300 139" fill="none" stroke={primary} strokeWidth="2.4" strokeLinecap="round" opacity=".78" />
-      <circle cx="300" cy="139" r="8.5" fill="#121b2c" stroke={lightTone} strokeWidth="2.5" />
-      <circle cx="300" cy="139" r="2.5" fill={lightTone} />
-
-      {/* Five silk tails with their own knotted bead and taper. */}
-      {[-34, -17, 0, 17, 34].map((shift, i) => (
-        <g key={shift} transform={`translate(${shift} 0)`}>
-          <path d={`M300 418 Q${284 + i * 8} 474 ${290 + i * 5} 538 Q${298 + i * 5} 550 ${298 + i * 5} 574`}
-            stroke={i % 2 ? primary : leaf} strokeWidth={i === 2 ? 7 : 4.5} opacity=".76" fill="none" strokeLinecap="round" />
-          <path d="M291 574 L300 592 L309 574" fill="none" stroke={i % 2 ? lightTone : primary} strokeWidth="3" />
-          <circle cx="300" cy="542" r="5" fill={rose} stroke={lightTone} strokeWidth="1" />
-        </g>
-      ))}
+      {/* The hanging cord and silk tassels now attach to the outermost
+          friend layer in ProceduralOuterShell, not to the fixed center. */}
 
       {/* The base parol is already complete and beautiful with zero friends. */}
       <polygon points={starPoints(158, 74)} fill={primary} opacity=".32" filter={`url(#${edgeGlow})`} />
