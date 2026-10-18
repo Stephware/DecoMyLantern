@@ -79,7 +79,7 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
               <path d={festivalBandPath(n)} fill={hue} fillOpacity=".67"
                 fillRule="evenodd" stroke="none" />
               {Array.from({ length: PANEL_SEGMENTS }, (_, segment) => {
-                const cellColor = palette[(Math.floor(segment / 2) + familyIndex + n) % palette.length]
+                const cellColor = palette[(segment % 4 + familyIndex + n) % palette.length]
                 return (
                   <path key={segment} data-capiz-facet={segment}
                     d={festivalFacetPath(n, segment)}
@@ -162,7 +162,7 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
             <g key={region.zone} data-growth-region={region.zone}
               data-visible-through-layer={end}>
               {Array.from({ length: 10 }, (_, sector) => {
-                const color = palette[(sector % 5 + regionIndex) % palette.length]
+                const color = palette[(sector % 2 + regionIndex) % palette.length]
                 const inner = festivalMotifPoint(region.from - 1, sector, 10)
                 const outer = festivalMotifPoint(end, sector, 10)
                 const midIndex = Math.floor((region.from + end) / 2)
@@ -296,9 +296,9 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
           <g key={index}>
             <circle cx={pos.x} cy={pos.y} r="5.1"
               fill={primary} opacity=".22"/>
-            <circle cx={pos.x} cy={pos.y} r={index % 5 === 0 ? 3.4 : 2}
+            <circle cx={pos.x} cy={pos.y} r={index % 8 === 0 ? 3.4 : 2}
               fill={ivory} stroke={primary} strokeWidth=".65"/>
-            {index % 5 === 0 && (
+            {index % 8 === 0 && (
               <circle cx={pos.x} cy={pos.y} r="7.4"
                 fill={glow} opacity=".2"/>
             )}
