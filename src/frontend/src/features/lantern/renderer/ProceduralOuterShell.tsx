@@ -2,6 +2,7 @@ import { useId } from 'react'
 import type { Theme } from '../../customization/themes'
 import {
   growthPhase,
+  friendInlayPosition,
   insetStarPoints,
   motifCountForFriends,
   ornamentPlanForFriends,
@@ -266,6 +267,30 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
           ))}
         </g>
       ))}
+
+      {/* Every individual friend adds one fivefold set of tiny capiz jewels:
+          a recognizable change after +1 while the overall composition stays
+          symmetrical. Stored lights inside the center still own the identity. */}
+      <g data-testid="friend-capiz-inlays"
+        data-inlay-count={Math.min(friendCount, 50) * 5}>
+        {Array.from({ length: Math.min(friendCount, 50) }, (_, friendIndex) =>
+          Array.from({ length: 5 }, (_, sector) => {
+            const { x, y } = friendInlayPosition(friendIndex, sector)
+            const jewelColor = friendIndex % 3 === 0 ? cream : friendIndex % 3 === 1 ? rose : gold
+            return (
+              <g key={`${sector}-${friendIndex}`}>
+                <path d={`M ${x.toFixed(2)} ${(y - 3.1).toFixed(2)}
+                  L ${(x + 2.4).toFixed(2)} ${y.toFixed(2)}
+                  L ${x.toFixed(2)} ${(y + 3.1).toFixed(2)}
+                  L ${(x - 2.4).toFixed(2)} ${y.toFixed(2)} Z`}
+                  fill={jewelColor} fillOpacity=".77"
+                  stroke="#fff4d5" strokeWidth=".7" />
+                <circle cx={x} cy={y - 1} r=".7" fill="#fffefa" />
+              </g>
+            )
+          })
+        )}
+      </g>
 
       {/* Decorative punta border: embossed scalloped capiz lace, no bare
           circles. A design family's edge shape remains recognisable. */}
