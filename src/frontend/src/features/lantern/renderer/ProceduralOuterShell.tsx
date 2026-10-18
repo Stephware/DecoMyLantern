@@ -50,7 +50,7 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
   // composition by elaborating panels, not by expanding 50 empty circles.
   return (
     <g data-testid="living-outer-shell" data-friends={friendCount}
-      data-recipe={recipe.key} data-zoom={outerFitZoom(friendCount)}
+      data-recipe={recipe.key} data-zoom={outerFitZoom(friendCount)} className="parol-ornament-reveal"
       aria-hidden="true">
       <defs>
         <radialGradient id={`${uid}-capiz`} cx="43%" cy="34%" r="80%">
