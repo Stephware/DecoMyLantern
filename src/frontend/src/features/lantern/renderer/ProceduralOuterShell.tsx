@@ -38,7 +38,6 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
   const contours = shellCountForFriends(friendCount, theme.key)
   const puntetas = motifCountForFriends(friendCount)
   const petals = recipe.wave === 'petal' || recipe.motif === 'jasmine'
-  const festival = recipe.wave === 'burst'
   const glass = `url(#${uid}-capiz)`
   const warm = `url(#${uid}-warm)`
   const glow = `url(#${uid}-gold-glow)`
