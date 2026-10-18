@@ -37,6 +37,7 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
   const outline = festivalOutlinePath(friendCount)
   const lastRadius = outerRadiusForFriends(friendCount)
   const glass = `url(#${uid}-capiz)`
+  const goldTrim = primary
   const glow = `url(#${uid}-jewel)`
   const regionVisible = GROWTH_REGIONS.filter(region => friendCount >= region.from)
   const motifFill = recipe.motif === 'flower' || recipe.motif === 'jasmine' ? rose :
@@ -76,7 +77,7 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
           const trim = familyIndex % 2 === 0 ? ivory : primary
           return (
             <g key={n} data-friend-layer={n} data-region={zone}>
-              <path d={festivalBandPath(n)} fill={hue} fillOpacity=".67"
+              <path d={festivalBandPath(n)} fill={hue} fillOpacity=".37"
                 fillRule="evenodd" stroke="none" />
               {Array.from({ length: PANEL_SEGMENTS }, (_, segment) => {
                 const cellColor = palette[(segment % 4 + familyIndex + n) % palette.length]
@@ -84,8 +85,8 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
                   <path key={segment} data-capiz-facet={segment}
                     d={festivalFacetPath(n, segment)}
                     fill={segment % 3 === 0 ? glass : cellColor}
-                    fillOpacity={segment % 3 === 0 ? '.62' : '.4'}
-                    stroke={ivory} strokeOpacity=".16" strokeWidth=".6" />
+                    fillOpacity={segment % 3 === 0 ? '.4' : '.25'}
+                    stroke={ivory} strokeOpacity=".12" strokeWidth=".5" />
                 )
               })}
 
@@ -144,8 +145,8 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
               {/* Every completed friend's boundary remains a true contour. */}
               <path d={festivalOutlinePath(n)} fill="none"
                 stroke={n % 5 === 0 ? ivory : trim}
-                strokeWidth={n % 5 === 0 ? 2.7 : 1.3}
-                strokeOpacity={n % 5 === 0 ? '.96' : '.67'}
+                strokeWidth={n % 5 === 0 ? 2.3 : .85}
+                strokeOpacity={n % 5 === 0 ? '.82' : '.31'}
                 strokeLinejoin="round"/>
             </g>
           )
@@ -167,14 +168,14 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
                 const outer = festivalMotifPoint(end, sector, 10)
                 const midIndex = Math.floor((region.from + end) / 2)
                 const center = bandMotifPoint(midIndex, sector)
-                const fillSize = Math.min(1.15, .35 + (end - region.from + 1) / 12)
+                const fillSize = Math.min(3.1, Math.max(.55, (end - region.from + 1) * 10.5 / 39))
                 const control = bandMotifPoint(midIndex, sector)
                 return (
                   <g key={sector}>
                     <path d={regionPanelPath(region.from, end, sector)}
                       fill={region.zone === 'palimbun' ? motifFill : color}
-                      fillOpacity={region.zone === 'palimbun' ? '.24' : '.13'}
-                      stroke={ivory} strokeOpacity=".39" strokeWidth="1.5"/>
+                      fillOpacity={region.zone === 'palimbun' ? '.42' : '.33'}
+                      stroke={ivory} strokeOpacity=".73" strokeWidth="2.0"/>
                     {/* A coherent large-scale design appears INSIDE each
                         region as its bands arrive, rather than just a thin border. */}
                     <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 36 + 18}) scale(${fillSize})`}>
@@ -255,9 +256,9 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
       <g data-testid="festival-layer-details">
         {layers.map(({ friendNumber: n }) => (
           <path key={n} d={festivalOutlinePath(n)} fill="none"
-            stroke={n % 5 === 0 ? ivory : primary}
-            strokeWidth={n % 5 === 0 ? 1.7 : .9}
-            strokeOpacity={n % 5 === 0 ? '.88' : '.48'}/>
+            stroke={n % 5 === 0 ? ivory : goldTrim}
+            strokeWidth={n % 5 === 0 ? 1.6 : .6}
+            strokeOpacity={n % 5 === 0 ? '.82' : '.22'}/>
         ))}
       </g>
 
