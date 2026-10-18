@@ -123,7 +123,7 @@ export default function LanternScene({
       <div className="relative overflow-hidden rounded-[26px] border border-white/5 bg-[radial-gradient(ellipse_at_50%_42%,rgba(249,177,82,0.10),rgba(8,14,32,0)_65%)]">
         <svg
           role="img"
-          aria-label={`${theme.label} evolving parol, ${friendCount} ${isPreview ? 'test friends' : 'accepted friends'}, ${designTier.name} milestone`}
+          aria-label={`${theme.label} five-pointed parol with ${friendCount} decorated outer star layers, one per ${isPreview ? 'test friend' : 'accepted friend'}; ${designTier.name} design milestone`}
           viewBox="0 0 600 640"
           preserveAspectRatio="xMidYMid meet"
           className="block h-auto w-full cursor-grab select-none active:cursor-grabbing"
@@ -173,14 +173,14 @@ export default function LanternScene({
           <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-white transition hover:bg-white/15 disabled:opacity-30" aria-label="Zoom in" title="Zoom in" disabled={camera.zoom >= MAX_ZOOM} onClick={() => zoomBy(0.2)}>+</button>
         </div>
         <div className="pointer-events-none absolute left-3 top-3 rounded-full border border-white/10 bg-[#101b33]/80 px-3 py-2 text-[11px] text-amber-100/80 backdrop-blur">
-          {friendCount} {isPreview ? 'test' : 'accepted'} friends · Living {theme.label} design
+          {friendCount} {isPreview ? 'test' : 'accepted'} friends · {friendCount} outer star layers
         </div>
       </div>
       {selected && <figcaption className="mt-2 text-center text-xs text-amber-200">
         Selected: {selected.displayName} · Light #{selected.slotIndex + 1}
       </figcaption>}
       <figcaption className="mt-2 text-center text-xs text-white/40">
-        Each friend reshapes the outer parol · Drag to explore · Pinch to zoom · Fit to recenter
+        Each friend adds one complete decorated outer star layer · Drag to explore · Pinch to zoom · Fit to recenter
       </figcaption>
     </figure>
   )
