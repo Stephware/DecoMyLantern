@@ -3,6 +3,7 @@ import LanternScene from '../lantern/renderer/LanternScene'
 import ParolArtwork from '../lantern/renderer/ParolArtwork'
 import ProceduralOuterShell from '../lantern/renderer/ProceduralOuterShell'
 import { MAX_TEST_FRIENDS, stageForFriends, nextDesignMilestone } from '../lantern/growth/stages'
+import { GROWTH_REGIONS, growthZoneForLayer } from '../lantern/growth/outerGrowth'
 import { THEMES } from '../customization/themes'
 import InvitationManager from '../invitations/InvitationManager'
 import type { Design, Lantern } from '../../lib/api'
@@ -139,8 +140,8 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                       Reset to 0
                     </button>
                   </div>
-                  <div className="flex flex-wrap items-center justify-center gap-2" aria-label="Jump to design unlock milestones">
-                    { [0, 3, 10, 23, 40, 50].map(count => (
+                  <div className="flex flex-wrap items-center justify-center gap-2" aria-label="Jump to design milestones and decorative-region transitions">
+                    { [0, 3, 10, 20, 23, 35, 40, 45, 50, 60].map(count => (
                       <button key={count} type="button" onClick={() => setPreviewCount(count)}
                         aria-pressed={previewCount === count}
                         className={'rounded-full border px-3 py-1.5 text-xs transition ' +
@@ -151,7 +152,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                   </div>
                   {previewCount !== null && (
                     <p role="status" className="text-center text-xs font-semibold text-amber-200">
-                      {previewCount} simulated friends · {previewCount} decorative festival layers · Not saved
+                      {previewCount} simulated friends · {previewCount} decorative festival layers · {previewCount === 0 ? 'Complete mini tambor' : GROWTH_REGIONS.find(region => region.zone === growthZoneForLayer(previewCount))?.label ?? 'Puntetas'} · Not saved
                     </p>
                   )}
                 </div>
