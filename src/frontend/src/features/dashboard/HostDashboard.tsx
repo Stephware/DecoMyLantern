@@ -155,7 +155,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                     </p>
                   )}
                 </div>
-                <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'The outer silhouette rearranges beautifully as friends join. Each friend retains their own selectable light within the central parol.' : 'Preview only: friends and decorations are simulated. Nothing here saves a contribution, sends an invitation, or unlocks a design.'}</p>
+                <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Every friend adds five glowing glass inlays across the ornament. Flower panels, foil latticework, edge filigree and the outer silhouette evolve while their individual star light stays identifiable.' : 'Design preview only: new capiz-style details appear as you add friends. This does not save contributions, send invitations, or unlock designs.'}</p>
                 <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-[#0b1325]/80 p-4 sm:grid-cols-3 sm:p-5">
                   <div><p className="text-2xl font-bold text-amber-200">{accepted}</p><p className="mt-1 text-xs text-white/50">Accepted friends</p></div>
                   <div><p className="text-lg font-semibold text-white">{stageForFriends(unlockProgress).name}</p><p className="mt-1 text-xs text-white/50">Highest unlocked design</p></div>
