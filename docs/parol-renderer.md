@@ -1,42 +1,48 @@
-# BeMyParol — living procedural outer design
+# BeMyParol — 50 friends, 50 actual five-pointed star layers
 
-## Final visual behavior
+## Growth
 
-The ring experiment informed the growth mechanics, but the **production artwork is not an expanding set of circles**. It uses layered capiz-inspired stained-glass beams, five window medallions, criss-cross diamond lattice, scalloped foil edging, small star jewels, embroidered filigree and embedded warm bulbs. Each accepted friend triggers a balanced recomposition and illuminates five new tiny glass inlays (one per sector). Zero-friend artwork is already complete. Growth beyond 50 keeps changing the outer contour and trim without shrinking the centerpiece into a tiny dot.
+The central parol is complete at **zero friends**. It uses a five-point star with an outer tip radius of 158 SVG units and notch radius 74. Every accepted friend contributes one connected decorative five-point star band, spaced 14 SVG units outward. Band N is defined by the difference between star polygons N and N − 1, and divided into ten capiz-glass facet panels. Therefore **50 friends create precisely 50 filled outer star layers**, not a single expanding circle and not fifty disconnected ornaments.
 
-Six owner-selectable families have independent design grammars:
+New bands have metallic edges, alternating capiz colors, tip and notch jewels, and full fivefold symmetry; every fifth band also carries capiz-style floral medallions. As the structure grows, the hanging cord and five ribbons follow the outermost star instead of the fixed center. The zoom calculation fits the entire star and moving tassels within the 600 × 640 SVG viewBox.
 
-| Design | Unlock requirement | Outer structure |
+## Contributor identity
+
+- The decoration's band count comes from the actual accepted contributions or, explicitly, a non-saving test count.
+- A real friend's **separate light** inside the original star is positioned only by their immutable `Contribution.SlotIndex`. Removed contributions leave gaps in slot indices and never reposition another person's light.
+- Guest invitation previews display only generic contributor labels, not other guests' real names or private messages.
+- The owner preview buttons simulate 0–60 friends in React state without API calls; real contributions still require the invitation workflow.
+
+## Design collections
+
+| Design | Unlock count | Per-layer ornament |
 |---|---:|---|
-| Classic Gold | 0 friends | Faceted diamonds and warm gold points |
-| Floral Bloom | 3 friends | Rounded petals and flowing floral arcs |
-| Festival Lights | 10 friends | Layered festival fans and bursts |
-| Celestial Lace | 23 friends | Fine celestial lace/star points |
-| Radiant Fiesta | 40 friends | Bright symmetrical sunbursts |
-| Sampaguita Glow | 50 friends | Jasmine petals and soft luminous layers |
+| Classic Gold | 0 | Faceted gold diamonds |
+| Floral Bloom | 3 | Rose petals |
+| Festival Lights | 10 | Colorful glass fans |
+| Celestial Lace | 23 | Celestial star inlays |
+| Radiant Fiesta | 40 | Warm sun motifs |
+| Sampaguita Glow | 50 | Jasmine flowers |
 
-The unlock milestone is not a limit on contributions. Growth continues after 50 friends, with logarithmic radius expansion to avoid unbounded viewport size.
+Every collection uses the **same count-to-layer invariant**. Design unlocks are handled by the backend and remain separate from ring/band geometry. Friend count continues beyond 50.
 
-## Identity and camera
+## Local checks
 
-- Every accepted `Contribution` keeps its original immutable `SlotIndex` and a corresponding **individual inner-star light**. Outer petals/rays are not themselves permanent friend identities, so the shell is free to recompose.
-- Selecting a light highlights it and displays its saved guest name to the owner. In anonymous guest previews, this is a generic label and never reveals names or sealed Christmas messages.
-- `LanternScene` computes a fit zoom from the outer extent, including the fixed silk tassels, and re-centers when the friend count changes. Manual drag/pinch/zoom and Fit continue working.
-- `ParolArtwork` draws the fixed core. `ProceduralOuterShell` draws the living outside. `outerGrowth.ts` is the deterministic style/geometry engine.
-- Preview buttons on the owner's dashboard simulate 0–60 friends in memory. **They do not write to SQL Server** and do not unlock any design or submit a guest contribution.
+```bash
+# repo root
+dotnet tool restore
+dotnet build DecoMyLantern.slnx
+dotnet test DecoMyLantern.slnx
+dotnet ef migrations has-pending-model-changes --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api
 
-## Database and compatibility
+cd src/frontend
+npm ci
+npm test
+npm run lint
+npm run typecheck
+npm run build
+```
 
-`20261017230000_LivingParolDesigns` updates only design and growth-stage seed rows. Existing three design GUIDs are unchanged; their currently saved lantern selections remain valid. No SQL table is dropped. Both new saves and direct API calls enforce `RequiredFriends`; `NextSlotIndex` retains historical friend progress when an individual contribution is removed.
+In the design studio, test +1 friend sequentially and jump to 50; zoom into individual bands and validate the parol's star silhouette, fivefold symmetry, light selection and moving tassels. Review a narrow mobile viewport as well as desktop. Full local builds, browser screenshots and live SQL verification must pass before merging the draft PR.
 
-Before applying the migration, compare `ConnectionStrings:DefaultConnection` with the SQL client instance and verify **DecoMyLanternDb**, not `master`. Prefer `dotnet ef database update` after backup rather than manually re-running the entire SQL script.
-
-## Verification checklist
-
-From the frontend directory: `npm ci && npm run test && npm run lint && npm run typecheck && npm run build`.
-
-From solution root: `dotnet build DecoMyLantern.slnx && dotnet test DecoMyLantern.slnx`; then `dotnet ef migrations has-pending-model-changes --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api`.
-
-Review desktop/mobile at 0, 1, 2, 3, 10, 23, 40, 50 and 60 friends; all six designs, explicit locked/unlocked gallery states and the +1 friend preview. Verify previously saved parols retain their selected designs, guest names remain private, and manual fit/zoom stays functional.
-
-See [living parol design architecture](living-parol-design.md).
+See [living parol architecture](living-parol-design.md).
