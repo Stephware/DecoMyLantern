@@ -192,6 +192,26 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
                   </g>
                 )
               })}
+              {/* Each fifth layer carries a fivefold capiz rosette set.
+                  At 50 friends these ten sets give the large star visible
+                  flower/jewel craftsmanship rather than only thin stripes. */}
+              {level % 5 === 0 && Array.from({ length: 5 }, (_, sector) => {
+                const { x, y } = starTipPosition(level, sector)
+                return (
+                  <g key={sector} transform={`translate(${x} ${y})`}
+                    data-layer-rosette={level}>
+                    <circle r="10.5" fill="#17223a" fillOpacity=".83"
+                      stroke={ivory} strokeWidth="1.8"/>
+                    {Array.from({ length: 5 }, (_, petal) => (
+                      <ellipse key={petal} cx="0" cy="-5.2" rx="3.8" ry="6.2"
+                        transform={`rotate(${petal * 72})`}
+                        fill={petal % 2 ? rose : jade}
+                        fillOpacity=".88" stroke={gold} strokeWidth=".55"/>
+                    ))}
+                    <circle r="3.1" fill={ivory} stroke={gold} strokeWidth="1"/>
+                  </g>
+                )
+              })}
               {pattern === 'rings' && level % 4 === 0 && (
                 <path d={starOutlinePath(layer.outerRadius - 3)}
                   fill="none" stroke={ivory} strokeDasharray="2 5"
