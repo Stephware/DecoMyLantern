@@ -2,7 +2,7 @@
 
 ## Final visual behavior
 
-The ring experiment informed the growth mechanics, but the **production artwork is not an expanding set of circles**. Each accepted friend triggers a new, balanced radial composition of the outer parol. A zero-friend parol is complete. Every subsequent count from 1 through 50 and beyond changes its outer contour, scale and repeating motifs.
+The ring experiment informed the growth mechanics, but the **production artwork is not an expanding set of circles**. It uses layered capiz-inspired stained-glass beams, five window medallions, criss-cross diamond lattice, scalloped foil edging, small star jewels, embroidered filigree and embedded warm bulbs. Each accepted friend triggers a balanced recomposition and illuminates five new tiny glass inlays (one per sector). Zero-friend artwork is already complete. Growth beyond 50 keeps changing the outer contour and trim without shrinking the centerpiece into a tiny dot.
 
 Six owner-selectable families have independent design grammars:
 
