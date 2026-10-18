@@ -140,19 +140,86 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
             fill={warm} fillOpacity=".76" stroke={cream}
             strokeWidth="2.5" strokeLinejoin="round"/>
           <g transform={`translate(300 ${blossomY.toFixed(2)})`}>
-            {Array.from({ length: 5 }, (_, petal) => (
-              <g key={petal} transform={`rotate(${petal * 72})`}>
-                <ellipse cx="0" cy="-17" rx={petals ? 12 : 10.2}
-                  ry={petals ? 20 : 18} fill={petal % 2 ? gold : glassTone}
-                  fillOpacity=".67" stroke={cream} strokeWidth="1.55"/>
-                <path d="M 0 -7 L 0 -31" fill="none"
-                  stroke="#fff9dd" strokeOpacity=".7" strokeWidth=".9"/>
-                {friendCount >= 10 && (
-                  <path d="M -4 -18 Q 0 -27 4 -18" fill="none"
-                    stroke={rose} strokeOpacity=".75" strokeWidth=".9"/>
+            {(recipe.motif === 'flower' || recipe.motif === 'jasmine') && (
+              <g>
+                {Array.from({ length: 5 }, (_, petal) => (
+                  <g key={petal} transform={`rotate(${petal * 72})`}>
+                    <ellipse cx="0" cy="-17" rx={petals ? 12 : 10.2}
+                      ry={petals ? 20 : 18} fill={petal % 2 ? gold : glassTone}
+                      fillOpacity=".67" stroke={cream} strokeWidth="1.55"/>
+                    <path d="M 0 -7 L 0 -31" fill="none"
+                      stroke="#fff9dd" strokeOpacity=".7" strokeWidth=".9"/>
+                    {friendCount >= 10 && (
+                      <path d="M -4 -18 Q 0 -27 4 -18" fill="none"
+                        stroke={rose} strokeOpacity=".75" strokeWidth=".9"/>
+                    )}
+                  </g>
+                ))}
+                {recipe.motif === 'flower' && (
+                  <g>
+                    <path d="M -21 14 Q -30 0 -19 -16 M 21 14 Q 30 0 19 -16"
+                      fill="none" stroke={leaf} strokeWidth="2.1"/>
+                    <circle cx="-20" cy="-14" r="2.6" fill={cream}/>
+                    <circle cx="20" cy="-14" r="2.6" fill={cream}/>
+                  </g>
                 )}
               </g>
-            ))}
+            )}
+            {recipe.motif === 'diamond' && (
+              <g>
+                {Array.from({ length: 4 }, (_, i) => (
+                  <g key={i} transform={`rotate(${i * 90})`}>
+                    <path d="M 0 -33 L 13 -16 L 0 2 L -13 -16 Z"
+                      fill={i % 2 ? rose : gold} fillOpacity=".66"
+                      stroke={cream} strokeWidth="1.7"/>
+                    <path d="M 0 -30 L 0 -3" fill="none"
+                      stroke="#fff4d6" strokeWidth="1.1"/>
+                  </g>
+                ))}
+                <polygon points={insetStarPoints(0, 0, 17, 9)}
+                  fill={glassTone} fillOpacity=".52"
+                  stroke={cream} strokeWidth="1.3"/>
+              </g>
+            )}
+            {recipe.motif === 'fan' && (
+              <g>
+                {Array.from({ length: 9 }, (_, i) => (
+                  <g key={i} transform={`rotate(${i * 40})`}>
+                    <path d="M -5 -8 L -8 -28 Q 0 -36 8 -28 L 5 -8 Z"
+                      fill={i % 3 === 0 ? rose : i % 3 === 1 ? gold : leaf}
+                      fillOpacity=".67" stroke={cream} strokeWidth="1.2"/>
+                    <path d="M 0 -11 L 0 -29" fill="none"
+                      stroke="#fff9da" strokeWidth=".9"/>
+                  </g>
+                ))}
+              </g>
+            )}
+            {recipe.motif === 'star' && (
+              <g>
+                <polygon points={insetStarPoints(0, 0, 33, 13)}
+                  fill={leaf} fillOpacity=".57" stroke={cream} strokeWidth="2"/>
+                <polygon points={insetStarPoints(0, 0, 25, 10)}
+                  fill="none" stroke={gold} strokeWidth="1.6"/>
+                {Array.from({ length: 10 }, (_, i) => (
+                  <g key={i} transform={`rotate(${i * 36})`}>
+                    <path d="M 0 -18 L 0 -29" stroke={cream} strokeWidth="1.2"/>
+                    <circle cx="0" cy="-29" r="2" fill="#fff7de"/>
+                  </g>
+                ))}
+              </g>
+            )}
+            {recipe.motif === 'sun' && (
+              <g>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <g key={i} transform={`rotate(${i * 30})`}>
+                    <path d="M -4 -10 L -6 -33 L 0 -39 L 6 -33 L 4 -10 Z"
+                      fill={i % 2 ? gold : rose} fillOpacity=".75"
+                      stroke={cream} strokeWidth="1.15"/>
+                    <path d="M 0 -11 L 0 -34" stroke="#fff7d3" strokeWidth=".85"/>
+                  </g>
+                ))}
+              </g>
+            )}
             <circle r="10" fill={gold} stroke={cream} strokeWidth="2"/>
             <circle r="4" fill="#fffee8"/>
             {recipe.motif === 'star' && (
