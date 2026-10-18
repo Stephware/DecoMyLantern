@@ -272,11 +272,38 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
               <g key={`${n}-${sector}`} transform={`translate(${pos.x} ${pos.y})`}>
                 <circle r="9.5" fill="#263b48" fillOpacity=".82"
                   stroke={ivory} strokeWidth="1.8"/>
-                {Array.from({ length: 5 }, (_, petal) => (
-                  <ellipse key={petal} cx="0" cy="-5.5" rx="3.2" ry="6"
-                    transform={`rotate(${petal * 72})`}
-                    fill={petal % 2 ? rose : teal} fillOpacity=".85"
-                    stroke={ivory} strokeWidth=".65"/>
+                {(recipe.motif === 'flower' || recipe.motif === 'jasmine') && (
+                  <g>
+                    {Array.from({ length: 5 }, (_, petal) => (
+                      <ellipse key={petal} cx="0" cy="-5.5"
+                        rx={recipe.motif === 'jasmine' ? 4.3 : 3.2} ry="6"
+                        transform={`rotate(${petal * 72})`}
+                        fill={recipe.motif === 'jasmine' ? ivory : petal % 2 ? rose : teal}
+                        fillOpacity=".87" stroke={primary} strokeWidth=".75"/>
+                    ))}
+                  </g>
+                )}
+                {recipe.motif === 'diamond' && (
+                  <g>
+                    <path d="M 0 -8 L 6 0 L 0 8 L -6 0 Z"
+                      fill={rose} stroke={ivory} strokeWidth="1.2"/>
+                    <path d="M -6 0 L 6 0 M 0 -8 L 0 8"
+                      fill="none" stroke={primary} strokeWidth=".85"/>
+                  </g>
+                )}
+                {recipe.motif === 'fan' && Array.from({ length: 8 }, (_, ray) => (
+                  <path key={ray} d="M -2 -2 L -4 -7 L 0 -9 L 4 -7 L 2 -2 Z"
+                    transform={`rotate(${ray * 45})`}
+                    fill={ray % 2 ? teal : rose} stroke={ivory} strokeWidth=".7"/>
+                ))}
+                {recipe.motif === 'star' && (
+                  <path d="M 0 -9 L 2.5 -3 L 9 0 L 2.5 3 L 0 9 L -2.5 3 L -9 0 L -2.5 -3 Z"
+                    fill={ivory} stroke={primary} strokeWidth=".95"/>
+                )}
+                {recipe.motif === 'sun' && Array.from({ length: 10 }, (_, ray) => (
+                  <path key={ray} d="M -2 -3 L 0 -9 L 2 -3 Z"
+                    transform={`rotate(${ray * 36})`}
+                    fill={rose} stroke={ivory} strokeWidth=".8"/>
                 ))}
                 <circle r="2.9" fill={ivory} stroke={primary} strokeWidth="1"/>
               </g>
