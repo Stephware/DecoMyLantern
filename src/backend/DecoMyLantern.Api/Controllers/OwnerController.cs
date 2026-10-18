@@ -3,7 +3,6 @@ using System.Security.Claims;
 using DecoMyLantern.Api.Services.Owner;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -74,7 +73,7 @@ public sealed class OwnerController(
 
     // Transitional support for existing signed-in hosts. No new email/password
     // registration or login route remains available.
-    [Authorize(AuthenticationSchemes = "Identity.Application")]
+    [Authorize(Policy = OwnerSession.LegacyUpgradePolicy)]
     [HttpGet("legacy-csrf")]
     public IActionResult LegacyCsrf()
     {
@@ -82,7 +81,7 @@ public sealed class OwnerController(
         return Ok(new { token = antiforgery.GetAndStoreTokens(HttpContext).RequestToken });
     }
 
-    [Authorize(AuthenticationSchemes = "Identity.Application")]
+    [Authorize(Policy = OwnerSession.LegacyUpgradePolicy)]
     [HttpGet("legacy-available")]
     public IActionResult LegacyAvailable()
     {
@@ -90,7 +89,7 @@ public sealed class OwnerController(
         return TryOwner(out _) ? Ok(new { available = true }) : Unauthorized();
     }
 
-    [Authorize(AuthenticationSchemes = "Identity.Application")]
+    [Authorize(Policy = OwnerSession.LegacyUpgradePolicy)]
     [EnableRateLimiting("owner-recover")]
     [HttpPost("upgrade-legacy")]
     public async Task<IActionResult> UpgradeLegacy(CancellationToken cancellationToken)

@@ -26,6 +26,7 @@ public static class OwnerSecrets
 public static class OwnerSession
 {
     public const string Scheme = "BeMyParol.OwnerToken";
+    public const string LegacyUpgradePolicy = "BeMyParol.LegacyOwnerUpgrade";
     public const string Cookie = "BeMyParol.Owner";
     public static readonly TimeSpan Lifetime = TimeSpan.FromDays(400);
     public static readonly TimeSpan RecoveryLifetime = TimeSpan.FromDays(730);
