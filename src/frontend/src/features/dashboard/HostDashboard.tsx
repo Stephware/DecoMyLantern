@@ -158,7 +158,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                   )}
                 </div>
                 <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Begins as a complete mini festival lantern. Every friend adds +3 growth points in one geometric, floral, fan or festival-edge band.' : 'Preview only: each friend adds +3 growth points and one band. At 50 friends, there are 150 growth points and 50 bands. No data is saved.'}</p>
-                <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-[#0b1325]/80 p-4 sm:grid-cols-3 sm:p-5">
+                <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-[#0b1325]/80 p-4 sm:grid-cols-4 sm:p-5">
                   <div><p className="text-2xl font-bold text-amber-200">{accepted}</p><p className="mt-1 text-xs text-white/50">Accepted friends</p></div>
                   <div><p className="text-2xl font-bold text-amber-200">{lantern.growthPoints}</p><p className="mt-1 text-xs text-white/50">Growth points · +3 per friend</p></div>
                   <div><p className="text-lg font-semibold text-white">{stageForFriends(unlockProgress).name}</p><p className="mt-1 text-xs text-white/50">Highest unlocked design</p></div>
