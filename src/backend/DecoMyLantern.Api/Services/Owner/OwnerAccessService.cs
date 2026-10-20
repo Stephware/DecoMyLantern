@@ -66,8 +66,7 @@ public sealed class OwnerAccessService(
         // Each recovery issues a new owner session but keeps the same recovery
         // hash and the original one-year deadline. Repeated use never rotates it.
         var newToken = OwnerSecrets.Generate();
-        credential.TokenHash = Hash(newToken);
-        credential.SessionExpiresAtUtc = now.Add(OwnerSession.Lifetime);
+        OwnerRecoveryPolicy.RefreshSession(credential, Hash(newToken), now);
         try { await database.SaveChangesAsync(cancellationToken); }
         catch (DbUpdateConcurrencyException)
         { throw new OwnerAccessException(409, "Your session changed during recovery. Retry with the same recovery key."); }
