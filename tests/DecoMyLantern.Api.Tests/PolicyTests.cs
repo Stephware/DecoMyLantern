@@ -51,6 +51,25 @@ public sealed class PolicyTests
         Assert.True(GrowthPolicy.DesignUnlocked(design, 1, 40));
     }
 
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 3)]
+    [InlineData(3, 9)]
+    [InlineData(10, 30)]
+    [InlineData(23, 69)]
+    [InlineData(40, 120)]
+    [InlineData(50, 150)]
+    [InlineData(51, 153)]
+    public void Each_friend_adds_three_growth_points(int friends, int expected) =>
+        Assert.Equal(expected, GrowthPolicy.PointsFor(friends));
+
+    [Fact]
+    public void Invalid_growth_counts_are_rejected()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => GrowthPolicy.PointsFor(-1));
+        Assert.Throws<OverflowException>(() => GrowthPolicy.PointsFor(int.MaxValue));
+    }
+
     [Fact]
     public void Final_milestone_is_not_a_contribution_cap()
     {
