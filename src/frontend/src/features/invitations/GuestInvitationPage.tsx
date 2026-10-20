@@ -88,7 +88,7 @@ export default function GuestInvitationPage({ token }: Props) {
                   <LanternScene theme={theme} pattern={preview.patternKey} contributions={contributions} />
                 </div>
                 <p className="mt-1 text-center text-xs text-white/50">
-                  {preview.acceptedFriends} {preview.acceptedFriends === 1 ? 'friend has' : 'friends have'} lit this parol
+                  {preview.acceptedFriends} {preview.acceptedFriends === 1 ? 'friend has' : 'friends have'} lit this parol · {preview.growthPoints} growth layers
                 </p>
               </>
             ) : (
@@ -105,7 +105,7 @@ export default function GuestInvitationPage({ token }: Props) {
                   {submitted ? 'Your light is shining!' : 'Your light is already here!'}
                 </h2>
                 <p className="mt-4 text-sm leading-7 text-white/65">
-                  Thank you for brightening this parol. Only one light can be added per browser visitor.
+                  You grew the lantern by three whole decorative layers and completed one illuminated outer band. Only one light can be added per browser visitor.
                   Your Christmas message, if you left one, is visible only to the owner on December 25 (Philippine time).
                 </p>
                 <a href="/" className="mt-6 inline-block rounded-xl border border-amber-300/40 px-5 py-3 text-sm font-semibold text-amber-100">
