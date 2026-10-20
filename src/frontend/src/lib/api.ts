@@ -93,12 +93,10 @@ export const getOwner = () => api<Owner>('/api/owner/me')
 export const createOwner = () =>
   api<OwnerIssue>('/api/owner/create', { method: 'POST' })
 export const recoverOwner = (recoveryCode: string) =>
-  api<OwnerIssue>('/api/owner/recover', { method: 'POST', body: JSON.stringify({ recoveryCode }) })
+  api<{ owner: Owner }>('/api/owner/recover', { method: 'POST', body: JSON.stringify({ recoveryCode }) })
 export const getLegacyOwner = () => api<{ available: boolean }>('/api/owner/legacy-available')
 export const upgradeLegacyOwner = () =>
   api<OwnerIssue>('/api/owner/upgrade-legacy', { method: 'POST' }, '/api/owner/legacy-csrf')
-export const rotateRecoveryCode = () =>
-  api<{ recoveryCode: string }>('/api/owner/recovery-code', { method: 'POST' })
 export const signOutOwner = () => api<void>('/api/owner/sign-out', { method: 'POST' })
 
 export const getMyLantern = () => api<Lantern>('/api/my/lantern')
