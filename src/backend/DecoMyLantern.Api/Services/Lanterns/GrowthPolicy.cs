@@ -8,6 +8,17 @@ namespace DecoMyLantern.Api.Services.Lanterns;
 /// </summary>
 public static class GrowthPolicy
 {
+    public const int PointsPerFriend = 3;
+
+    // Growth is derived from accepted contributions; it is never stored as a
+    // second source of truth or counted as separate contributions.
+    public static int PointsFor(int acceptedFriends)
+    {
+        if (acceptedFriends < 0)
+            throw new ArgumentOutOfRangeException(nameof(acceptedFriends));
+        return checked(acceptedFriends * PointsPerFriend);
+    }
+
     public static string StageFor(int acceptedFriends) => acceptedFriends switch
     {
         < 0 => throw new ArgumentOutOfRangeException(nameof(acceptedFriends)),
