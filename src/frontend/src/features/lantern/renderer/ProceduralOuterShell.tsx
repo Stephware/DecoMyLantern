@@ -35,6 +35,9 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern, grow
   const palette = [primary, rose, teal, ivory] as const
   const layers = festivalLayers(friendCount)
   const outline = festivalOutlinePath(friendCount)
+  // Keep the former decorative perimeter until the third (illumination) step.
+  const completedOutlineLayer = growthPhase > 0 && growthPhase < 3 ? friendCount - 1 : friendCount
+  const completedOutline = festivalOutlinePath(completedOutlineLayer)
   const lastRadius = outerRadiusForFriends(friendCount)
   const glass = `url(#${uid}-capiz)`
   const goldTrim = primary
@@ -252,8 +255,9 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern, grow
               })}
               {/* A bold ornamental seam makes different growth regions visible
                   without requiring all 50 layers to use the same motif. */}
-              <path d={festivalOutlinePath(end)} fill="none"
-                stroke={ivory} strokeWidth="2.2" strokeOpacity=".82"/>
+              {(growthPhase === 0 || growthPhase === 3 || end < friendCount) &&
+                <path d={festivalOutlinePath(end)} fill="none"
+                  stroke={ivory} strokeWidth="2.2" strokeOpacity=".82"/>}
             </g>
           )
         })}
@@ -262,7 +266,7 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern, grow
       {/* Repeat the delicate structural boundaries above the larger panels.
           They remain visible even where patterns span across several bands. */}
       <g data-testid="festival-layer-details">
-        {layers.map(({ friendNumber: n }) => (
+        {layers.filter(layer => layer.friendNumber <= completedOutlineLayer).map(({ friendNumber: n }) => (
           <path key={n} d={festivalOutlinePath(n)} fill="none"
             stroke={n % 5 === 0 ? ivory : goldTrim}
             strokeWidth={n % 5 === 0 ? 1.6 : .6}
@@ -273,12 +277,14 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern, grow
       {/* Fivefold capiz medallions appear every fifth new layer and help make
           the finished design feel like a coherent festival lantern. */}
       <g data-testid="festival-medallions">
-        {layers.filter(layer => layer.friendNumber % 5 === 0).flatMap(layer =>
+        {layers.filter(layer => layer.friendNumber % 5 === 0 &&
+          (layer.friendNumber < friendCount || growthPhase === 0 || growthPhase >= 2)).flatMap(layer =>
           Array.from({ length: 5 }, (_, sector) => {
             const pos = bandMotifPoint(layer.friendNumber, sector, 5)
             const n = layer.friendNumber
             return (
-              <g key={`${n}-${sector}`} transform={`translate(${pos.x} ${pos.y})`}>
+              <g key={`${n}-${sector}`} transform={`translate(${pos.x} ${pos.y})`}
+                className={n === friendCount && growthPhase === 2 ? 'parol-band-detail-appear' : undefined}>
                 <circle r="9.5" fill="#263b48" fillOpacity=".82"
                   stroke={ivory} strokeWidth="1.8"/>
                 {(recipe.motif === 'flower' || recipe.motif === 'jasmine') && (
@@ -322,12 +328,12 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern, grow
       </g>
 
       {/* No ribbons, hanging tail or dangling fringe: a polished lit border. */}
-      <path d={outline} fill="none" stroke={primary} strokeWidth="11" opacity=".22"
+      <path d={completedOutline} fill="none" stroke={primary} strokeWidth="11" opacity=".22"
         filter={`url(#${uid}-halo)`}/>
-      <path d={outline} fill="none" stroke={ivory} strokeWidth="3.4"
+      <path d={completedOutline} fill="none" stroke={ivory} strokeWidth="3.4"
         strokeLinejoin="round" />
       {Array.from({ length: 40 }, (_, index) => {
-        const pos = festivalMotifPoint(friendCount, index, 40)
+        const pos = festivalMotifPoint(completedOutlineLayer, index, 40)
         return (
           <g key={index}>
             <circle cx={pos.x} cy={pos.y} r="5.1"
@@ -343,14 +349,14 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern, grow
       })}
       {pattern === 'rays' && Array.from({ length: 10 }, (_, index) => {
         const angle = -Math.PI / 2 + index * TAU / 10
-        const p0 = festivalPointAt(Math.max(0, friendCount - 2), angle)
-        const p1 = festivalPointAt(friendCount, angle)
+        const p0 = festivalPointAt(Math.max(0, completedOutlineLayer - 2), angle)
+        const p1 = festivalPointAt(completedOutlineLayer, angle)
         return <path key={index}
           d={`M ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} L ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}`}
           stroke={ivory} strokeWidth="1.9" opacity=".7"/>
       })}
       {pattern === 'rings' && (
-        <path d={festivalOutlinePath(friendCount)} fill="none"
+        <path d={completedOutline} fill="none"
           stroke={primary} strokeWidth="1.5" strokeDasharray="3 5"/>
       )}
       <title>{`${recipe.name}: ${friendCount} connected decorated layers in five festival regions; no hanging tail. Outer radius ${lastRadius.toFixed(1)}.`}</title>
