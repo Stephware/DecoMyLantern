@@ -1,0 +1,45 @@
+services:
+  backend:
+    build:
+      context: ./src/backend/DecoMyLantern.Api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: ${DATABASE_CONNECTION_STRING:?Set DATABASE_CONNECTION_STRING in .env}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-5050}:8080"
+
+  frontend:
+    build:
+      context: ./src/frontend
+    depends_on:
+      - backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:80"
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARED_TOKEN:-}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      - caddy
+    restart: unless-stopped
+    profiles:
+      - tunnel
