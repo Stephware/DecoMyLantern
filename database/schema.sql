@@ -598,3 +598,17 @@ BEGIN
 END;
 COMMIT;
 GO
+
+-- Keep cancellation available only while a newly created owner is saving the recovery key.
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT 1 FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261020220811_PendingOwnerSetup'
+)
+BEGIN
+    ALTER TABLE [OwnerCredentials] ADD [SetupPending] bit NOT NULL DEFAULT CAST(0 AS bit);
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261020220811_PendingOwnerSetup', N'10.0.4');
+END;
+COMMIT;
+GO

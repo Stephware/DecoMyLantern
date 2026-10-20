@@ -13,5 +13,6 @@ public sealed class OwnerCredential
     public DateTime CreatedAtUtc { get; set; }
     public DateTime SessionExpiresAtUtc { get; set; }
     public DateTime RecoveryExpiresAtUtc { get; set; }
+    public bool SetupPending { get; set; }
     public byte[] RowVersion { get; set; } = [];
 }

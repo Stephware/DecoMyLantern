@@ -12,6 +12,8 @@ import {
   getLegacyOwner,
   upgradeLegacyOwner,
   signOutOwner,
+  finishOwnerSetup,
+  cancelOwnerCreation,
   createMyLantern,
   getDesigns,
   getMyLantern,
@@ -31,6 +33,7 @@ export default function App() {
   const [lantern, setLantern] = useState<Lantern | null>(null)
   const [designs, setDesigns] = useState<Design[]>([])
   const [recoveryKey, setRecoveryKey] = useState('')
+  const [canCancelCreation, setCanCancelCreation] = useState(false)
   const [legacyAvailable, setLegacyAvailable] = useState(false)
   const [error, setError] = useState('')
 
@@ -56,10 +59,11 @@ export default function App() {
     }
   }
 
-  function showIssuedKey(issued: OwnerIssue) {
+  function showIssuedKey(issued: OwnerIssue, newlyCreated = false) {
     setOwner(issued.owner)
     setLegacyAvailable(false)
     setRecoveryKey(issued.recoveryCode)
+    setCanCancelCreation(newlyCreated)
     setScreen('recovery-key')
   }
 
@@ -141,16 +145,26 @@ export default function App() {
   )
 
   if (screen === 'recovery-key' && recoveryKey) {
-    return <RecoveryKeyPage code={recoveryKey} onContinue={() => {
+    return <RecoveryKeyPage code={recoveryKey} onContinue={async () => {
+      if (canCancelCreation) await finishOwnerSetup()
+      setCanCancelCreation(false)
       setRecoveryKey('')
-      if (owner) void enterDashboard(owner)
-    }} />
+      if (owner) await enterDashboard(owner)
+    }} onCancel={canCancelCreation ? async () => {
+      await cancelOwnerCreation()
+      setOwner(null)
+      setLantern(null)
+      setDesigns([])
+      setRecoveryKey('')
+      setCanCancelCreation(false)
+      setScreen('welcome')
+    } : undefined} />
   }
 
   if (screen === 'welcome' || !owner) return (
     <WelcomePage
       legacyAvailable={legacyAvailable}
-      onCreate={async () => { showIssuedKey(await createOwner()) }}
+      onCreate={async () => { showIssuedKey(await createOwner(), true) }}
       onRecover={async code => {
         const restored = await recoverOwner(code)
         setLegacyAvailable(false)
@@ -172,6 +186,7 @@ export default function App() {
         setLantern(null)
         setDesigns([])
         setRecoveryKey('')
+        setCanCancelCreation(false)
         setLegacyAvailable(false)
         setScreen('welcome')
       }}

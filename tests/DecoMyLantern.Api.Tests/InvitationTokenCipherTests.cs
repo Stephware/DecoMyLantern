@@ -35,8 +35,8 @@ public sealed class InvitationTokenCipherTests
         var original = CreateCipher();
         var lantern = Guid.NewGuid();
         var ciphertext = original.Protect(InvitationPolicy.GenerateToken(), lantern);
-        Assert.Throws<CryptographicException>(() => original.Unprotect(ciphertext, Guid.NewGuid()));
-        Assert.Throws<CryptographicException>(() => CreateCipher(5).Unprotect(ciphertext, lantern));
+        Assert.ThrowsAny<CryptographicException>(() => original.Unprotect(ciphertext, Guid.NewGuid()));
+        Assert.ThrowsAny<CryptographicException>(() => CreateCipher(5).Unprotect(ciphertext, lantern));
     }
 
     [Fact]

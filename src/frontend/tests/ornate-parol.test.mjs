@@ -16,7 +16,6 @@ import {
   festivalPointAt,
   growthForFriends,
   growthZoneForLayer,
-  isFriendBoundary,
   outerFitZoom,
   outerRadiusForFriends,
   regionPanelPath,

@@ -19,6 +19,8 @@ public interface IOwnerAccessService
     Task<IssuedOwnerAccess> UpgradeLegacyAsync(Guid ownerId, CancellationToken cancellationToken);
     Task<IssuedOwnerAccess> RecoverAsync(string recoveryCode, CancellationToken cancellationToken);
     Task SignOutAsync(Guid ownerId, CancellationToken cancellationToken);
+    Task FinishSetupAsync(Guid ownerId, CancellationToken cancellationToken);
+    Task CancelCreationAsync(Guid ownerId, CancellationToken cancellationToken);
 }
 
 public sealed class OwnerAccessService(
@@ -39,7 +41,7 @@ public sealed class OwnerAccessService(
 
         await lanternService.CreateAsync(user.Id, cancellationToken);
         await invitationService.GetOrCreateLinkAsync(user.Id, cancellationToken);
-        var issued = await IssueForOwnerAsync(user.Id, cancellationToken);
+        var issued = await IssueForOwnerAsync(user.Id, cancellationToken, setupPending: true);
         await transaction.CommitAsync(cancellationToken);
         return issued;
     }
@@ -70,6 +72,7 @@ public sealed class OwnerAccessService(
         // hash and the original one-year deadline. Repeated use never rotates it.
         var newToken = OwnerSecrets.Generate();
         OwnerRecoveryPolicy.RefreshSession(credential, Hash(newToken), now);
+        credential.SetupPending = false;
         try { await database.SaveChangesAsync(cancellationToken); }
         catch (DbUpdateConcurrencyException)
         { throw new OwnerAccessException(409, "Your session changed during recovery. Retry with the same recovery key."); }
@@ -87,7 +90,43 @@ public sealed class OwnerAccessService(
         { throw new OwnerAccessException(409, "Your session changed. Please refresh."); }
     }
 
-    private async Task<IssuedOwnerAccess> IssueForOwnerAsync(Guid ownerId, CancellationToken cancellationToken)
+    public async Task FinishSetupAsync(Guid ownerId, CancellationToken cancellationToken)
+    {
+        var credential = await GetCredentialAsync(ownerId, cancellationToken);
+        if (!credential.SetupPending) return;
+        credential.SetupPending = false;
+        await database.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task CancelCreationAsync(Guid ownerId, CancellationToken cancellationToken)
+    {
+        await using var transaction = await database.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable, cancellationToken);
+        var credential = await GetCredentialAsync(ownerId, cancellationToken);
+        if (!credential.SetupPending)
+            throw new OwnerAccessException(409, "Only a newly created parol can be cancelled.");
+
+        var lanterns = await database.Lanterns.Where(x => x.OwnerUserId == ownerId)
+            .ToListAsync(cancellationToken);
+        if (lanterns.Count != 1 ||
+            await database.Contributions.AnyAsync(x => x.Lantern.OwnerUserId == ownerId, cancellationToken) ||
+            await database.MessageReports.AnyAsync(x => x.ReporterUserId == ownerId, cancellationToken))
+            throw new OwnerAccessException(409, "This parol has already been used and cannot be cancelled.");
+
+        // A new parol has one official link already. Remove it before the
+        // lantern because ShareLinks has a restrictive foreign key.
+        var shareLinks = await database.ShareLinks.Where(x => x.LanternId == lanterns[0].Id)
+            .ToListAsync(cancellationToken);
+        database.ShareLinks.RemoveRange(shareLinks);
+        var user = await database.Users.SingleAsync(x => x.Id == ownerId, cancellationToken);
+        database.OwnerCredentials.Remove(credential);
+        database.Lanterns.Remove(lanterns[0]);
+        database.Users.Remove(user);
+        await database.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private async Task<IssuedOwnerAccess> IssueForOwnerAsync(Guid ownerId, CancellationToken cancellationToken, bool setupPending = false)
     {
         var now = clock.GetUtcNow().UtcDateTime;
         var token = OwnerSecrets.Generate();
@@ -99,7 +138,8 @@ public sealed class OwnerAccessService(
             RecoveryHash = Hash(recoveryCode),
             CreatedAtUtc = now,
             SessionExpiresAtUtc = now.Add(OwnerSession.Lifetime),
-            RecoveryExpiresAtUtc = now.Add(OwnerSession.RecoveryLifetime)
+            RecoveryExpiresAtUtc = now.Add(OwnerSession.RecoveryLifetime),
+            SetupPending = setupPending
         };
         database.OwnerCredentials.Add(credential);
         try { await database.SaveChangesAsync(cancellationToken); }
@@ -108,6 +148,10 @@ public sealed class OwnerAccessService(
         { throw new OwnerAccessException(409, "Owner access has already been issued. Please refresh."); }
         return new IssuedOwnerAccess(ownerId, token, recoveryCode, credential.SessionExpiresAtUtc);
     }
+
+    private async Task<OwnerCredential> GetCredentialAsync(Guid ownerId, CancellationToken cancellationToken) =>
+        await database.OwnerCredentials.SingleOrDefaultAsync(x => x.OwnerUserId == ownerId, cancellationToken)
+            ?? throw new OwnerAccessException(404, "Owner access was not found.");
 
     private static string Hash(string secret) =>
         OwnerSecrets.TryHashRecovery(secret, out var hash) ? hash :

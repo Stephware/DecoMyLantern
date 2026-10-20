@@ -108,6 +108,37 @@ public sealed class OwnerController(
     }
 
     [Authorize]
+    [HttpPost("finish-setup")]
+    public async Task<IActionResult> FinishSetup(CancellationToken cancellationToken)
+    {
+        if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid security token. Refresh and try again." });
+        if (!TryOwner(out var id)) return Unauthorized();
+        NoStore();
+        try
+        {
+            await access.FinishSetupAsync(id, cancellationToken);
+            return NoContent();
+        }
+        catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
+    }
+
+    [Authorize]
+    [HttpPost("cancel-creation")]
+    public async Task<IActionResult> CancelCreation(CancellationToken cancellationToken)
+    {
+        if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid security token. Refresh and try again." });
+        if (!TryOwner(out var id)) return Unauthorized();
+        NoStore();
+        try
+        {
+            await access.CancelCreationAsync(id, cancellationToken);
+            ClearOwnerCookie();
+            return NoContent();
+        }
+        catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
+    }
+
+    [Authorize]
     [HttpPost("sign-out")]
     public async Task<IActionResult> SignOut(CancellationToken cancellationToken)
     {
@@ -117,13 +148,7 @@ public sealed class OwnerController(
         try
         {
             await access.SignOutAsync(id, cancellationToken);
-            Response.Cookies.Delete(OwnerSession.Cookie, new CookieOptions
-            {
-                Path = "/api",
-                Secure = !environment.IsDevelopment() || HttpContext.Request.IsHttps,
-                SameSite = SameSiteMode.Strict,
-                HttpOnly = true
-            });
+            ClearOwnerCookie();
             return NoContent();
         }
         catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
@@ -132,6 +157,15 @@ public sealed class OwnerController(
     private void SetCookie(IssuedOwnerAccess issued) =>
         Response.Cookies.Append(OwnerSession.Cookie, issued.Token,
             OwnerSession.CookieOptions(HttpContext, environment, issued.ExpiresAtUtc));
+
+    private void ClearOwnerCookie() =>
+        Response.Cookies.Delete(OwnerSession.Cookie, new CookieOptions
+        {
+            Path = "/api",
+            Secure = !environment.IsDevelopment() || HttpContext.Request.IsHttps,
+            SameSite = SameSiteMode.Strict,
+            HttpOnly = true
+        });
 
     private bool TryOwner(out Guid ownerId) =>
         Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out ownerId);

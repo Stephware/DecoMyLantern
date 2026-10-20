@@ -97,6 +97,8 @@ export const getLegacyOwner = () => api<{ available: boolean }>('/api/owner/lega
 export const upgradeLegacyOwner = () =>
   api<OwnerIssue>('/api/owner/upgrade-legacy', { method: 'POST' }, '/api/owner/legacy-csrf')
 export const signOutOwner = () => api<void>('/api/owner/sign-out', { method: 'POST' })
+export const finishOwnerSetup = () => api<void>('/api/owner/finish-setup', { method: 'POST' })
+export const cancelOwnerCreation = () => api<void>('/api/owner/cancel-creation', { method: 'POST' })
 
 export const getMyLantern = () => api<Lantern>('/api/my/lantern')
 export const createMyLantern = () => api<Lantern>('/api/my/lantern', { method: 'POST' })
