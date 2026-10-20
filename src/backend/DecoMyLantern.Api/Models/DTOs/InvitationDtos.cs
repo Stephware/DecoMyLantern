@@ -30,6 +30,7 @@ public sealed record InvitationPreviewDto(
     string DesignKey,
     string PatternKey,
     int AcceptedFriends,
+    int GrowthPoints,
     string GrowthStage,
     bool AlreadyContributed,
     IReadOnlyList<PublicLightDto> Lights);
