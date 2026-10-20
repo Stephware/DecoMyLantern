@@ -146,7 +146,7 @@ public sealed class InvitationService(
                 .SingleOrDefaultAsync(x => x.TokenHash == inviteHash &&
                     x.IsOfficial && x.RevokedAtUtc == null &&
                     (x.ExpiresAtUtc == null || x.ExpiresAtUtc > now), cancellationToken)
-                ?? throw new InvitationException(404, "This invitation has expired or was revoked.");
+                ?? throw new InvitationException(404, "This invitation is unavailable or has expired.");
 
             var lantern = await database.Lanterns
                 .FromSqlInterpolated($"SELECT * FROM [Lanterns] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {link.LanternId}")
@@ -198,10 +198,8 @@ public sealed class InvitationService(
             await database.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            // Re-read public data after commit, using the link validated inside
-            // the transaction. If the owner revokes the link immediately after
-            // acceptance, the guest still receives success for their saved light.
-            // This response never contains private message text.
+            // Re-read public data after commit using the validated link.
+            // Never include private message text in guest responses.
             var preview = await PublicPreviewAsync(link, guestToken, cancellationToken);
             return new GuestContributionResultDto(contribution.Id, slot,
                 !string.IsNullOrEmpty(body), preview);
@@ -233,7 +231,7 @@ public sealed class InvitationService(
                 x.IsOfficial && x.RevokedAtUtc == null &&
                 (x.ExpiresAtUtc == null || x.ExpiresAtUtc > now),
                 cancellationToken)
-            ?? throw new InvitationException(404, "This invitation has expired or was revoked.");
+            ?? throw new InvitationException(404, "This invitation is unavailable or has expired.");
     }
 
     private async Task<InvitationPreviewDto> PublicPreviewAsync(
