@@ -54,7 +54,7 @@ public sealed class OwnerAccessService(
 
     public async Task<IssuedOwnerAccess> RecoverAsync(string recoveryCode, CancellationToken cancellationToken)
     {
-        if (!OwnerSecrets.TryHash(recoveryCode, out var hash))
+        if (!OwnerSecrets.TryHashRecovery(recoveryCode, out var hash))
             throw new OwnerAccessException(401, "Invalid or expired recovery key.");
 
         var credential = await database.OwnerCredentials
@@ -88,7 +88,7 @@ public sealed class OwnerAccessService(
     {
         var now = clock.GetUtcNow().UtcDateTime;
         var token = OwnerSecrets.Generate();
-        var recoveryCode = OwnerSecrets.Generate();
+        var recoveryCode = OwnerSecrets.GenerateRecoveryKey();
         var credential = new OwnerCredential
         {
             OwnerUserId = ownerId,
@@ -107,6 +107,6 @@ public sealed class OwnerAccessService(
     }
 
     private static string Hash(string secret) =>
-        OwnerSecrets.TryHash(secret, out var hash) ? hash :
+        OwnerSecrets.TryHashRecovery(secret, out var hash) ? hash :
         throw new InvalidOperationException("Unable to hash a generated owner secret.");
 }
