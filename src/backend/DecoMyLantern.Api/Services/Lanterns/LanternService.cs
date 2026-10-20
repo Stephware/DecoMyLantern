@@ -115,6 +115,7 @@ public sealed class LanternService(ILanternRepository repository, TimeProvider t
         lantern.PaletteKey,
         lantern.PatternKey,
         lights.Count,
+        GrowthPolicy.GrowthFor(lights.Count),
         lantern.NextSlotIndex,
         GrowthPolicy.StageFor(lights.Count),
         lantern.UnlockAtUtc,
