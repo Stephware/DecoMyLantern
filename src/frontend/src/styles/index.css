@@ -31,6 +31,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid #ffcf75; outline-
   to { opacity: 1; filter: brightness(1); }
 }
 .parol-ornament-reveal { animation: parol-ornament-appear 420ms ease-out both; }
+@keyframes parol-band-expand {
+  from { opacity: .12; transform: scale(.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.parol-band-expand { animation: parol-band-expand 500ms ease-out both; transform-origin: 300px 302px; }
+
+@keyframes parol-band-illuminate {
+  from { opacity: .08; filter: drop-shadow(0 0 0 transparent); }
+  to { opacity: 1; filter: drop-shadow(0 0 5px #ffe5aa); }
+}
+.parol-band-light-up { animation: parol-band-illuminate 600ms ease-out both; }
 .parol-light { animation: parol-light-appear 340ms ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
