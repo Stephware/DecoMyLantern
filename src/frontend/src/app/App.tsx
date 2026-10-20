@@ -93,6 +93,34 @@ export default function App() {
     return () => { mounted = false }
   }, [invitationToken])
 
+  // Refresh the owner's open lantern so guest contributions arrive without a
+  // manual reload. Hidden tabs do not poll; returning catches up immediately.
+  useEffect(() => {
+    if (screen !== 'owner' || invitationToken !== null || !lantern?.id) return
+    let active = true
+    let fetching = false
+    async function refresh() {
+      if (!active || fetching || document.hidden) return
+      fetching = true
+      try {
+        const latest = await getMyLantern()
+        if (active) setLantern(current => current?.id === latest.id ? latest : current)
+      } catch {
+        // Temporary network failures should not replace the owner's screen.
+      } finally {
+        fetching = false
+      }
+    }
+    const interval = window.setInterval(() => void refresh(), 12000)
+    const onVisible = () => { if (!document.hidden) void refresh() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      active = false
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [screen, invitationToken, lantern?.id])
+
   // Render the friend-side experience before all owner/login screens.
   if (invitationToken !== null) return <GuestInvitationPage token={invitationToken} />
 

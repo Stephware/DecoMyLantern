@@ -14,7 +14,9 @@ import {
   festivalMaxExtent,
   festivalOutlinePath,
   festivalPointAt,
+  growthForFriends,
   growthZoneForLayer,
+  isFriendBoundary,
   outerFitZoom,
   outerRadiusForFriends,
   regionPanelPath,
@@ -37,7 +39,7 @@ test('zero friends is a complete mini festival parol and never has a tail', () =
   assert.ok(!shell.includes('Hanging filament and cap'))
 })
 
-test('every friend adds precisely one connected filled decorative layer', () => {
+test('all structural growth layers are filled without gaps', () => {
   for (const count of [0, 1, 2, 3, 10, 20, 23, 35, 40, 45, 46, 50, 51, 60, 120]) {
     const layers = festivalLayers(count)
     assert.equal(layers.length, count)
@@ -57,17 +59,20 @@ test('every friend adds precisely one connected filled decorative layer', () => 
   assert.equal(festivalLayers(51).length, 51)
 })
 
-test('five distinct ornamental regions cover every one of the first 50 layers', () => {
-  assert.deepEqual(GROWTH_REGIONS.map(({ from, to }) => [from, to]),
+test('fifteen distinct ornamental regions cover the first 150 growth layers', () => {
+  assert.deepEqual(GROWTH_REGIONS.slice(0, 5).map(({ from, to }) => [from, to]),
     [[1, 10], [11, 20], [21, 35], [36, 45], [46, 50]])
+  assert.equal(GROWTH_REGIONS.length, 15)
   const zones = new Set(GROWTH_REGIONS.map(x => x.zone))
-  assert.equal(zones.size, 5)
+  assert.equal(zones.size, 15)
   for (const region of GROWTH_REGIONS) {
     for (let friend = region.from; friend <= region.to; friend++) {
       assert.equal(growthZoneForLayer(friend), region.zone)
     }
   }
-  assert.equal(growthZoneForLayer(51), 'puntetas')
+  assert.equal(growthZoneForLayer(51), 'lattice')
+  assert.equal(growthZoneForLayer(150), 'corona')
+  assert.equal(growthZoneForLayer(151), 'corona')
 })
 
 test('all 20 glass facets per layer are finite and connected', () => {
@@ -120,7 +125,7 @@ test('festival silhouette stays round/floral and fits even past 50 friends', () 
     assert.ok(outerFitZoom(count) > 0)
     assert.ok(festivalMaxExtent(count) * outerFitZoom(count) < 281)
   }
-  assert.ok(outerFitZoom(50) > .35)
+  assert.ok(outerFitZoom(growthForFriends(50)) > .13)
   assert.notEqual(festivalOutlinePath(0), festivalOutlinePath(50))
   assert.equal(styles.length, 6)
   assert.equal(new Set(Object.values(OUTER_RECIPES).map(x => x.motif)).size, 6)

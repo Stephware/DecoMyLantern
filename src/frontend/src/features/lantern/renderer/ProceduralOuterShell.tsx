@@ -1,4 +1,5 @@
-import { useId } from 'react'
+import { memo, useId } from 'react'
+import ExtendedRegionMotif from './ExtendedRegionMotif'
 import type { Theme } from '../../customization/themes'
 import {
   bandMotifPoint,
@@ -9,44 +10,47 @@ import {
   festivalOutlinePath,
   festivalPointAt,
   GROWTH_REGIONS,
+  GROWTH_PER_FRIEND,
+  isFriendBoundary,
   OUTER_RECIPES,
   outerRadiusForFriends,
   PANEL_SEGMENTS,
   regionPanelPath,
 } from '../growth/outerGrowth'
 
-type Props = { theme: Theme; friendCount: number; pattern: string }
+type Props = { theme: Theme; growthCount: number; pattern: string; animateGrowth?: boolean }
 const TAU = Math.PI * 2
 
 /**
  * San Fernando-inspired ornamental regions: siku-siku, capiz mosaic,
  * palimbun floral fans, ceremonial rays, and puntetas.
  *
- * Every accepted friend creates a full, filled, contiguous outer band with
- * 20 stained-glass facets. Each band belongs to a different motif grammar
- * according to its structural region, not a repeated circular outline.
- * 50 accepted friends ALWAYS results in precisely 50 data-friend-layer groups.
+ * Every accepted friend contributes three connected, filled growth layers.
+ * Internal glass and floral details exist in all three; only each third layer
+ * receives one permanent outer boundary. Fifteen regions extend to layer 150.
  * The small tambor/base is rendered by ParolArtwork and has no tassels.
  */
-export default function ProceduralOuterShell({ theme, friendCount, pattern }: Props) {
+function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = false }: Props) {
   const uid = useId().replace(/:/g, '')
   const recipe = OUTER_RECIPES[theme.key]
   const [primary, ivory, rose, teal] = theme.colors
   const palette = [primary, rose, teal, ivory] as const
-  const layers = festivalLayers(friendCount)
-  const outline = festivalOutlinePath(friendCount)
-  const lastRadius = outerRadiusForFriends(friendCount)
+  const layers = festivalLayers(growthCount)
+  const outline = festivalOutlinePath(growthCount)
+  const completedContour = Math.floor(growthCount / GROWTH_PER_FRIEND) * GROWTH_PER_FRIEND
+  const boundaryOutline = festivalOutlinePath(completedContour)
+  const lastRadius = outerRadiusForFriends(growthCount)
   const glass = `url(#${uid}-capiz)`
   const goldTrim = primary
   const glow = `url(#${uid}-jewel)`
-  const regionVisible = GROWTH_REGIONS.filter(region => friendCount >= region.from)
+  const regionVisible = GROWTH_REGIONS.filter(region => growthCount >= region.from)
   const motifFill = recipe.motif === 'flower' || recipe.motif === 'jasmine' ? rose :
     recipe.motif === 'star' ? ivory : primary
 
   return (
-    <g data-testid="living-outer-shell" data-friends={friendCount}
-      data-layer-count={layers.length} data-recipe={recipe.key}
-      className="parol-ornament-reveal" aria-hidden="true">
+    <g data-testid="living-outer-shell" data-friends={Math.floor(growthCount / GROWTH_PER_FRIEND)}
+      data-growth-count={growthCount} data-layer-count={layers.length} data-recipe={recipe.key}
+      aria-hidden="true">
       <defs>
         <linearGradient id={`${uid}-capiz`} x1="6%" y1="8%" x2="94%" y2="90%">
           <stop offset="0%" stopColor={ivory} stopOpacity=".91" />
@@ -71,12 +75,13 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
         {layers.map(layer => {
           const n = layer.friendNumber
           const zone = layer.zone
-          const familyIndex = zone === 'siku' ? 0 : zone === 'mosaic' ? 1 :
-            zone === 'palimbun' ? 2 : zone === 'ceremonial' ? 3 : 4
+          const familyIndex = GROWTH_REGIONS.findIndex(region => region.zone === zone)
           const hue = palette[(familyIndex + Math.floor(n / 3)) % palette.length]
           const trim = familyIndex % 2 === 0 ? ivory : primary
           return (
-            <g key={n} data-friend-layer={n} data-region={zone}>
+            <g key={n} data-growth-layer={n} data-region={zone}
+              data-boundary={isFriendBoundary(n) ? "friend" : undefined}
+              className={animateGrowth && n === growthCount ? "parol-growth-layer-arrive" : undefined}>
               <path d={festivalBandPath(n)} fill={hue} fillOpacity=".37"
                 fillRule="evenodd" stroke="none" />
               {Array.from({ length: PANEL_SEGMENTS }, (_, segment) => {
@@ -139,15 +144,19 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
                         <circle r="1.6" fill={rose}/>
                       </g>
                     )}
+                    {n > 50 && <g transform="scale(.21)">
+                      <ExtendedRegionMotif zone={zone} primary={primary} ivory={ivory}
+                        rose={rose} teal={teal} color={hue}/>
+                    </g>}
                   </g>
                 )
               })}
-              {/* Every completed friend's boundary remains a true contour. */}
-              <path d={festivalOutlinePath(n)} fill="none"
-                stroke={n % 5 === 0 ? ivory : trim}
-                strokeWidth={n % 5 === 0 ? 2.3 : .85}
-                strokeOpacity={n % 5 === 0 ? '.82' : '.31'}
-                strokeLinejoin="round"/>
+              {/* Only one completed outline per three growth layers. */}
+              {isFriendBoundary(n) && <path d={festivalOutlinePath(n)} fill="none"
+                stroke={n % 15 === 0 ? ivory : trim}
+                strokeWidth={n % 15 === 0 ? 2.3 : 1.05}
+                strokeOpacity={n % 15 === 0 ? '.82' : '.45'}
+                strokeLinejoin="round"/>}
             </g>
           )
         })}
@@ -158,7 +167,7 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
           Incomplete regions stop exactly at the current friend count. */}
       <g data-testid="festival-regional-patterns">
         {regionVisible.map((region, regionIndex) => {
-          const end = Math.min(friendCount, region.to)
+          const end = Math.min(growthCount, region.to)
           return (
             <g key={region.zone} data-growth-region={region.zone}
               data-visible-through-layer={end}>
@@ -231,6 +240,8 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
                           <circle r="6" fill={ivory} stroke={rose} strokeWidth="1.3"/>
                         </g>
                       )}
+                      {region.from > 50 && <ExtendedRegionMotif zone={region.zone}
+                        primary={primary} ivory={ivory} rose={rose} teal={teal} color={color}/>}
                     </g>
                     {end - region.from >= 2 && (
                       <path d={`M ${inner.x.toFixed(2)} ${inner.y.toFixed(2)}
@@ -242,10 +253,7 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
                   </g>
                 )
               })}
-              {/* A bold ornamental seam makes different growth regions visible
-                  without requiring all 50 layers to use the same motif. */}
-              <path d={festivalOutlinePath(end)} fill="none"
-                stroke={ivory} strokeWidth="2.2" strokeOpacity=".82"/>
+              {/* Region patterns meet without drawing a second outer boundary. */}
             </g>
           )
         })}
@@ -254,11 +262,11 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
       {/* Repeat the delicate structural boundaries above the larger panels.
           They remain visible even where patterns span across several bands. */}
       <g data-testid="festival-layer-details">
-        {layers.map(({ friendNumber: n }) => (
+        {layers.filter(layer => isFriendBoundary(layer.friendNumber)).map(({ friendNumber: n }) => (
           <path key={n} d={festivalOutlinePath(n)} fill="none"
-            stroke={n % 5 === 0 ? ivory : goldTrim}
-            strokeWidth={n % 5 === 0 ? 1.6 : .6}
-            strokeOpacity={n % 5 === 0 ? '.82' : '.22'}/>
+            stroke={n % 15 === 0 ? ivory : goldTrim}
+            strokeWidth={n % 15 === 0 ? 1.6 : .75}
+            strokeOpacity={n % 15 === 0 ? '.82' : '.35'}/>
         ))}
       </g>
 
@@ -314,12 +322,12 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
       </g>
 
       {/* No ribbons, hanging tail or dangling fringe: a polished lit border. */}
-      <path d={outline} fill="none" stroke={primary} strokeWidth="11" opacity=".22"
+      <path d={boundaryOutline} fill="none" stroke={primary} strokeWidth="11" opacity=".22"
         filter={`url(#${uid}-halo)`}/>
-      <path d={outline} fill="none" stroke={ivory} strokeWidth="3.4"
+      <path d={boundaryOutline} fill="none" stroke={ivory} strokeWidth="3.4"
         strokeLinejoin="round" />
       {Array.from({ length: 40 }, (_, index) => {
-        const pos = festivalMotifPoint(friendCount, index, 40)
+        const pos = festivalMotifPoint(completedContour, index, 40)
         return (
           <g key={index}>
             <circle cx={pos.x} cy={pos.y} r="5.1"
@@ -335,17 +343,32 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
       })}
       {pattern === 'rays' && Array.from({ length: 10 }, (_, index) => {
         const angle = -Math.PI / 2 + index * TAU / 10
-        const p0 = festivalPointAt(Math.max(0, friendCount - 2), angle)
-        const p1 = festivalPointAt(friendCount, angle)
+        const p0 = festivalPointAt(Math.max(0, completedContour - 2), angle)
+        const p1 = festivalPointAt(completedContour, angle)
         return <path key={index}
           d={`M ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} L ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}`}
           stroke={ivory} strokeWidth="1.9" opacity=".7"/>
       })}
       {pattern === 'rings' && (
-        <path d={festivalOutlinePath(friendCount)} fill="none"
+        <path d={boundaryOutline} fill="none"
           stroke={primary} strokeWidth="1.5" strokeDasharray="3 5"/>
       )}
-      <title>{`${recipe.name}: ${friendCount} connected decorated layers in five festival regions; no hanging tail. Outer radius ${lastRadius.toFixed(1)}.`}</title>
+      {animateGrowth && <g className="parol-growth-flare" pointerEvents="none">
+        <path d={outline} fill="none" stroke={ivory} strokeWidth="5"
+          className="parol-growth-flash" opacity=".9"/>
+        {Array.from({ length: 20 }, (_, index) => {
+          const pos = festivalMotifPoint(growthCount, index, 20)
+          return <g key={index} transform={`translate(${pos.x} ${pos.y})`}>
+            <g className="parol-growth-sparkle" style={{ animationDelay: `${index * 33}ms` }}>
+              <path d="M 0 -8 L 2 -2 L 8 0 L 2 2 L 0 8 L -2 2 L -8 0 L -2 -2 Z"
+                fill={index % 2 ? rose : ivory} stroke={primary} strokeWidth=".7"/>
+            </g>
+          </g>
+        })}
+      </g>}
+      <title>{`${recipe.name}: ${growthCount} growth layers, ${Math.floor(growthCount / 3)} completed friend outlines across 15 festival regions. Outer radius ${lastRadius.toFixed(1)}.`}</title>
     </g>
   )
 }
+
+export default memo(ProceduralOuterShell)

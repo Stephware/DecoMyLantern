@@ -8,6 +8,15 @@ namespace DecoMyLantern.Api.Services.Lanterns;
 /// </summary>
 public static class GrowthPolicy
 {
+    public const int GrowthPerFriend = 3;
+
+    // Visual growth is derived from accepted friends, not another database record.
+    public static int GrowthFor(int acceptedFriends)
+    {
+        if (acceptedFriends < 0) throw new ArgumentOutOfRangeException(nameof(acceptedFriends));
+        return checked(acceptedFriends * GrowthPerFriend);
+    }
+
     public static string StageFor(int acceptedFriends) => acceptedFriends switch
     {
         < 0 => throw new ArgumentOutOfRangeException(nameof(acceptedFriends)),

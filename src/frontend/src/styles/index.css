@@ -33,6 +33,35 @@ button:focus-visible, input:focus-visible { outline: 2px solid #ffcf75; outline-
 .parol-ornament-reveal { animation: parol-ornament-appear 420ms ease-out both; }
 .parol-light { animation: parol-light-appear 340ms ease-out both; }
 
+
+/* Three physical growth layers bloom outward per friend. The final wave
+   seals the single completed boundary with a radiant sparkle cascade. */
+@keyframes parol-growth-bloom {
+  0% { opacity: .1; transform: scale(.978); filter: brightness(2.1); }
+  50% { opacity: .82; filter: brightness(1.65); }
+  100% { opacity: 1; transform: scale(1); filter: brightness(1); }
+}
+.parol-growth-layer-arrive {
+  animation: parol-growth-bloom 800ms cubic-bezier(.15,.85,.25,1) both;
+  transform-origin: 300px 302px;
+}
+@keyframes parol-growth-glint {
+  0% { opacity: 0; stroke-width: 15; filter: drop-shadow(0 0 10px #ffe8a6); }
+  40% { opacity: .9; stroke-width: 7; }
+  100% { opacity: 0; stroke-width: 1; }
+}
+.parol-growth-flash { animation: parol-growth-glint 1000ms ease-out both; }
+@keyframes parol-growth-spark {
+  0% { opacity: 0; transform: scale(.08) rotate(-40deg); }
+  32% { opacity: .95; transform: scale(1.7) rotate(12deg); }
+  100% { opacity: 0; transform: scale(.3) rotate(45deg); }
+}
+.parol-growth-sparkle {
+  animation: parol-growth-spark 1050ms ease-out both;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;

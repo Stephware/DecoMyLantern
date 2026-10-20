@@ -3,7 +3,7 @@ import LanternScene from '../lantern/renderer/LanternScene'
 import ParolArtwork from '../lantern/renderer/ParolArtwork'
 import ProceduralOuterShell from '../lantern/renderer/ProceduralOuterShell'
 import { MAX_TEST_FRIENDS, stageForFriends, nextDesignMilestone } from '../lantern/growth/stages'
-import { GROWTH_REGIONS, growthZoneForLayer } from '../lantern/growth/outerGrowth'
+import { GROWTH_REGIONS, growthForFriends, growthZoneForLayer } from '../lantern/growth/outerGrowth'
 import { THEMES } from '../customization/themes'
 import InvitationManager from '../invitations/InvitationManager'
 import type { Design, Lantern } from '../../lib/api'
@@ -152,13 +152,14 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                   </div>
                   {previewCount !== null && (
                     <p role="status" className="text-center text-xs font-semibold text-amber-200">
-                      {previewCount} simulated friends · {previewCount} decorative festival layers · {previewCount === 0 ? 'Complete mini tambor' : GROWTH_REGIONS.find(region => region.zone === growthZoneForLayer(previewCount))?.label ?? 'Puntetas'} · Not saved
+                      {previewCount} simulated friends · {growthForFriends(previewCount)} growth layers · {previewCount} outer boundaries · {previewCount === 0 ? 'Complete mini tambor' : GROWTH_REGIONS.find(region => region.zone === growthZoneForLayer(growthForFriends(previewCount)))?.label ?? 'Celebration crown'} · Not saved
                     </p>
                   )}
                 </div>
-                <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Begins as a complete mini festival lantern. Every friend adds one connected, illuminated geometric, floral, fan, or festival-edge layer.' : 'Preview only: +1 friend adds a full decorative layer. At 50 friends, five connected ornamental regions form a grand festival lantern. No data is saved.'}</p>
-                <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-[#0b1325]/80 p-4 sm:grid-cols-3 sm:p-5">
+                <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Every friend adds three real decorative growth layers, but just one completed outer outline. New patterns extend through growth 150.' : 'Preview only: +1 friend equals +3 real growth layers and one outer line. At 50 friends the lantern reaches growth 150. No data is saved.'}</p>
+                <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-[#0b1325]/80 p-4 sm:grid-cols-4 sm:p-5">
                   <div><p className="text-2xl font-bold text-amber-200">{accepted}</p><p className="mt-1 text-xs text-white/50">Accepted friends</p></div>
+                  <div><p className="text-2xl font-bold text-amber-200">{lantern.growthPoints}</p><p className="mt-1 text-xs text-white/50">Visual growth · 150 at 50 friends</p></div>
                   <div><p className="text-lg font-semibold text-white">{stageForFriends(unlockProgress).name}</p><p className="mt-1 text-xs text-white/50">Highest unlocked design</p></div>
                   <div className="col-span-2 sm:col-span-1"><p className="text-lg font-semibold text-white">{nextDesign ? `${nextDesign.minFriends} friends` : 'All designs unlocked'}</p><p className="mt-1 text-xs text-white/50">{nextDesign ? 'Next design milestone' : 'Outer artwork still keeps evolving'}</p></div>
                 </div>
@@ -183,7 +184,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                   {designs.map(design => {
                     const palette = THEMES.find(item => item.key === design.designKey)
                     return <button key={design.designKey} type="button" disabled={busy} onClick={() => { setDraftDesign(design.designKey); setNotice('') }} aria-pressed={draftDesign === design.designKey} className={'flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-55 ' + (draftDesign === design.designKey ? 'border-amber-300 bg-amber-300/10' : 'border-white/10 bg-white/5 hover:border-amber-200/50')}>
-                      {palette && <svg viewBox="0 0 600 640" role="img" aria-label={design.name + ' thumbnail'} className="h-[98px] w-[86px] shrink-0 rounded-xl bg-[#0b1425]"><ProceduralOuterShell theme={palette} friendCount={0} pattern="default" /><ParolArtwork theme={palette} pattern="default" /></svg>}
+                      {palette && <svg viewBox="0 0 600 640" role="img" aria-label={design.name + ' thumbnail'} className="h-[98px] w-[86px] shrink-0 rounded-xl bg-[#0b1425]"><ProceduralOuterShell theme={palette} growthCount={0} pattern="default" /><ParolArtwork theme={palette} pattern="default" /></svg>}
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold">{design.name}</span>
                         <span className="mt-1 block text-xs text-white/50">{design.requiredFriends <= unlockProgress ? 'Unlocked · Ready to select' : lantern?.designKey === design.designKey ? 'Previously selected · Kept unlocked' : `Preview only · Unlocks at ${design.requiredFriends} friends` }</span>

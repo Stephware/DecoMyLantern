@@ -12,6 +12,7 @@ public sealed record LanternDto(
     string PaletteKey,
     string PatternKey,
     int AcceptedFriends,
+    int GrowthPoints,
     int MaxReachedFriends,
     string GrowthStage,
     DateTime UnlockAtUtc,

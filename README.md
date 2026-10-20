@@ -1,16 +1,16 @@
 # BeMyParol (formerly Deco My Lantern)
 
-**BeMyParol** is a mobile-first Filipino Christmas *parol* experience. Every accepted friend keeps an identifiable light in the central tambor and adds **one connected ornamental structural layer** to an elaborate, round/floral festival-style parol inspired by San Fernando, Pampanga. Fifty accepted friends create fifty filled layers organized into five distinct geometric, floral and illuminated regions. Friend milestones at **0, 3, 10, 23, 40 and 50** unlock six selectable design families.
+**BeMyParol** is a mobile-first Filipino Christmas *parol* experience. Every accepted friend keeps an identifiable light in the central tambor and adds **three actual visual growth layers** to an elaborate, round/floral festival-style parol inspired by San Fernando, Pampanga. A single visible outer boundary completes every three growth layers. Fifty friends therefore create 150 filled growth layers and 50 outer bands across 15 geometric, floral and illuminated regions. Friend milestones at **0, 3, 10, 23, 40 and 50** unlock six selectable design families.
 
-The parol looks complete even with **zero friends**: a compact festival lantern with intricate glass windows, a floral-starburst tambor, diamond patterns and decorative lighting. Every friend adds a distinct connected outer layer, and the camera fits the growing design. **No dangling tail, cord, tassels or ribbon fringe.** Design unlocks are separate from ongoing visual evolution; friends can continue joining past 50.
+The parol looks complete even with **zero friends**: a compact festival lantern with intricate glass windows, a floral-starburst tambor, diamond patterns and decorative lighting. Every friend triggers a three-wave visual reveal and one completed outer band; the camera fits the growing design. **No dangling tail, cord, tassels or ribbon fringe.** Design unlocks are separate from ongoing visual evolution; friends can continue joining past 50.
 
-> **Development status:** Passwordless owner access and guest invitations exist. The living, six-family procedural design system and milestone unlocks are under development in this feature branch. The owner Christmas inbox UI and production abuse controls remain incomplete; full .NET, SQL Server and browser validation are required before release.
+> **Development status:** Passwordless owner access and guest invitations exist. The extended 150-layer procedural design and three-wave animation require local build and browser validation before release. The owner Christmas inbox UI and production abuse controls remain incomplete; full .NET, SQL Server and browser validation are required before release.
 
 ## How the app is intended to work
 
 - **Owners** create a seasonal parol without signing up or logging in. The API gives the browser a secure HTTP-only owner cookie and shows a private recovery key once.
 - **Friends** open a unique invitation link without creating an account, see a guest-only page, then contribute one light per browser visitor and optionally leave a sealed Christmas message.
-- Each accepted contribution has a stable central light and adds one connected outer ornamental layer. Structural bands collectively form five different festival-style regions rather than repeating a single outline.
+- Each accepted contribution keeps a stable central light and adds three connected ornament layers, with one visible contour after all three. The first 150 layers span 15 distinct festival-inspired regions instead of repeating the previous final design.
 - Owners can switch among designs unlocked by their reached friend milestones (0/3/10/23/40/50). A previously selected design stays available.
 - Messages are private to the lantern owner and stay sealed until **December 25, 12:00 AM Philippine Standard Time (UTC+8)**. For Christmas 2026, the server-side unlock is `2026-12-24T16:00:00Z`.
 

@@ -8,6 +8,7 @@ export type InvitationPreview = {
   designKey: string
   patternKey: string
   acceptedFriends: number
+  growthPoints: number
   growthStage: string
   alreadyContributed: boolean
   lights: PublicLight[]
@@ -28,6 +29,7 @@ export type Lantern = {
   paletteKey: string
   patternKey: string
   acceptedFriends: number
+  growthPoints: number
   maxReachedFriends: number
   growthStage: string
   unlockAtUtc: string

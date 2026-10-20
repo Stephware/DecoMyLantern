@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import { nextGrowthStep, retargetGrowth, settledGrowth, STEP_DURATIONS_MS,
+  visibleGrowth, visibleFriends } from '../growth/reveal'
 import type { Theme } from '../../customization/themes'
 import { MAX_TEST_FRIENDS, stageForFriends } from '../growth/stages'
-import { outerFitZoom } from '../growth/outerGrowth'
+import { growthForFriends, outerFitZoom } from '../growth/outerGrowth'
 import ParolArtwork from './ParolArtwork'
 import ProceduralOuterShell from './ProceduralOuterShell'
 import { lightPosition } from './lightPositions'
@@ -18,7 +20,7 @@ type Props = {
 
 type Camera = { zoom: number; x: number; y: number }
 type Finger = { x: number; y: number }
-const MIN_ZOOM = 0.13
+const MIN_ZOOM = 0.04
 const MAX_ZOOM = 4
 const VIEW_WIDTH = 600
 const VIEW_HEIGHT = 640
@@ -47,13 +49,46 @@ export default function LanternScene({
   const lights = isPreview ? preview : contributions
   const friendCount = lights.length
   const designTier = stageForFriends(friendCount)
-  const fitZoom = outerFitZoom(friendCount)
+  const [reveal, setReveal] = useState(() => settledGrowth(friendCount))
+  const priorFriendCount = useRef(friendCount)
+  const priorPreview = useRef(isPreview)
+  const returnedToTab = useRef(0)
+  const growthCount = visibleGrowth(reveal)
+  const drawnFriends = visibleFriends(reveal)
+  const drawnLights = lights.slice(0, drawnFriends)
+  const fitZoom = outerFitZoom(growthCount)
   const [camera, setCamera] = useState<Camera>(() => ({ zoom: fitZoom, x: 0, y: 0 }))
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null)
   const pointers = useRef<Map<number, Finger>>(new Map())
 
-  // When a contribution arrives, automatically reframe the whole evolving
-  // silhouette. User pinch/zoom remains available until the next friend.
+  // A fresh page shows the saved lantern complete. Only new, live arrivals
+  // animate; jumps to milestones and returning after an absence are instant.
+  useEffect(() => {
+    const whenVisible = () => { if (!document.hidden) returnedToTab.current = Date.now() }
+    document.addEventListener('visibilitychange', whenVisible)
+    return () => document.removeEventListener('visibilitychange', whenVisible)
+  }, [])
+
+  useEffect(() => {
+    const changedMode = priorPreview.current !== isPreview
+    const increasedByOne = friendCount === priorFriendCount.current + 1
+    const skipAnimation = (changedMode && !increasedByOne) || !increasedByOne ||
+      document.hidden || (returnedToTab.current > 0 && Date.now() - returnedToTab.current < 6000) ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    priorFriendCount.current = friendCount
+    priorPreview.current = isPreview
+    setReveal(current => retargetGrowth(current, friendCount, skipAnimation))
+  }, [friendCount, isPreview])
+
+  useEffect(() => {
+    if (reveal.step === 0) return
+    const timer = window.setTimeout(() => setReveal(current => nextGrowthStep(current)),
+      STEP_DURATIONS_MS[reveal.step - 1])
+    return () => window.clearTimeout(timer)
+  }, [reveal])
+
+  // When a growth layer arrives, automatically reframe the evolving
+  // silhouette. User pinch/zoom remains available until the next update.
   useEffect(() => {
     setCamera({ zoom: fitZoom, x: 0, y: 0 })
   }, [fitZoom])
@@ -62,7 +97,7 @@ export default function LanternScene({
     setSelectedFriendId(null)
   }, [isPreview, friendCount])
 
-  const selected = lights.find(light => light.id === selectedFriendId)
+  const selected = drawnLights.find(light => light.id === selectedFriendId)
   const transform = `translate(${CENTER_X + camera.x} ${CENTER_Y + camera.y}) scale(${camera.zoom}) translate(${-CENTER_X} ${-CENTER_Y})`
 
   function pointerDown(event: PointerEvent<SVGSVGElement>) {
@@ -123,7 +158,7 @@ export default function LanternScene({
       <div className="relative overflow-hidden rounded-[26px] border border-white/5 bg-[radial-gradient(ellipse_at_50%_42%,rgba(249,177,82,0.10),rgba(8,14,32,0)_65%)]">
         <svg
           role="img"
-          aria-label={`${theme.label} floral San Fernando-inspired festival lantern with ${friendCount} connected ornamental outer layers, one per ${isPreview ? 'test friend' : 'accepted friend'}; ${designTier.name} design milestone`}
+          aria-label={`${theme.label} San Fernando-inspired festival lantern with ${growthCount} geometric growth layers, ${drawnFriends} completed friend bands and ${designTier.name} design milestone`}
           viewBox="0 0 600 640"
           preserveAspectRatio="xMidYMid meet"
           className="block h-auto w-full cursor-grab select-none active:cursor-grabbing"
@@ -136,10 +171,10 @@ export default function LanternScene({
           <g transform={transform} style={{
             transition: pointers.current.size === 0 ? 'transform 420ms ease-out' : 'none',
           }}>
-            <ProceduralOuterShell key={friendCount} theme={theme} friendCount={friendCount} pattern={pattern} />
+            <ProceduralOuterShell theme={theme} growthCount={growthCount} animateGrowth={reveal.step !== 0} pattern={pattern} />
             <ParolArtwork theme={theme} pattern={pattern} />
             <g className="parol-contributions">
-              {lights.map(light => {
+              {drawnLights.map(light => {
                 const { x, y, radius } = lightPosition(light.slotIndex)
                 const lightColor = theme.colors[light.slotIndex % theme.colors.length]
                 const focused = light.id === selectedFriendId
@@ -173,14 +208,17 @@ export default function LanternScene({
           <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-white transition hover:bg-white/15 disabled:opacity-30" aria-label="Zoom in" title="Zoom in" disabled={camera.zoom >= MAX_ZOOM} onClick={() => zoomBy(0.2)}>+</button>
         </div>
         <div className="pointer-events-none absolute left-3 top-3 rounded-full border border-white/10 bg-[#101b33]/80 px-3 py-2 text-[11px] text-amber-100/80 backdrop-blur">
-          {friendCount} {isPreview ? 'test' : 'accepted'} friends · {friendCount} festival layers
+          {drawnFriends} {isPreview ? 'test' : 'accepted'} friends · {growthCount} growth layers · {drawnFriends} outer bands
         </div>
       </div>
       {selected && <figcaption className="mt-2 text-center text-xs text-amber-200">
         Selected: {selected.displayName} · Light #{selected.slotIndex + 1}
       </figcaption>}
-      <figcaption className="mt-2 text-center text-xs text-white/40">
-        One friend adds one decorated festival layer · Drag to explore · Pinch to zoom · Fit to recenter
+      <figcaption role="status" aria-live="polite" className="mt-2 text-center text-xs text-white/50">
+        {reveal.step === 1 ? '✦ First wave — new festival glass blooms outward' :
+          reveal.step === 2 ? '✦ Second wave — intricate ornaments unfold' :
+          reveal.step === 3 ? '✦ Third wave — the full new band illuminates' :
+          `Every friend adds three true growth layers · ${growthForFriends(friendCount)} total growth · Drag, pinch or fit to explore`}
       </figcaption>
     </figure>
   )
