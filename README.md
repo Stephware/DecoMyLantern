@@ -141,15 +141,15 @@ Open **http://localhost:5173** in your browser. Vite proxies `/api` to `http://l
 
 Open the site and choose **Create my parol**. No email/password is needed. **Copy your private recovery key and keep it safe before continuing.** The owner session persists in a secure HTTP-only browser cookie across refreshes. The original recovery key remains usable for one year from creation and does not change when restoring the parol. Use **Leave parol** to revoke the browser session; recovering access afterward requires the same recovery key. You can preview six evolving design families, simulate individual friends using the +1 friend button, and jump to 0/3/10/23/40/50 friend milestones without changing real contributions.
 
-The dashboard displays real accepted contributions. Owners can create, copy and revoke invitation links. The Christmas inbox still needs its full owner UI; message bodies remain server-protected until December 25.
+The dashboard displays real accepted contributions. Owners can copy their one short invitation link again whenever needed. The Christmas inbox still needs its full owner UI; message bodies remain server-protected until December 25.
 
 **Owner API security:** The server authenticates by looking up the SHA-256 hash of a 256-bit random browser token in SQL on each protected request. The token is only sent in an HTTP-only SameSite=Strict cookie (Secure on HTTPS/production); React does not read or persist it. All writes require a fresh CSRF token from `GET /api/owner/csrf`. Only public catalogs are cached for two minutes — never owner identity or recovery codes. See the [API contracts](docs/api-contracts.md).
 
 ## Friend invitations — Task 4
 
-Once your parol exists, copy its single invitation link and share it with friends. Friends can open their own guest page, enter a name, and optionally leave a Christmas note. The invitation link never contains your private owner or recovery key. One light per guest browser is enforced with a secure cookie and SQL constraints; this does not prove unique human identity. Links expire December 31 Philippine time, and revoking a link does not remove existing contributions.
+Once your parol exists, copy its single invitation link and share it with friends. Friends can open their own guest page, enter a name, and optionally leave a Christmas note. The invitation link never contains your private owner or recovery key. One light per guest browser is enforced with a secure cookie and SQL constraints; this does not prove unique human identity. Links expire December 31 Philippine time. Historic links are retired without removing existing contributions.
 
-The share secret is only returned once, so save the copied URL or create a new link when needed (old links continue working). See [Task 4: invitations, security and real-guest test plan](docs/task4-friend-invitations.md). Its local SQL smoke test inserts 51 guests and must **never** be used against production.
+The same invitation URL can be copied again after refreshing the dashboard. Old invitation URLs no longer work after the migration. See [Task 4: invitations, security and real-guest test plan](docs/task4-friend-invitations.md). Its local SQL smoke test inserts 51 guests and must **never** be used against production.
 
 ## Short invitation link and recovery key
 
