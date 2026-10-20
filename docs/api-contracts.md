@@ -19,7 +19,7 @@ The owner never registers or logs in. The API creates an internal, passwordless 
 
 `POST /api/owner/create` returns status 201 with `{ "owner": { "id": "..." }, "recoveryCode": "..." }`; `upgrade-legacy` returns the same shape with 200. `recover` returns `{ "owner": { "id": "..." } }` with 200 and sets a new session cookie. The original recovery key is shown when first issued, reused without rotation during its one-year lifetime, and is not returned from `/me` or `recover`. It must never appear in invitation URLs, logs, or public caches.
 
-Recovery body: `{ "recoveryCode": "base64url-secret" }`. Recovery invalidates the old owner cookie but **does not change or consume the original recovery key**. Both secrets are 256-bit random; their hashes are unique indexed values. Recovery is limited to 6 attempts per 15 minutes per observed IP; creation is limited to 6/hour per observed IP. These in-memory counters are per API instance, and production deployments need shared rate limiting and trusted-proxy IP configuration. Owner sessions expire after 400 days; recovery keys expire 365 days after original issuance without renewal on use. Existing keys with longer stored expiration dates are also restricted to one year from their credential creation. Without a valid session or the recovery key, access cannot be regained automatically; verified email recovery is *not* provided.
+Recovery body: `{ "recoveryCode": "base64url-secret" }`. Recovery invalidates the old owner cookie but **does not change or consume the original recovery key**. Owner browser sessions are 256-bit random, while newly issued recovery keys are 128-bit random (22 characters); existing 256-bit recovery keys remain accepted. Their hashes are unique indexed values. Recovery is limited to 6 attempts per 15 minutes per observed IP; creation is limited to 6/hour per observed IP. These in-memory counters are per API instance, and production deployments need shared rate limiting and trusted-proxy IP configuration. Owner sessions expire after 400 days; recovery keys expire 365 days after original issuance without renewal on use. Existing keys with longer stored expiration dates are also restricted to one year from their credential creation. Without a valid session or the recovery key, access cannot be regained automatically; verified email recovery is *not* provided.
 
 Every modifying request first calls `GET /api/owner/csrf` and includes `X-CSRF-TOKEN` plus the same cookies. The legacy migration uses `/api/owner/legacy-csrf` instead. Responses containing owner tokens or recovery codes carry `Cache-Control: no-store`. Owner validation **never trusts the memory cache**; the 2-minute `IMemoryCache` is used only for read-only public design and growth catalog responses.
 
@@ -48,12 +48,11 @@ Lantern responses include `id`, `seasonYear`, `designKey`, `paletteKey`, `patter
 
 ## Task 4 — Friend invitations and contributions
 
-A passwordless owner creates a random 256-bit invitation token with `POST /api/my/lantern/invitations`; only its SHA-256 hash is stored in SQL. The frontend builds a share URL of the form `https://bemyparol.site/#/invite/<token>`. The guest submits the token in a **POST JSON body**, not in an HTTP path or query.
+The owner receives one short, cryptographically random 96-bit (16-character) invitation per seasonal parol through the idempotent `POST /api/my/lantern/invitations`. It is issued automatically when creating a new parol, while existing parols receive it on their first dashboard visit. A SHA-256 hash plus an AES-GCM encrypted copy are stored in the existing `ShareLinks` table; the encrypted token is recoverable only using the persistent configured `Invitations:EncryptionKey`. The frontend builds `https://bemyparol.site/#/i/<token>` and sends tokens in POST JSON bodies, not paths or query strings. Historical invitation rows remain but are no longer valid.
 
 | Method | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
-| GET | `/api/my/lantern/invitations` | Owner | List current-season link metadata, never plaintext tokens |
-| POST | `/api/my/lantern/invitations` | Owner + CSRF | Issue one new share token and its expiry |
+| POST | `/api/my/lantern/invitations` | Owner + CSRF | Retrieve or create the same single official invitation (returns its token and expiry) |
 | DELETE | `/api/my/lantern/invitations/{id}` | Owner + CSRF | Revoke an owned invitation without removing lights |
 | GET | `/api/invitations/csrf` | Public | Set HTTP-only guest cookie and provide CSRF token |
 | POST | `/api/invitations/preview` | Public + CSRF | `{ token }` returns safe public parol and contributed status |
