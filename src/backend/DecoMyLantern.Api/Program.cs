@@ -89,12 +89,14 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = 6, Window = TimeSpan.FromHours(1),
             QueueLimit = 0, AutoReplenishment = true
         }));
+    // This now retrieves the same link on dashboard visits instead of
+    // creating a new invitation each time.
     options.AddPolicy("invitation-create", context => RateLimitPartition.GetFixedWindowLimiter(
         context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 10, Window = TimeSpan.FromHours(1),
+            PermitLimit = 120, Window = TimeSpan.FromHours(1),
             QueueLimit = 0, AutoReplenishment = true
         }));
     options.AddPolicy("invitation-preview", context => RateLimitPartition.GetFixedWindowLimiter(
