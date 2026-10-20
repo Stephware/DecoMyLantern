@@ -3,6 +3,7 @@ import LanternScene from '../lantern/renderer/LanternScene'
 import ParolArtwork from '../lantern/renderer/ParolArtwork'
 import ProceduralOuterShell from '../lantern/renderer/ProceduralOuterShell'
 import { MAX_TEST_FRIENDS, stageForFriends, nextDesignMilestone } from '../lantern/growth/stages'
+import { growthPointsForFriends } from '../lantern/growth/animation'
 import { GROWTH_REGIONS, growthZoneForLayer } from '../lantern/growth/outerGrowth'
 import { THEMES } from '../customization/themes'
 import InvitationManager from '../invitations/InvitationManager'
@@ -152,13 +153,14 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                   </div>
                   {previewCount !== null && (
                     <p role="status" className="text-center text-xs font-semibold text-amber-200">
-                      {previewCount} simulated friends · {previewCount} decorative festival layers · {previewCount === 0 ? 'Complete mini tambor' : GROWTH_REGIONS.find(region => region.zone === growthZoneForLayer(previewCount))?.label ?? 'Puntetas'} · Not saved
+                      {previewCount} simulated friends · {growthPointsForFriends(previewCount)} growth points · {previewCount} decorative festival bands · {previewCount === 0 ? 'Complete mini tambor' : GROWTH_REGIONS.find(region => region.zone === growthZoneForLayer(previewCount))?.label ?? 'Puntetas'} · Not saved
                     </p>
                   )}
                 </div>
-                <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Begins as a complete mini festival lantern. Every friend adds one connected, illuminated geometric, floral, fan, or festival-edge layer.' : 'Preview only: +1 friend adds a full decorative layer. At 50 friends, five connected ornamental regions form a grand festival lantern. No data is saved.'}</p>
+                <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Begins as a complete mini festival lantern. Every friend adds +3 growth points in one geometric, floral, fan or festival-edge band.' : 'Preview only: each friend adds +3 growth points and one band. At 50 friends, there are 150 growth points and 50 bands. No data is saved.'}</p>
                 <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-[#0b1325]/80 p-4 sm:grid-cols-3 sm:p-5">
                   <div><p className="text-2xl font-bold text-amber-200">{accepted}</p><p className="mt-1 text-xs text-white/50">Accepted friends</p></div>
+                  <div><p className="text-2xl font-bold text-amber-200">{lantern.growthPoints}</p><p className="mt-1 text-xs text-white/50">Growth points · +3 per friend</p></div>
                   <div><p className="text-lg font-semibold text-white">{stageForFriends(unlockProgress).name}</p><p className="mt-1 text-xs text-white/50">Highest unlocked design</p></div>
                   <div className="col-span-2 sm:col-span-1"><p className="text-lg font-semibold text-white">{nextDesign ? `${nextDesign.minFriends} friends` : 'All designs unlocked'}</p><p className="mt-1 text-xs text-white/50">{nextDesign ? 'Next design milestone' : 'Outer artwork still keeps evolving'}</p></div>
                 </div>
