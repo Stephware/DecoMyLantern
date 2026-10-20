@@ -48,7 +48,7 @@ public sealed class OwnerSecretsTests
     [Fact]
     public void Owner_session_has_defined_expiration_and_recovery_window()
     {
-        Assert.True(OwnerSession.Lifetime > TimeSpan.FromDays(365));
-        Assert.True(OwnerSession.RecoveryLifetime > OwnerSession.Lifetime);
+        Assert.Equal(TimeSpan.FromDays(400), OwnerSession.Lifetime);
+        Assert.Equal(TimeSpan.FromDays(365), OwnerSession.RecoveryLifetime);
     }
 }
