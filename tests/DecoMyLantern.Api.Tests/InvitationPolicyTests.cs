@@ -39,7 +39,7 @@ public sealed class InvitationPolicyTests
     }
 
     [Fact]
-    public void Invitation_secret_is_cryptographic_and_only_the_hash_is_persistable()
+    public void Invitation_secret_is_cryptographic_and_hashable()
     {
         var secret = InvitationPolicy.GenerateToken();
         Assert.Equal(16, secret.Length);
