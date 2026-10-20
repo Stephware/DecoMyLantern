@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_URLS: http://+:8080
+      ReverseProxy__KnownNetwork: 172.16.0.0/12
       ConnectionStrings__DefaultConnection: ${DATABASE_CONNECTION_STRING:?Set DATABASE_CONNECTION_STRING in .env}
     extra_hosts:
       - host.docker.internal:host-gateway
