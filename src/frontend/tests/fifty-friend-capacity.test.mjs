@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   BASE_FESTIVAL_RADIUS, FRIEND_LAYER_SPACING, PANEL_SEGMENTS,
-  GROWTH_REGIONS, festivalLayers, outerRadiusForFriends,
+  GROWTH_REGIONS, festivalLayers, growthForFriends, outerRadiusForFriends,
   outerFitZoom, festivalFacetPath,
 } from '../src/features/lantern/growth/outerGrowth.ts'
 import { stageForFriends, DESIGN_TARGET_FRIENDS } from '../src/features/lantern/growth/stages.ts'
@@ -20,23 +20,24 @@ function closestDistance(slots) {
   return closest
 }
 
-test('50 friends produce 50 filled bands, 1000 capiz facet panels', () => {
+test('50 friends produce 150 filled growth layers and 3000 capiz facet panels', () => {
   assert.equal(DESIGN_TARGET_FRIENDS, 50)
-  const layers = festivalLayers(50)
-  assert.equal(layers.length, 50)
+  const layers = festivalLayers(growthForFriends(50))
+  assert.equal(layers.length, 150)
   assert.equal(layers[0].innerRadius, BASE_FESTIVAL_RADIUS)
-  assert.equal(layers[49].outerRadius, BASE_FESTIVAL_RADIUS + 50 * FRIEND_LAYER_SPACING)
-  assert.equal(PANEL_SEGMENTS * layers.length, 1000)
+  assert.equal(layers[149].outerRadius, BASE_FESTIVAL_RADIUS + 150 * FRIEND_LAYER_SPACING)
+  assert.equal(PANEL_SEGMENTS * layers.length, 3000)
   for (const layer of layers) {
     assert.ok(festivalFacetPath(layer.friendNumber, 0).startsWith('M '))
   }
 })
 
-test('the first 50 layers fill five sequential connected ornamental regions', () => {
-  const layers = festivalLayers(50)
+test('150 growth layers fill fifteen consecutive decorative regions', () => {
+  const layers = festivalLayers(growthForFriends(50))
   for (let i = 1; i < layers.length; i++) {
     assert.equal(layers[i].innerRadius, layers[i - 1].outerRadius)
   }
+  assert.equal(GROWTH_REGIONS.length, 15)
   for (const { from, to, zone } of GROWTH_REGIONS) {
     assert.equal(layers.filter(x => x.zone === zone).length, to - from + 1)
   }
