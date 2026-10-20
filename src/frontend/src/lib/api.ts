@@ -2,7 +2,6 @@ export type Owner = { id: string }
 export type OwnerIssue = { owner: Owner; recoveryCode: string }
 
 export type CreatedInvitation = { id: string; token: string; expiresAtUtc: string }
-export type InvitationInfo = { id: string; expiresAtUtc: string | null; revokedAtUtc: string | null }
 export type PublicLight = { id: string; slotIndex: number }
 export type InvitationPreview = {
   designKey: string
@@ -107,9 +106,6 @@ export const getDesigns = () => api<Design[]>('/api/designs')
 
 export const createInvitation = () =>
   api<CreatedInvitation>('/api/my/lantern/invitations', { method: 'POST' })
-export const getInvitations = () => api<InvitationInfo[]>('/api/my/lantern/invitations')
-export const revokeInvitation = (id: string) =>
-  api<void>(`/api/my/lantern/invitations/${encodeURIComponent(id)}`, { method: 'DELETE' })
 export const previewInvitation = (token: string) =>
   api<InvitationPreview>('/api/invitations/preview',
     { method: 'POST', body: JSON.stringify({ token }) }, '/api/invitations/csrf')
