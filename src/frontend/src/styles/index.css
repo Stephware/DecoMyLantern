@@ -23,6 +23,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid #ffcf75; outline-
 }
 
 .parol-layer-rise { animation: parol-layer-arrive 650ms ease-out both; }
+
+/* Flash of gold as the newly embellished frame is recomposed. The existing
+   reduced-motion media query disables this for sensitive visitors. */
+@keyframes parol-ornament-appear {
+  from { opacity: .77; filter: brightness(1.32); }
+  to { opacity: 1; filter: brightness(1); }
+}
+.parol-ornament-reveal { animation: parol-ornament-appear 420ms ease-out both; }
 .parol-light { animation: parol-light-appear 340ms ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {

@@ -7,8 +7,8 @@ The schema is defined in `src/backend/DecoMyLantern.Api/Models/Database` using E
 | Identity ApplicationUser | Internal owner record, no email/password required for new owners; retains existing owner foreign keys and historical rows |
 | Lanterns | Unique OwnerUserId + SeasonYear, rowversion concurrency | 
 | OwnerCredentials | One-to-one owner row; SHA-256 TokenHash/RecoveryHash (unique), session/recovery expiration, rowversion for rotation conflict detection |
-| ParolDesigns | Unique DesignKey, 3 seeded themes all available from 0 friends; legacy RequiredFriends column retained at 0 |
-| GrowthStages | Unique StageKey + RequiredFriends; visual ranges begin at 0, 1, 6, 16, 31 (not feature unlocks) |
+| ParolDesigns | Unique DesignKey, 6 seeded design families with RequiredFriends milestones 0, 3, 10, 23, 40, 50; existing three IDs preserved |
+| GrowthStages | Unique StageKey + RequiredFriends; six selectable design milestones at 0, 3, 10, 23, 40, 50 |
 | ShareLinks | Unique SHA-256 TokenHash, expiry and revocation; plaintext link returned only at creation |
 | GuestVisitors | Unique SHA-256 hash of a random guest browser token (not verified human identity) |
 | Contributions | Unique (LanternId, GuestVisitorId) and (LanternId, SlotIndex); slot counter assigned under SQL row lock/transaction |
@@ -40,6 +40,10 @@ dotnet ef database update --project src/backend/DecoMyLantern.Api --startup-proj
 ```
 
 Do not use manual SQL scripts and EF migrations interchangeably without checking `__EFMigrationsHistory`.
+
+## Living parol design migration
+
+`20261017230000_LivingParolDesigns` changes **seed data only**: it adjusts requirements for the existing Floral and Festival designs, adds three more selectable designs, and aligns six growth-stage rows. Existing owners, parols, contributions and private messages are preserved. Confirm the EF connection points to **DecoMyLanternDb** (not `master`) and back up the database before running `dotnet ef database update`. Do not reapply the full schema if the migration is already recorded.
 
 ## Create the database
 

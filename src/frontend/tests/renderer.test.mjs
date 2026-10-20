@@ -1,64 +1,46 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { lightPosition } from '../src/features/lantern/renderer/lightPositions.ts'
-import { stageForFriends, decorationCounts } from '../src/features/lantern/growth/stages.ts'
+import { stageForFriends, nextDesignMilestone, STAGES } from '../src/features/lantern/growth/stages.ts'
+import {
+  festivalLayers, festivalOutlinePath, outerFitZoom, OUTER_RECIPES,
+} from '../src/features/lantern/growth/outerGrowth.ts'
 
-test('the five visual ranges are complete base, lights, details, fuller and grand', () => {
-  const cases = [
-    [0, 'base'], [1, 'lights'], [5, 'lights'], [6, 'details'],
-    [15, 'details'], [16, 'fuller'], [30, 'fuller'], [31, 'grand'],
-    [50, 'grand'], [51, 'grand'], [120, 'grand'],
-  ]
-  for (const [count, expected] of cases) {
-    assert.equal(stageForFriends(count).key, expected)
+test('design unlocks remain independent of structural layers', () => {
+  assert.deepEqual(STAGES.map(s => s.minFriends), [0, 3, 10, 23, 40, 50])
+  for (const [count, key] of [
+    [0, 'base'], [1, 'base'], [2, 'base'], [3, 'floral'], [9, 'floral'],
+    [10, 'festival'], [22, 'festival'], [23, 'celestial'],
+    [39, 'celestial'], [40, 'fiesta'], [49, 'fiesta'],
+    [50, 'sampaguita'], [120, 'sampaguita'],
+  ]) assert.equal(stageForFriends(count).key, key)
+  assert.equal(nextDesignMilestone(50), null)
+})
+
+test('one new friend always creates one new complete ornamental band', () => {
+  for (let count = 1; count <= 120; count++) {
+    assert.equal(festivalLayers(count).length - festivalLayers(count - 1).length, 1)
+    assert.notEqual(festivalOutlinePath(count), festivalOutlinePath(count - 1))
+    assert.ok(outerFitZoom(count) <= outerFitZoom(count - 1))
   }
 })
 
-test('every friend adds a light or one new decorative accent through 50 friends', () => {
-  assert.deepEqual(decorationCounts(0), { details: 0, fuller: 0, grand: 0 })
-  assert.deepEqual(decorationCounts(5), { details: 0, fuller: 0, grand: 0 })
-  assert.deepEqual(decorationCounts(6), { details: 1, fuller: 0, grand: 0 })
-  assert.deepEqual(decorationCounts(15), { details: 10, fuller: 0, grand: 0 })
-  assert.deepEqual(decorationCounts(16), { details: 10, fuller: 1, grand: 0 })
-  assert.deepEqual(decorationCounts(30), { details: 10, fuller: 15, grand: 0 })
-  assert.deepEqual(decorationCounts(31), { details: 10, fuller: 15, grand: 1 })
-  assert.deepEqual(decorationCounts(50), { details: 10, fuller: 15, grand: 20 })
-  assert.deepEqual(decorationCounts(51), decorationCounts(50))
-
-  for (let friends = 1; friends <= 50; friends++) {
-    const before = decorationCounts(friends - 1)
-    const after = decorationCounts(friends)
-    const total = value => value.details + value.fuller + value.grand
-    // Friends #1–5 get a light; #6–50 get a light plus exactly one outer accent.
-    assert.equal(total(after) - total(before), friends <= 5 ? 0 : 1)
-  }
+test('saved contributor identity lights are independent of exterior decoration', () => {
+  const position = lightPosition(17)
+  assert.deepEqual(lightPosition(17), position)
+  assert.notDeepEqual(lightPosition(18), position)
+  assert.deepEqual([0, 8, 17].map(lightPosition)[2], position)
 })
 
-test('light coordinates depend only on the persisted slot and survive sparse removals', () => {
-  const original = lightPosition(17)
-  assert.deepEqual(lightPosition(17), original)
-  assert.notDeepEqual(lightPosition(18), original)
-  assert.deepEqual([0, 8, 17].map(lightPosition)[2], original)
+test('all six design families have different festival-style motif rules', () => {
+  assert.equal(Object.keys(OUTER_RECIPES).length, 6)
+  assert.equal(new Set(Object.values(OUTER_RECIPES).map(x => x.motif)).size, 6)
 })
 
-test('at least the first 120 light slots are distinct and inside finite coordinates', () => {
-  const seen = new Set()
-  for (let i = 0; i < 120; i++) {
-    const light = lightPosition(i)
-    assert.ok(Number.isFinite(light.x))
-    assert.ok(Number.isFinite(light.y))
-    assert.ok(light.radius > 0)
-    assert.ok(Math.hypot(light.x - 300, light.y - 302) <= 132.0001)
-    const key = `${light.x.toFixed(4)}:${light.y.toFixed(4)}`
-    assert.equal(seen.has(key), false)
-    seen.add(key)
-  }
-})
-
-test('negative or non-integer stage counts and contribution slots are rejected', () => {
-  for (const value of [-1, 0.5, NaN, Infinity]) {
-    assert.throws(() => lightPosition(value), RangeError)
-    assert.throws(() => stageForFriends(value), RangeError)
-    assert.throws(() => decorationCounts(value), RangeError)
+test('invalid friend counts are rejected', () => {
+  for (const n of [-1, NaN, Infinity, .5, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(() => festivalLayers(n), RangeError)
+    assert.throws(() => stageForFriends(n), RangeError)
+    assert.throws(() => lightPosition(n), RangeError)
   }
 })

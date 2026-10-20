@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import LanternScene from '../lantern/renderer/LanternScene'
 import ParolArtwork from '../lantern/renderer/ParolArtwork'
-import { stageForFriends } from '../lantern/growth/stages'
+import ProceduralOuterShell from '../lantern/renderer/ProceduralOuterShell'
+import { MAX_TEST_FRIENDS, stageForFriends, nextDesignMilestone } from '../lantern/growth/stages'
+import { GROWTH_REGIONS, growthZoneForLayer } from '../lantern/growth/outerGrowth'
 import { THEMES } from '../customization/themes'
 import InvitationManager from '../invitations/InvitationManager'
 import type { Design, Lantern } from '../../lib/api'
@@ -17,7 +19,7 @@ type Props = {
 
 const PATTERNS = [
   { key: 'default', label: 'Traditional', detail: 'Original star accents' },
-  { key: 'rings', label: 'Celestial rings', detail: 'Soft circular detailing' },
+  { key: 'rings', label: 'Filigree trim', detail: 'Fine luminous outlines between decorative regions' },
   { key: 'rays', label: 'Radiant rays', detail: 'A brighter starburst' },
 ] as const
 
@@ -37,9 +39,11 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
 
   const theme = THEMES.find(item => item.key === draftDesign) ?? THEMES[0]
   const accepted = lantern?.acceptedFriends ?? 0
+  const unlockProgress = Math.max(accepted, lantern?.maxReachedFriends ?? accepted)
+  const nextDesign = nextDesignMilestone(unlockProgress)
   const changed = lantern !== null && (draftDesign !== lantern.designKey || draftPattern !== lantern.patternKey)
   const selectedDesign = designs.find(item => item.designKey === draftDesign)
-  const invalidDesign = selectedDesign === undefined
+  const invalidDesign = selectedDesign === undefined || (selectedDesign.requiredFriends > unlockProgress && lantern?.designKey !== draftDesign)
 
   async function run(action: () => Promise<void>, confirmation: string) {
     setBusy(true)
@@ -113,18 +117,50 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-300/75">A parol of friendship</p>
                     <h2 className="mt-2 font-serif text-2xl sm:text-3xl">Your growing lantern</h2>
                   </div>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/65">{previewCount === null ? 'Your real contribution lights' : 'Design studio · Sample lights only'}</span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/65">{previewCount === null ? 'Your evolving parol' : 'Design lab · Test friends only'}</span>
                 </div>
                 <div className="mx-auto max-w-[620px]"><LanternScene theme={theme} pattern={draftPattern} contributions={previewCount === null ? lantern.lights : []} previewCount={previewCount === null ? undefined : previewCount} /></div>
-                <div className="mt-1 flex flex-wrap items-center justify-center gap-2" aria-label="Preview visual growth ranges">
-                  <button type="button" onClick={() => setPreviewCount(null)} aria-pressed={previewCount === null} className={'rounded-full border px-3 py-2 text-xs font-semibold transition ' + (previewCount === null ? 'border-amber-300 bg-amber-300/15 text-amber-100' : 'border-white/10 text-white/55 hover:border-white/25')}>My lantern</button>
-                  {[0, 3, 10, 23, 40, 50].map(count => <button key={count} type="button" onClick={() => setPreviewCount(count)} aria-pressed={previewCount === count} className={'rounded-full border px-3 py-2 text-xs font-semibold transition ' + (previewCount === count ? 'border-amber-300 bg-amber-300/15 text-amber-100' : 'border-white/10 text-white/55 hover:border-white/25')}>{count} lights</button>)}
+                <div className="mt-2 space-y-3" aria-label="Simulate a friend joining without saving">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button type="button" onClick={() => setPreviewCount(null)} aria-pressed={previewCount === null}
+                      className={'rounded-full border px-3 py-2 text-xs font-semibold transition ' + (previewCount === null ? 'border-amber-300 bg-amber-300/15 text-amber-100' : 'border-white/10 text-white/55 hover:border-white/25')}>
+                      My real parol
+                    </button>
+                    <button type="button" disabled={previewCount === 0} onClick={() => setPreviewCount(Math.max(0, (previewCount ?? accepted) - 1))}
+                      className="rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold text-white/85 hover:border-amber-300/60 disabled:opacity-30">
+                      −1 friend
+                    </button>
+                    <button type="button" disabled={previewCount !== null && previewCount >= MAX_TEST_FRIENDS}
+                      onClick={() => setPreviewCount(Math.min(MAX_TEST_FRIENDS, (previewCount ?? accepted) + 1))}
+                      className="rounded-xl bg-amber-300 px-4 py-2 text-xs font-bold text-[#142033] hover:bg-amber-200 disabled:opacity-30">
+                      + Add test friend
+                    </button>
+                    <button type="button" onClick={() => setPreviewCount(0)}
+                      className="rounded-xl border border-white/15 px-3 py-2 text-xs text-white/70 hover:border-white/35">
+                      Reset to 0
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2" aria-label="Jump to design milestones and decorative-region transitions">
+                    { [0, 3, 10, 20, 23, 35, 40, 45, 50, 60].map(count => (
+                      <button key={count} type="button" onClick={() => setPreviewCount(count)}
+                        aria-pressed={previewCount === count}
+                        className={'rounded-full border px-3 py-1.5 text-xs transition ' +
+                          (previewCount === count ? 'border-amber-300 bg-amber-300/15 text-amber-100' : 'border-white/10 text-white/55 hover:border-white/30')}>
+                        {count} friends
+                      </button>
+                    ))}
+                  </div>
+                  {previewCount !== null && (
+                    <p role="status" className="text-center text-xs font-semibold text-amber-200">
+                      {previewCount} simulated friends · {previewCount} decorative festival layers · {previewCount === 0 ? 'Complete mini tambor' : GROWTH_REGIONS.find(region => region.zone === growthZoneForLayer(previewCount))?.label ?? 'Puntetas'} · Not saved
+                    </p>
+                  )}
                 </div>
-                <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Only accepted guest contributions appear here. Lights keep their positions through every growth stage.' : 'Visual demonstration only. Preview lights do not alter your real friend count or saved parol.'}</p>
+                <p className="mt-3 text-center text-xs leading-5 text-white/40">{previewCount === null ? 'Begins as a complete mini festival lantern. Every friend adds one connected, illuminated geometric, floral, fan, or festival-edge layer.' : 'Preview only: +1 friend adds a full decorative layer. At 50 friends, five connected ornamental regions form a grand festival lantern. No data is saved.'}</p>
                 <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-[#0b1325]/80 p-4 sm:grid-cols-3 sm:p-5">
-                  <div><p className="text-2xl font-bold text-amber-200">{accepted}</p><p className="mt-1 text-xs text-white/50">Accepted lights</p></div>
-                  <div><p className="text-lg font-semibold text-white">{stageForFriends(accepted).name}</p><p className="mt-1 text-xs text-white/50">Visual progression</p></div>
-                  <div className="col-span-2 sm:col-span-1"><p className="text-lg font-semibold text-white">Every friend adds a light</p><p className="mt-1 text-xs text-white/50">No unlock requirements</p></div>
+                  <div><p className="text-2xl font-bold text-amber-200">{accepted}</p><p className="mt-1 text-xs text-white/50">Accepted friends</p></div>
+                  <div><p className="text-lg font-semibold text-white">{stageForFriends(unlockProgress).name}</p><p className="mt-1 text-xs text-white/50">Highest unlocked design</p></div>
+                  <div className="col-span-2 sm:col-span-1"><p className="text-lg font-semibold text-white">{nextDesign ? `${nextDesign.minFriends} friends` : 'All designs unlocked'}</p><p className="mt-1 text-xs text-white/50">{nextDesign ? 'Next design milestone' : 'Outer artwork still keeps evolving'}</p></div>
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-[#121e35]/75 p-5 sm:p-6">
@@ -141,16 +177,16 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
               <section className="rounded-3xl border border-white/10 bg-[#14213a]/90 p-5 shadow-xl sm:p-6">
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-300/75">Personalize</p>
                 <h2 className="mt-2 font-serif text-2xl">Make it yours</h2>
-                <p className="mb-6 mt-2 text-sm leading-6 text-white/55">Every parol design is available from the start. Friends add individual lights and decorative details as they join.</p>
+                <p className="mb-6 mt-2 text-sm leading-6 text-white/55">A complete, tail-free festival parol grows with each friend through connected diamonds, capiz mosaics, flowers, fans, and illuminated edging. New design families unlock at 0, 3, 10, 23, 40 and 50 friends.</p>
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-white/60">Design & color palette</h3>
                 <div className="space-y-3">
                   {designs.map(design => {
                     const palette = THEMES.find(item => item.key === design.designKey)
-                    return <button key={design.designKey} type="button" disabled={busy} onClick={() => { setDraftDesign(design.designKey); setNotice('') }} aria-pressed={draftDesign === design.designKey} className={'flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition ' + (draftDesign === design.designKey ? 'border-amber-300 bg-amber-300/10' : 'border-white/10 bg-white/5 hover:border-amber-200/50')}>
-                      {palette && <svg viewBox="100 100 400 470" role="img" aria-label={design.name + ' thumbnail'} className="h-[98px] w-[86px] shrink-0 rounded-xl bg-[#0b1425]"><ParolArtwork theme={palette} friendCount={0} pattern="default" /></svg>}
+                    return <button key={design.designKey} type="button" disabled={busy} onClick={() => { setDraftDesign(design.designKey); setNotice('') }} aria-pressed={draftDesign === design.designKey} className={'flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-55 ' + (draftDesign === design.designKey ? 'border-amber-300 bg-amber-300/10' : 'border-white/10 bg-white/5 hover:border-amber-200/50')}>
+                      {palette && <svg viewBox="0 0 600 640" role="img" aria-label={design.name + ' thumbnail'} className="h-[98px] w-[86px] shrink-0 rounded-xl bg-[#0b1425]"><ProceduralOuterShell theme={palette} friendCount={0} pattern="default" /><ParolArtwork theme={palette} pattern="default" /></svg>}
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold">{design.name}</span>
-                        <span className="mt-1 block text-xs text-white/50">Available to everyone · No friend requirement</span>
+                        <span className="mt-1 block text-xs text-white/50">{design.requiredFriends <= unlockProgress ? 'Unlocked · Ready to select' : lantern?.designKey === design.designKey ? 'Previously selected · Kept unlocked' : `Preview only · Unlocks at ${design.requiredFriends} friends` }</span>
                         <span className="mt-2 flex gap-1">{palette?.colors.map((color, index) => <span key={index} className="h-2.5 w-2.5 rounded-full border border-white/20" style={{ backgroundColor: color }} />)}</span>
                       </span>
                       <span aria-hidden="true" className="text-sm text-amber-300">{draftDesign === design.designKey ? '●' : '○'}</span>
@@ -165,7 +201,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                     <span aria-hidden="true" className="text-amber-300">{draftPattern === option.key ? '●' : '○'}</span>
                   </button>)}
                 </div>
-                <button type="button" disabled={!changed || busy || designs.length === 0 || invalidDesign} onClick={() => void run(() => onSave(draftDesign, draftPattern), 'Your lantern customization has been saved.')} className="mt-6 w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Saving…' : invalidDesign ? 'Choose an available design' : changed ? 'Save customization →' : 'All changes saved'}</button>
+                <button type="button" disabled={!changed || busy || designs.length === 0 || invalidDesign} onClick={() => void run(() => onSave(draftDesign, draftPattern), 'Your lantern customization has been saved.')} className="mt-6 w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Saving…' : invalidDesign ? `Locked until ${selectedDesign?.requiredFriends ?? 'more'} friends` : changed ? 'Save customization →' : 'All changes saved'}</button>
               </section>
               <InvitationManager />
             </aside>

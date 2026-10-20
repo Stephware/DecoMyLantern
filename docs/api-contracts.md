@@ -32,19 +32,19 @@ Every modifying request first calls `GET /api/owner/csrf` and includes `X-CSRF-T
 | --- | --- | --- | --- |
 | GET | `/api/my/lantern` | Owner token | Current Philippine-season lantern; 404 until created |
 | POST | `/api/my/lantern` | Owner token + CSRF | Create the current season's default Classic lantern; 201 or 409 if already exists |
-| PUT | `/api/my/lantern` | Owner token + CSRF | Update selected design and visual pattern; all enabled designs are selectable immediately |
+| PUT | `/api/my/lantern` | Owner token + CSRF | Update selected design and visual pattern; rejects a new locked design with 409, preserves a pre-existing selection |
 
 PUT JSON: `{ "designKey": "classic", "patternKey": "rings" }`.
 
 Supported `patternKey` values: `default`, `rings`, `rays`. Supported designs currently seeded: `classic`, `floral`, `festival` — all available at zero friends. Pattern and selected design are persisted in the existing `Lanterns` table.
 
-Lantern responses include `id`, `seasonYear`, `designKey`, `paletteKey`, `patternKey`, `acceptedFriends`, `growthStage`, `unlockAtUtc`, and `createdAtUtc`. These are computed from server-side ownership and real accepted contribution rows, never from client-submitted friend counts. Unique DB index protects one lantern per host per season.
+Lantern responses include `id`, `seasonYear`, `designKey`, `paletteKey`, `patternKey`, `acceptedFriends`, `maxReachedFriends`, `growthStage`, `unlockAtUtc`, and `createdAtUtc`. These are computed from server-side ownership and real accepted contribution rows, never from client-submitted friend counts. Unique DB index protects one lantern per host per season.
 
 ## Existing public/read-only endpoints
 
 - GET `/api/health` — liveness
-- GET `/api/designs` — enabled parol designs (`designKey`, `name`, `assetKey`); no friend requirement
-- GET `/api/growth-stages` — five descriptive visual ranges (starts at 0, 1, 6, 16, 31 friends); never unlock requirements
+- GET `/api/designs` — enabled catalog (`designKey`, `name`, `assetKey`, `requiredFriends`); 0/3/10/23/40/50 unlock requirements are enforced by PUT `/api/my/lantern`
+- GET `/api/growth-stages` — six design unlock milestones (0, 3, 10, 23, 40, 50 friends)
 - GET `/api/my/lanterns/{lanternId}/messages` — owner-authenticated Christmas inbox with server-side pre-unlock body redaction; full frontend inbox planned for Phase 4.
 
 ## Task 4 — Friend invitations and contributions
