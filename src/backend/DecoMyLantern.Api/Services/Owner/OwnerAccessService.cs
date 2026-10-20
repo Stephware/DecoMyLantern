@@ -17,7 +17,6 @@ public interface IOwnerAccessService
     Task<IssuedOwnerAccess> CreateAsync(CancellationToken cancellationToken);
     Task<IssuedOwnerAccess> UpgradeLegacyAsync(Guid ownerId, CancellationToken cancellationToken);
     Task<IssuedOwnerAccess> RecoverAsync(string recoveryCode, CancellationToken cancellationToken);
-    Task<string> RotateRecoveryAsync(Guid ownerId, CancellationToken cancellationToken);
     Task SignOutAsync(Guid ownerId, CancellationToken cancellationToken);
 }
 
@@ -61,32 +60,18 @@ public sealed class OwnerAccessService(
         var credential = await database.OwnerCredentials
             .SingleOrDefaultAsync(x => x.RecoveryHash == hash, cancellationToken);
         var now = clock.GetUtcNow().UtcDateTime;
-        if (credential is null || credential.RecoveryExpiresAtUtc <= now)
+        if (credential is null || !OwnerRecoveryPolicy.CanRecover(credential, now))
             throw new OwnerAccessException(401, "Invalid or expired recovery key.");
 
-        // Recovery consumes the old code and immediately invalidates the old owner cookie.
+        // Each recovery issues a new owner session but keeps the same recovery
+        // hash and the original one-year deadline. Repeated use never rotates it.
         var newToken = OwnerSecrets.Generate();
-        var newRecovery = OwnerSecrets.Generate();
         credential.TokenHash = Hash(newToken);
-        credential.RecoveryHash = Hash(newRecovery);
         credential.SessionExpiresAtUtc = now.Add(OwnerSession.Lifetime);
-        credential.RecoveryExpiresAtUtc = now.Add(OwnerSession.RecoveryLifetime);
         try { await database.SaveChangesAsync(cancellationToken); }
         catch (DbUpdateConcurrencyException)
-        { throw new OwnerAccessException(409, "This recovery key has already been used. Try the newest key."); }
-        return new IssuedOwnerAccess(credential.OwnerUserId, newToken, newRecovery, credential.SessionExpiresAtUtc);
-    }
-
-    public async Task<string> RotateRecoveryAsync(Guid ownerId, CancellationToken cancellationToken)
-    {
-        var credential = await GetCredentialAsync(ownerId, cancellationToken);
-        var newRecovery = OwnerSecrets.Generate();
-        credential.RecoveryHash = Hash(newRecovery);
-        credential.RecoveryExpiresAtUtc = clock.GetUtcNow().UtcDateTime.Add(OwnerSession.RecoveryLifetime);
-        try { await database.SaveChangesAsync(cancellationToken); }
-        catch (DbUpdateConcurrencyException)
-        { throw new OwnerAccessException(409, "Your recovery key changed. Refresh and retry."); }
-        return newRecovery;
+        { throw new OwnerAccessException(409, "Your session changed during recovery. Retry with the same recovery key."); }
+        return new IssuedOwnerAccess(credential.OwnerUserId, newToken, recoveryCode, credential.SessionExpiresAtUtc);
     }
 
     public async Task SignOutAsync(Guid ownerId, CancellationToken cancellationToken)
@@ -121,10 +106,6 @@ public sealed class OwnerAccessService(
         { throw new OwnerAccessException(409, "Owner access has already been issued. Please refresh."); }
         return new IssuedOwnerAccess(ownerId, token, recoveryCode, credential.SessionExpiresAtUtc);
     }
-
-    private async Task<OwnerCredential> GetCredentialAsync(Guid ownerId, CancellationToken cancellationToken) =>
-        await database.OwnerCredentials.SingleOrDefaultAsync(x => x.OwnerUserId == ownerId, cancellationToken)
-            ?? throw new OwnerAccessException(404, "Owner access was not found.");
 
     private static string Hash(string secret) =>
         OwnerSecrets.TryHash(secret, out var hash) ? hash :
