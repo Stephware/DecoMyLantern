@@ -100,6 +100,8 @@ export const upgradeLegacyOwner = () =>
 export const rotateRecoveryCode = () =>
   api<{ recoveryCode: string }>('/api/owner/recovery-code', { method: 'POST' })
 export const signOutOwner = () => api<void>('/api/owner/sign-out', { method: 'POST' })
+export const finishOwnerSetup = () => api<void>('/api/owner/finish-setup', { method: 'POST' })
+export const cancelOwnerCreation = () => api<void>('/api/owner/cancel-creation', { method: 'POST' })
 
 export const getMyLantern = () => api<Lantern>('/api/my/lantern')
 export const createMyLantern = () => api<Lantern>('/api/my/lantern', { method: 'POST' })
