@@ -17,7 +17,7 @@ npm run dev
 ```
 Vite is on http://localhost:5173 and proxies /api to http://localhost:5050.
 
-Open the website and choose **Create my parol**; no email/password is required. **Save the private recovery key** before continuing. Close/reopen the tab and verify the owner cookie resumes the same parol. Try **Recovery key** to rotate the private code, and **Leave parol** only after saving the current key. The restoration form can redeem the key on another browser/device (and rotates both session and recovery code). Never share the recovery key in an invitation or screenshot. To migrate an existing host, the same browser must still have a valid old `Deco.Host` cookie so **Transfer my existing parol** appears.
+Open the website and choose **Create my parol**; no email/password is required. **Save the private recovery key** before continuing. Close/reopen the tab and verify the owner cookie resumes the same parol. Use **Leave parol** only after saving the original key. The restoration form can redeem that same key repeatedly on another browser/device during its one-year validity (only the previous owner session is replaced). Never share the recovery key in an invitation or screenshot. To migrate an existing host, the same browser must still have a valid old `Deco.Host` cookie so **Transfer my existing parol** appears.
 
 ## Backend
 ```bash
@@ -64,6 +64,6 @@ dotnet tool restore
 dotnet ef migrations has-pending-model-changes --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api
 ```
 
-**Manual API acceptance:** verify owner creation returns a one-time recovery key, refresh preserves owner identity, old token fails after sign-out/recovery, a wrong recovery key returns 401, 6+ rapid recovery attempts return 429 from the same IP, design edits require the owner cookie and CSRF, and Christmas letters stay sealed before Dec 25 in Philippine time. Record results in the PR before merging. When testing an old authenticated account, verify legacy upgrade preserves lantern ID.
+**Manual API acceptance:** verify owner creation returns an original one-year recovery key, repeated recovery works using exactly the same key without extending expiry, refresh preserves owner identity, old token fails after sign-out/recovery, a wrong recovery key returns 401, 6+ rapid recovery attempts return 429 from the same IP, design edits require the owner cookie and CSRF, and Christmas letters stay sealed before Dec 25 in Philippine time. Record results in the PR before merging. When testing an old authenticated account, verify legacy upgrade preserves lantern ID.
 
 **GitHub Actions CI/CD has been removed.** Run and record these checks manually before each pull request. The project is an early scaffold; the checks do not replace real SQL Server integration testing.
