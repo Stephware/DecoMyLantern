@@ -2,7 +2,6 @@ export type Owner = { id: string }
 export type OwnerIssue = { owner: Owner; recoveryCode: string }
 
 export type CreatedInvitation = { id: string; token: string; expiresAtUtc: string }
-export type InvitationInfo = { id: string; expiresAtUtc: string | null; revokedAtUtc: string | null }
 export type PublicLight = { id: string; slotIndex: number }
 export type InvitationPreview = {
   designKey: string
@@ -93,12 +92,10 @@ export const getOwner = () => api<Owner>('/api/owner/me')
 export const createOwner = () =>
   api<OwnerIssue>('/api/owner/create', { method: 'POST' })
 export const recoverOwner = (recoveryCode: string) =>
-  api<OwnerIssue>('/api/owner/recover', { method: 'POST', body: JSON.stringify({ recoveryCode }) })
+  api<{ owner: Owner }>('/api/owner/recover', { method: 'POST', body: JSON.stringify({ recoveryCode }) })
 export const getLegacyOwner = () => api<{ available: boolean }>('/api/owner/legacy-available')
 export const upgradeLegacyOwner = () =>
   api<OwnerIssue>('/api/owner/upgrade-legacy', { method: 'POST' }, '/api/owner/legacy-csrf')
-export const rotateRecoveryCode = () =>
-  api<{ recoveryCode: string }>('/api/owner/recovery-code', { method: 'POST' })
 export const signOutOwner = () => api<void>('/api/owner/sign-out', { method: 'POST' })
 export const finishOwnerSetup = () => api<void>('/api/owner/finish-setup', { method: 'POST' })
 export const cancelOwnerCreation = () => api<void>('/api/owner/cancel-creation', { method: 'POST' })
@@ -111,9 +108,6 @@ export const getDesigns = () => api<Design[]>('/api/designs')
 
 export const createInvitation = () =>
   api<CreatedInvitation>('/api/my/lantern/invitations', { method: 'POST' })
-export const getInvitations = () => api<InvitationInfo[]>('/api/my/lantern/invitations')
-export const revokeInvitation = (id: string) =>
-  api<void>(`/api/my/lantern/invitations/${encodeURIComponent(id)}`, { method: 'DELETE' })
 export const previewInvitation = (token: string) =>
   api<InvitationPreview>('/api/invitations/preview',
     { method: 'POST', body: JSON.stringify({ token }) }, '/api/invitations/csrf')

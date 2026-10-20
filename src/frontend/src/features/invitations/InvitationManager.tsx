@@ -4,18 +4,33 @@ import { invitationUrl } from './invitationLinks'
 
 export default function InvitationManager() {
   const [url, setUrl] = useState('')
-  const [showLinkPage, setShowLinkPage] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [showLinkPage, setShowLinkPage] = useState(false)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState('')
   const [copyError, setCopyError] = useState('')
   const linkInput = useRef<HTMLInputElement>(null)
 
+  // The endpoint always returns the same official invitation, including after refresh.
+  useEffect(() => {
+    let active = true
+    void createInvitation()
+      .then(issued => {
+        if (active) setUrl(invitationUrl(window.location.origin, issued.token))
+      })
+      .catch(caught => {
+        if (active) setError(caught instanceof Error ? caught.message : 'Unable to load your invitation.')
+      })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [])
+
   useEffect(() => {
     if (showLinkPage) linkInput.current?.focus()
   }, [showLinkPage])
 
-  async function generate() {
+  async function showInvitation() {
     setBusy(true)
     setError('')
     setCopyError('')
@@ -25,7 +40,7 @@ export default function InvitationManager() {
       setCopied(false)
       setShowLinkPage(true)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to create invitation.')
+      setError(caught instanceof Error ? caught.message : 'Unable to load your invitation.')
     } finally {
       setBusy(false)
     }
@@ -45,34 +60,31 @@ export default function InvitationManager() {
 
   return (
     <section className="rounded-2xl border border-amber-200/25 bg-amber-300/5 p-5" aria-label="Friend invitations">
-      <h3 className="text-sm font-bold text-amber-100">Invite your friends</h3>
+      <h3 className="text-sm font-bold text-amber-100">Your parol invitation</h3>
       <p className="mt-2 text-sm leading-6 text-white/60">
-        Give a friend a private invitation link. They can add one light and an optional Christmas message without logging in.
+        Share the same invitation with all your friends. Each friend can add one light and an optional Christmas message without an account.
       </p>
 
       {error && <p role="alert" className="mt-3 rounded-lg bg-rose-400/10 p-3 text-xs text-rose-200">{error}</p>}
-
-      <button type="button" disabled={busy} onClick={() => void generate()}
-        className="mt-4 w-full rounded-xl bg-amber-300 px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:opacity-50">
-        {busy ? 'Please wait…' : 'Create invitation link →'}
-      </button>
-
-      {url && (
-        <div className="mt-4 space-y-2">
-          <label htmlFor="invitation-url" className="block text-xs font-semibold text-white/75">Your shareable invitation</label>
-          <input id="invitation-url" readOnly value={url} onFocus={event => event.currentTarget.select()}
-            className="w-full rounded-lg border border-white/15 bg-[#080e20] px-3 py-3 text-xs text-amber-100" />
-          <button type="button" onClick={() => void copy()}
-            className="w-full rounded-lg border border-amber-200/40 px-4 py-2.5 text-xs font-bold text-amber-100">
-            {copied ? 'Copied!' : 'Copy invitation link'}
+      {loading ? <p className="mt-4 text-sm text-white/55">Preparing your invitation…</p> : (
+        <div className="mt-4 space-y-3">
+          {url && (
+            <>
+              <label htmlFor="invitation-url" className="block text-xs font-semibold text-white/75">One link for your whole parol</label>
+              <input id="invitation-url" readOnly value={url} onFocus={event => event.currentTarget.select()}
+                className="w-full rounded-lg border border-white/15 bg-[#080e20] px-3 py-3 text-xs text-amber-100" />
+            </>
+          )}
+          <button type="button" disabled={busy} onClick={() => void showInvitation()}
+            className="w-full rounded-xl bg-amber-300 px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:opacity-50">
+            {busy ? 'Preparing…' : url ? 'View invitation link' : 'Create invitation link'}
           </button>
-          {copyError && <p role="alert" className="text-xs text-rose-200">{copyError}</p>}
         </div>
       )}
 
       <p className="mt-4 text-xs leading-5 text-white/45">
-        Creating another link doesn't invalidate earlier ones. Invitations expire after December 31 (Philippine time).
-        Your private owner recovery key is never included.
+        This link stays the same for the current Christmas season and expires on December 31 (Philippine time).
+        Your private recovery key is never included.
       </p>
 
       {showLinkPage && (

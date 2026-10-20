@@ -66,7 +66,7 @@ public sealed class OwnerController(
         {
             var issued = await access.RecoverAsync(request.RecoveryCode.Trim(), cancellationToken);
             SetCookie(issued);
-            return Ok(new { owner = new { id = issued.OwnerId }, recoveryCode = issued.RecoveryCode });
+            return Ok(new { owner = new { id = issued.OwnerId } });
         }
         catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
     }
@@ -103,21 +103,6 @@ public sealed class OwnerController(
             SetCookie(issued);
             Response.Cookies.Delete("Deco.Host", new CookieOptions { Path = "/" });
             return Ok(new { owner = new { id = issued.OwnerId }, recoveryCode = issued.RecoveryCode });
-        }
-        catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
-    }
-
-    [Authorize]
-    [HttpPost("recovery-code")]
-    public async Task<IActionResult> RotateRecovery(CancellationToken cancellationToken)
-    {
-        if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid security token. Refresh and try again." });
-        if (!TryOwner(out var id)) return Unauthorized();
-        NoStore();
-        try
-        {
-            var code = await access.RotateRecoveryAsync(id, cancellationToken);
-            return Ok(new { recoveryCode = code });
         }
         catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
     }

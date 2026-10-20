@@ -8,8 +8,8 @@ The parol looks complete even with **zero friends**: a compact festival lantern 
 
 ## How the app is intended to work
 
-- **Owners** create a seasonal parol without signing up or logging in. The API gives the browser a secure HTTP-only owner cookie and shows a private recovery key once.
-- **Friends** open a unique invitation link without creating an account, see a guest-only page, then contribute one light per browser visitor and optionally leave a sealed Christmas message.
+- **Owners** create a seasonal parol without signing up or logging in. The API gives the browser a secure HTTP-only owner cookie and shows a reusable 22-character private recovery key once (old 43-character keys remain accepted if valid).
+- **Friends** open the owner's single short invitation link without creating an account, then contribute one light per browser visitor and optionally leave a sealed Christmas message.
 - Each accepted contribution keeps a stable central light and adds three connected ornament layers, with one visible contour after all three. The first 150 layers span 15 distinct festival-inspired regions instead of repeating the previous final design.
 - Owners can switch among designs unlocked by their reached friend milestones (0/3/10/23/40/50). A previously selected design stays available.
 - Messages are private to the lantern owner and stay sealed until **December 25, 12:00 AM Philippine Standard Time (UTC+8)**. For Christmas 2026, the server-side unlock is `2026-12-24T16:00:00Z`.
@@ -26,7 +26,7 @@ Anonymous guest participation is convenient, but a browser token cannot prove th
 | Backend | ASP.NET Core Web API / .NET 10 / C# |
 | Backend organization | Controllers → Services → Repository → Models/Database |
 | Database | SQL Server with Entity Framework Core 10 |
-| Owner access | Hashed 256-bit random tokens in SQL Server, HTTP-only cookie, one-time recovery key; Identity database retained for existing foreign keys |
+| Owner access | Hashed 256-bit random tokens in SQL Server, HTTP-only cookie, reusable one-year recovery key; Identity database retained for existing foreign keys |
 | Validation | Local/manual lint, type-check, unit test, build, and EF migration checks |
 
 React owns the page layout. The backend follows a familiar **MVC-style folder organization**, but it exposes JSON API endpoints rather than Razor views.
@@ -139,21 +139,29 @@ On Windows PowerShell, replace the copy command with `Copy-Item .env.example .en
 
 Open **http://localhost:5173** in your browser. Vite proxies `/api` to `http://localhost:5050`.
 
-Open the site and choose **Create my parol**. No email/password is needed. **Copy your private recovery key and keep it safe before continuing.** The owner session persists in a secure HTTP-only browser cookie across refreshes. Use **Recovery key** in the dashboard to generate a replacement (the old code then stops working). Use **Leave parol** to revoke the browser session; recovering access afterward requires your recovery key. You can preview six evolving design families, simulate individual friends using the +1 friend button, and jump to 0/3/10/23/40/50 friend milestones without changing real contributions.
+Open the site and choose **Create my parol**. No email/password is needed. **Copy your private recovery key and keep it safe before continuing.** The owner session persists in a secure HTTP-only browser cookie across refreshes. The original recovery key remains usable for one year from creation and does not change when restoring the parol. Use **Leave parol** to revoke the browser session; recovering access afterward requires the same recovery key. You can preview six evolving design families, simulate individual friends using the +1 friend button, and jump to 0/3/10/23/40/50 friend milestones without changing real contributions.
 
-The dashboard displays real accepted contributions. Owners can create, copy and revoke invitation links. The Christmas inbox still needs its full owner UI; message bodies remain server-protected until December 25.
+The dashboard displays real accepted contributions. Owners can copy their one short invitation link again whenever needed. The Christmas inbox still needs its full owner UI; message bodies remain server-protected until December 25.
 
 **Owner API security:** The server authenticates by looking up the SHA-256 hash of a 256-bit random browser token in SQL on each protected request. The token is only sent in an HTTP-only SameSite=Strict cookie (Secure on HTTPS/production); React does not read or persist it. All writes require a fresh CSRF token from `GET /api/owner/csrf`. Only public catalogs are cached for two minutes — never owner identity or recovery codes. See the [API contracts](docs/api-contracts.md).
 
 ## Friend invitations — Task 4
 
-Once your parol exists, select **Create invitation link**, copy the link, and share it with friends. Friends can open their own guest page, enter a name, and optionally leave a Christmas note. The invitation link never contains your private owner or recovery key. One light per guest browser is enforced with a secure cookie and SQL constraints; this does not prove unique human identity. Links expire December 31 Philippine time, and revoking a link does not remove existing contributions.
+Once your parol exists, copy its single invitation link and share it with friends. Friends can open their own guest page, enter a name, and optionally leave a Christmas note. The invitation link never contains your private owner or recovery key. One light per guest browser is enforced with a secure cookie and SQL constraints; this does not prove unique human identity. Links expire December 31 Philippine time. Historic links are retired without removing existing contributions.
 
-The share secret is only returned once, so save the copied URL or create a new link when needed (old links continue working). See [Task 4: invitations, security and real-guest test plan](docs/task4-friend-invitations.md). Its local SQL smoke test inserts 51 guests and must **never** be used against production.
+The same invitation URL can be copied again after refreshing the dashboard. Old invitation URLs no longer work after the migration. See [Task 4: invitations, security and real-guest test plan](docs/task4-friend-invitations.md). Its local SQL smoke test inserts 51 guests and must **never** be used against production.
+
+## Short invitation link and recovery key
+
+- Each seasonal parol has one official invitation URL: `https://bemyparol.site/#/i/<16-character-token>`. It is created with the parol, stays identical after reload, and expires December 31 Philippine time. Older long invitation URLs are retired, but existing lights and messages remain.
+- New owners receive a **22-character** recovery key, reusable throughout its original one-year lifetime. Existing valid 43-character recovery keys remain accepted.
+- The server stores only the SHA-256 invitation hash plus an AES-GCM encrypted copy so the owner can retrieve the same link. Set a **persistent 32-byte Base64 encryption key** using `Invitations:EncryptionKey` (`INVITATION_ENCRYPTION_KEY` for Docker) before creating parols. Never change or lose this value while issued invitations must remain readable.
+- For local development, generate a secret once with `openssl rand -base64 32`, then set it from the API project's directory using `dotnet user-secrets set "Invitations:EncryptionKey" "<generated-secret>"`. For Docker, put it in the ignored root `.env` under `INVITATION_ENCRYPTION_KEY`.
+- Upgrade existing databases with `dotnet ef database update --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api`; the existing `database/schema.sql` also contains the new idempotent migration section.
 
 ## Existing-user migration and recovery
 
-Existing users and lantern data are retained. If you have a still-valid old `Deco.Host` cookie, use **Transfer my existing parol** to issue a new owner token and recovery key. Without that valid old cookie, a previous email/password alone cannot access the new system; plan a separately verified migration before public rollout. Newly created parols can be restored with the private recovery key. **If both your browser cookie and recovery key are lost, there is no built-in recovery mechanism.** Owner tokens have a 400-day lifetime; recovery keys expire after 730 days. Do not share a recovery key in the public friend invitation link. HTTPS is required in production.
+Existing users and lantern data are retained. If you have a still-valid old `Deco.Host` cookie, use **Transfer my existing parol** to issue a new owner token and recovery key. Without that valid old cookie, a previous email/password alone cannot access the new system; plan a separately verified migration before public rollout. Newly created parols can be restored with the private recovery key. **If both your browser cookie and recovery key are lost, there is no built-in recovery mechanism.** Owner tokens have a 400-day lifetime; recovery keys expire 365 days after issuance and can be reused without limit before then. Do not share a recovery key in the public friend invitation link. HTTPS is required in production.
 
 ## Run with Docker Compose
 

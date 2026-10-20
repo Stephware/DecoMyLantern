@@ -7,6 +7,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ReverseProxy__KnownNetwork: 172.16.0.0/12
       ConnectionStrings__DefaultConnection: ${DATABASE_CONNECTION_STRING:?Set DATABASE_CONNECTION_STRING in .env}
+      Invitations__EncryptionKey: ${INVITATION_ENCRYPTION_KEY:?Set stable INVITATION_ENCRYPTION_KEY in .env}
     extra_hosts:
       - host.docker.internal:host-gateway
     ports:

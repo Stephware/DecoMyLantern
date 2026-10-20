@@ -6,10 +6,10 @@ The schema is defined in `src/backend/DecoMyLantern.Api/Models/Database` using E
 |---|---|
 | Identity ApplicationUser | Internal owner record, no email/password required for new owners; retains existing owner foreign keys and historical rows |
 | Lanterns | Unique OwnerUserId + SeasonYear, rowversion concurrency | 
-| OwnerCredentials | One-to-one owner row; SHA-256 TokenHash/RecoveryHash (unique), session/recovery expiration, rowversion for rotation conflict detection |
+| OwnerCredentials | One-to-one owner row; unique SHA-256 session/recovery hashes, expiration, setup-pending flag, and rowversion for concurrent updates |
 | ParolDesigns | Unique DesignKey, 6 seeded design families with RequiredFriends milestones 0, 3, 10, 23, 40, 50; existing three IDs preserved |
 | GrowthStages | Unique StageKey + RequiredFriends; six selectable design milestones at 0, 3, 10, 23, 40, 50 |
-| ShareLinks | Unique SHA-256 TokenHash, expiry and revocation; plaintext link returned only at creation |
+| ShareLinks | One official encrypted invitation per parol, unique SHA-256 token hash, expiry and revocation; the same link can be retrieved by its owner |
 | GuestVisitors | Unique SHA-256 hash of a random guest browser token (not verified human identity) |
 | Contributions | Unique (LanternId, GuestVisitorId) and (LanternId, SlotIndex); slot counter assigned under SQL row lock/transaction |
 | Messages | Optional one per contribution, max 500 characters |

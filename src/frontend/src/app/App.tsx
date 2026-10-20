@@ -11,7 +11,6 @@ import {
   getOwner,
   getLegacyOwner,
   upgradeLegacyOwner,
-  rotateRecoveryCode,
   signOutOwner,
   finishOwnerSetup,
   cancelOwnerCreation,
@@ -166,7 +165,11 @@ export default function App() {
     <WelcomePage
       legacyAvailable={legacyAvailable}
       onCreate={async () => { showIssuedKey(await createOwner(), true) }}
-      onRecover={async code => { await enterDashboard((await recoverOwner(code)).owner) }}
+      onRecover={async code => {
+        const restored = await recoverOwner(code)
+        setLegacyAvailable(false)
+        await enterDashboard(restored.owner)
+      }}
       onUpgradeLegacy={async () => { showIssuedKey(await upgradeLegacyOwner()) }}
     />
   )
@@ -177,11 +180,6 @@ export default function App() {
       designs={designs}
       onCreate={async () => { setLantern(await createMyLantern()) }}
       onSave={async (designKey, patternKey) => { setLantern(await updateMyLantern(designKey, patternKey)) }}
-      onRegenerateRecovery={async () => {
-        const result = await rotateRecoveryCode()
-        setRecoveryKey(result.recoveryCode)
-        setScreen('recovery-key')
-      }}
       onLogout={async () => {
         await signOutOwner()
         setOwner(null)

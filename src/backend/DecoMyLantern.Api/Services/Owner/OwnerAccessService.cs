@@ -1,5 +1,6 @@
 using DecoMyLantern.Api.Models.Database;
 using DecoMyLantern.Api.Services.Lanterns;
+using DecoMyLantern.Api.Services.Invitations;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,6 @@ public interface IOwnerAccessService
     Task<IssuedOwnerAccess> CreateAsync(CancellationToken cancellationToken);
     Task<IssuedOwnerAccess> UpgradeLegacyAsync(Guid ownerId, CancellationToken cancellationToken);
     Task<IssuedOwnerAccess> RecoverAsync(string recoveryCode, CancellationToken cancellationToken);
-    Task<string> RotateRecoveryAsync(Guid ownerId, CancellationToken cancellationToken);
     Task SignOutAsync(Guid ownerId, CancellationToken cancellationToken);
     Task FinishSetupAsync(Guid ownerId, CancellationToken cancellationToken);
     Task CancelCreationAsync(Guid ownerId, CancellationToken cancellationToken);
@@ -27,6 +27,7 @@ public sealed class OwnerAccessService(
     ApplicationDbContext database,
     UserManager<ApplicationUser> userManager,
     ILanternService lanternService,
+    IInvitationService invitationService,
     TimeProvider clock) : IOwnerAccessService
 {
     public async Task<IssuedOwnerAccess> CreateAsync(CancellationToken cancellationToken)
@@ -39,6 +40,7 @@ public sealed class OwnerAccessService(
             throw new OwnerAccessException(500, "Unable to create your parol. Please try again.");
 
         await lanternService.CreateAsync(user.Id, cancellationToken);
+        await invitationService.GetOrCreateLinkAsync(user.Id, cancellationToken);
         var issued = await IssueForOwnerAsync(user.Id, cancellationToken, setupPending: true);
         await transaction.CommitAsync(cancellationToken);
         return issued;
@@ -57,39 +59,24 @@ public sealed class OwnerAccessService(
 
     public async Task<IssuedOwnerAccess> RecoverAsync(string recoveryCode, CancellationToken cancellationToken)
     {
-        if (!OwnerSecrets.TryHash(recoveryCode, out var hash))
+        if (!OwnerSecrets.TryHashRecovery(recoveryCode, out var hash))
             throw new OwnerAccessException(401, "Invalid or expired recovery key.");
 
         var credential = await database.OwnerCredentials
             .SingleOrDefaultAsync(x => x.RecoveryHash == hash, cancellationToken);
         var now = clock.GetUtcNow().UtcDateTime;
-        if (credential is null || credential.RecoveryExpiresAtUtc <= now)
+        if (credential is null || !OwnerRecoveryPolicy.CanRecover(credential, now))
             throw new OwnerAccessException(401, "Invalid or expired recovery key.");
 
-        // Recovery consumes the old code and immediately invalidates the old owner cookie.
+        // Each recovery issues a new owner session but keeps the same recovery
+        // hash and the original one-year deadline. Repeated use never rotates it.
         var newToken = OwnerSecrets.Generate();
-        var newRecovery = OwnerSecrets.Generate();
-        credential.TokenHash = Hash(newToken);
-        credential.RecoveryHash = Hash(newRecovery);
-        credential.SessionExpiresAtUtc = now.Add(OwnerSession.Lifetime);
-        credential.RecoveryExpiresAtUtc = now.Add(OwnerSession.RecoveryLifetime);
+        OwnerRecoveryPolicy.RefreshSession(credential, Hash(newToken), now);
         credential.SetupPending = false;
         try { await database.SaveChangesAsync(cancellationToken); }
         catch (DbUpdateConcurrencyException)
-        { throw new OwnerAccessException(409, "This recovery key has already been used. Try the newest key."); }
-        return new IssuedOwnerAccess(credential.OwnerUserId, newToken, newRecovery, credential.SessionExpiresAtUtc);
-    }
-
-    public async Task<string> RotateRecoveryAsync(Guid ownerId, CancellationToken cancellationToken)
-    {
-        var credential = await GetCredentialAsync(ownerId, cancellationToken);
-        var newRecovery = OwnerSecrets.Generate();
-        credential.RecoveryHash = Hash(newRecovery);
-        credential.RecoveryExpiresAtUtc = clock.GetUtcNow().UtcDateTime.Add(OwnerSession.RecoveryLifetime);
-        try { await database.SaveChangesAsync(cancellationToken); }
-        catch (DbUpdateConcurrencyException)
-        { throw new OwnerAccessException(409, "Your recovery key changed. Refresh and retry."); }
-        return newRecovery;
+        { throw new OwnerAccessException(409, "Your session changed during recovery. Retry with the same recovery key."); }
+        return new IssuedOwnerAccess(credential.OwnerUserId, newToken, recoveryCode, credential.SessionExpiresAtUtc);
     }
 
     public async Task SignOutAsync(Guid ownerId, CancellationToken cancellationToken)
@@ -122,11 +109,15 @@ public sealed class OwnerAccessService(
         var lanterns = await database.Lanterns.Where(x => x.OwnerUserId == ownerId)
             .ToListAsync(cancellationToken);
         if (lanterns.Count != 1 ||
-            await database.ShareLinks.AnyAsync(x => x.Lantern.OwnerUserId == ownerId, cancellationToken) ||
             await database.Contributions.AnyAsync(x => x.Lantern.OwnerUserId == ownerId, cancellationToken) ||
             await database.MessageReports.AnyAsync(x => x.ReporterUserId == ownerId, cancellationToken))
             throw new OwnerAccessException(409, "This parol has already been used and cannot be cancelled.");
 
+        // A new parol has one official link already. Remove it before the
+        // lantern because ShareLinks has a restrictive foreign key.
+        var shareLinks = await database.ShareLinks.Where(x => x.LanternId == lanterns[0].Id)
+            .ToListAsync(cancellationToken);
+        database.ShareLinks.RemoveRange(shareLinks);
         var user = await database.Users.SingleAsync(x => x.Id == ownerId, cancellationToken);
         database.OwnerCredentials.Remove(credential);
         database.Lanterns.Remove(lanterns[0]);
@@ -139,7 +130,7 @@ public sealed class OwnerAccessService(
     {
         var now = clock.GetUtcNow().UtcDateTime;
         var token = OwnerSecrets.Generate();
-        var recoveryCode = OwnerSecrets.Generate();
+        var recoveryCode = OwnerSecrets.GenerateRecoveryKey();
         var credential = new OwnerCredential
         {
             OwnerUserId = ownerId,
@@ -163,6 +154,6 @@ public sealed class OwnerAccessService(
             ?? throw new OwnerAccessException(404, "Owner access was not found.");
 
     private static string Hash(string secret) =>
-        OwnerSecrets.TryHash(secret, out var hash) ? hash :
+        OwnerSecrets.TryHashRecovery(secret, out var hash) ? hash :
         throw new InvalidOperationException("Unable to hash a generated owner secret.");
 }
