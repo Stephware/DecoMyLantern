@@ -22,7 +22,7 @@ export default function RecoveryKeyPage({ code, onContinue }: Props) {
         <h1 className="mt-4 font-serif text-3xl font-semibold">Save your recovery key</h1>
         <p className="mt-3 text-sm leading-7 text-white/65">
           Your parol is protected by a private browser session. Save this key in a safe place.
-          You’ll need it to recover access from another device or after clearing browser data.
+          This original recovery key is valid for one year and can be reused during that year, even after restoring access. Save it for another device or after clearing browser data.
         </p>
         <div className="mt-6 rounded-xl border border-white/15 bg-[#080e20] p-4">
           <p className="text-xs font-bold uppercase tracking-widest text-white/50">Private key — shown only now</p>
