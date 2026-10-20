@@ -106,9 +106,8 @@ export function outerRadiusForFriends(count: number): number {
 
 export function outerFitZoom(count: number): number {
   const radius = outerRadiusForFriends(count)
-  // Center is (300,302). The design has no dangling tails, cords or beads.
-  // Reserve 21 units beyond the true maximum decorative perimeter.
-  return Math.min(1, 279 / (radius + 38))
+  // Extra sculpted petals after layer 50 must also fit within the viewBox.
+  return Math.min(1, 279 / (festivalMaxExtent(count) + 2))
 }
 
 /**
@@ -226,7 +225,9 @@ export function regionPanelPath(firstLayer: number, lastLayer: number, sector: n
     Q ${cp.x.toFixed(2)} ${cp.y.toFixed(2)} ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} Z`
 }
 
-/** Bound covers the 32-unit fivefold scallop, bulbs and outer trim. */
-export function festivalMaxExtent(friendCount: number): number {
-  return outerRadiusForFriends(friendCount) + 36
+/** Conservative geometric bound, including the new floral lobes after layer 50. */
+export function festivalMaxExtent(layerIndex: number): number {
+  assertFriendCount(layerIndex)
+  const grand = Math.min(1, Math.max(0, (layerIndex - 50) / 100))
+  return outerRadiusForFriends(layerIndex) + 36 + 16 * grand
 }
