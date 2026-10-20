@@ -10,6 +10,7 @@ using DecoMyLantern.Api.Services.Lanterns;
 using DecoMyLantern.Api.Services.Messages;
 using DecoMyLantern.Api.Services.Owner;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
@@ -18,6 +19,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddMemoryCache();
+var trustedProxyNetwork = builder.Configuration["ReverseProxy:KnownNetwork"];
+if (!string.IsNullOrWhiteSpace(trustedProxyNetwork))
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
+        options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(trustedProxyNetwork));
+    });
+}
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -123,6 +133,8 @@ builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IOwnerAccessService, OwnerAccessService>();
 
 var app = builder.Build();
+if (!string.IsNullOrWhiteSpace(trustedProxyNetwork))
+    app.UseForwardedHeaders();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler();

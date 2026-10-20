@@ -155,6 +155,52 @@ The share secret is only returned once, so save the copied URL or create a new l
 
 Existing users and lantern data are retained. If you have a still-valid old `Deco.Host` cookie, use **Transfer my existing parol** to issue a new owner token and recovery key. Without that valid old cookie, a previous email/password alone cannot access the new system; plan a separately verified migration before public rollout. Newly created parols can be restored with the private recovery key. **If both your browser cookie and recovery key are lost, there is no built-in recovery mechanism.** Owner tokens have a 400-day lifetime; recovery keys expire after 730 days. Do not share a recovery key in the public friend invitation link. HTTPS is required in production.
 
+## Run with Docker Compose
+
+The deployment `compose.yaml` builds two application images: the ASP.NET Core API and a production frontend served by Nginx. Caddy routes both hostnames inside Docker, and an optional `cloudflared` service connects them to Cloudflare without inbound ports. The frontend is available locally at `http://localhost:5173`, and Nginx forwards `/api/` requests to the backend. The API is also available locally at `http://localhost:5050`. The tracked `compose.yml` is a separate SQL Server-only development configuration; select either file explicitly with `-f`.
+
+Copy the root `.env.example` to `.env` and set `DATABASE_CONNECTION_STRING` for an existing SQL Server instance. For SQL Server on your Docker host, use `host.docker.internal` as shown in the example. The connection string must point to a database with the committed EF Core migrations applied; see [Database and migrations](docs/database-schema.md). No database container is included in the deployment `compose.yaml`.
+
+```bash
+cp .env.example .env
+# Edit .env with your SQL Server credentials.
+docker compose -f compose.yaml up --build -d
+docker compose -f compose.yaml ps
+```
+
+Check `http://localhost:5173` for the frontend and `http://localhost:5173/api/health` for the API through Nginx. Use `docker compose -f compose.yaml down` to stop the stack. `FRONTEND_PORT` and `BACKEND_PORT` in `.env` can change the local host ports.
+
+### Public domains through Cloudflare Tunnel
+
+The request path is `Cloudflare HTTPS → cloudflared → Caddy → frontend or backend`. Caddy serves HTTP only within the Docker network and on host loopback port 80. It routes `bemyparol.site` to the frontend and `api.bemyparol.site` to the backend. The backend's `/api/...` routes remain available; on `api.bemyparol.site`, `/health` is the public health URL and `/api/health` redirects to it. The direct frontend and backend ports are bound to localhost only.
+
+The Compose `cloudflared` service can serve this tunnel on its own. If another connector runs directly on the host, it must resolve `caddy` to `127.0.0.1`, where Compose publishes Caddy on port 80; otherwise requests sent to that connector return 502. A host entry of `127.0.0.1 caddy` provides that mapping.
+
+1. In Cloudflare Zero Trust, create a **remotely managed** tunnel for the `bemyparol.site` zone, or use an existing one. Copy its connector token into `CLOUDFLARED_TOKEN` in the root `.env` file. Keep that file private; Git ignores it.
+2. In that tunnel's **Public hostnames** settings, point both `bemyparol.site` and `api.bemyparol.site` to the service URL `http://caddy:80`. Set the **HTTP Host Header** on each route to its own hostname (`bemyparol.site` or `api.bemyparol.site`) so Caddy selects the matching site. Replace any conflicting existing DNS record or tunnel route for these names; Cloudflare creates the tunnel DNS records when these hostnames are published.
+3. Start the connector with `docker compose -f compose.yaml --profile tunnel up -d`. It uses outbound connections; no inbound port forwarding is required. Check `docker compose -f compose.yaml --profile tunnel ps` and `docker compose -f compose.yaml logs cloudflared` for its connection status.
+
+After the tunnel and hostnames are connected, check these public routes:
+
+```bash
+curl -i https://bemyparol.site/
+curl -i https://bemyparol.site/api/health
+curl -i https://api.bemyparol.site/health
+```
+
+### SSH through the tunnel
+
+Publish `ssh.bemyparol.site` on the same Cloudflare Tunnel as an **SSH** service with origin `host.docker.internal:22`, not an HTTP service pointing to Caddy. The Compose `cloudflared` service maps `host.docker.internal` to the Docker host, where SSH listens on port 22. If a second `cloudflared` connector runs directly on the host, add `127.0.0.1 host.docker.internal` to that host's `/etc/hosts` so both connectors reach the same SSH server. Protect the hostname with a Cloudflare Access policy for the intended users.
+
+For native SSH, install `cloudflared` on the client and add this to the client's `~/.ssh/config` (adjust the `cloudflared` path if needed):
+
+```sshconfig
+Host ssh.bemyparol.site
+    ProxyCommand cloudflared access ssh --hostname %h
+```
+
+Then connect with `ssh mark@ssh.bemyparol.site`. The Cloudflare tunnel uses HTTPS/WebSocket transport for this hostname, so a plain `ssh` connection to port 22 on the public hostname does not work without the client-side proxy command.
+
 ## Run manual checks before a PR
 
 **Frontend:**
