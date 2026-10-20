@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import { lightPosition } from '../src/features/lantern/renderer/lightPositions.ts'
 import { stageForFriends, nextDesignMilestone, STAGES } from '../src/features/lantern/growth/stages.ts'
 import {
-  festivalLayers, festivalOutlinePath, outerFitZoom, OUTER_RECIPES,
+  festivalLayers, festivalOutlinePath, growthForFriends, isFriendBoundary,
+  outerFitZoom, OUTER_RECIPES,
 } from '../src/features/lantern/growth/outerGrowth.ts'
 
 test('design unlocks remain independent of structural layers', () => {
@@ -17,11 +18,14 @@ test('design unlocks remain independent of structural layers', () => {
   assert.equal(nextDesignMilestone(50), null)
 })
 
-test('one new friend always creates one new complete ornamental band', () => {
-  for (let count = 1; count <= 120; count++) {
-    assert.equal(festivalLayers(count).length - festivalLayers(count - 1).length, 1)
-    assert.notEqual(festivalOutlinePath(count), festivalOutlinePath(count - 1))
-    assert.ok(outerFitZoom(count) <= outerFitZoom(count - 1))
+test('each friend expands three full layers with only one completed outer boundary', () => {
+  for (let friends = 1; friends <= 120; friends++) {
+    const growth = growthForFriends(friends)
+    const previous = growthForFriends(friends - 1)
+    assert.equal(festivalLayers(growth).length - festivalLayers(previous).length, 3)
+    assert.deepEqual([previous + 1, previous + 2, previous + 3].filter(isFriendBoundary), [growth])
+    assert.notEqual(festivalOutlinePath(growth), festivalOutlinePath(previous))
+    assert.ok(outerFitZoom(growth) <= outerFitZoom(previous))
   }
 })
 
