@@ -577,3 +577,24 @@ BEGIN
 END;
 COMMIT;
 GO
+
+
+-- Single official invitation per seasonal parol (old links are retired).
+-- Historical ShareLinks and their Contributions/Messages remain untouched.
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT 1 FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261020220000_SingleInvitationLink'
+)
+BEGIN
+    ALTER TABLE [ShareLinks] ADD [IsOfficial] bit NOT NULL DEFAULT CAST(0 AS bit);
+    ALTER TABLE [ShareLinks] ADD [EncryptedToken] varchar(128) NULL;
+    DROP INDEX [IX_ShareLinks_LanternId] ON [ShareLinks];
+    CREATE UNIQUE INDEX [IX_ShareLinks_LanternId]
+        ON [ShareLinks] ([LanternId]) WHERE [IsOfficial] = 1;
+
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261020220000_SingleInvitationLink', N'10.0.4');
+END;
+COMMIT;
+GO
