@@ -478,3 +478,102 @@ END;
 COMMIT;
 GO
 
+
+-- Data-only BeMyParol progressive-growth migration (idempotent, matching EF Core migration).
+-- EF migration remains the source of truth; regenerate this SQL with database/bootstrap.sh
+-- after verifying the migration using the local .NET SDK.
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261016160000_ProgressiveParolGrowth'
+)
+BEGIN
+    UPDATE [ParolDesigns] SET [RequiredFriends] = 0
+    WHERE [Id] = 'c54deae0-8e9c-4a63-ae19-88989b0f3012';
+    UPDATE [ParolDesigns] SET [RequiredFriends] = 0
+    WHERE [Id] = 'c54deae0-8e9c-4a63-ae19-88989b0f3013';
+
+    UPDATE [GrowthStages] SET [Name] = N'Complete Base' WHERE [Id] = 1;
+    UPDATE [GrowthStages] SET [Name] = N'Added Lights', [RequiredFriends] = 1, [StageKey] = N'lights' WHERE [Id] = 2;
+    UPDATE [GrowthStages] SET [Name] = N'More Details', [RequiredFriends] = 6, [StageKey] = N'details' WHERE [Id] = 3;
+    UPDATE [GrowthStages] SET [Name] = N'Fuller Layers', [RequiredFriends] = 16, [StageKey] = N'fuller' WHERE [Id] = 4;
+
+    SET IDENTITY_INSERT [GrowthStages] ON;
+    INSERT INTO [GrowthStages] ([Id], [Name], [RequiredFriends], [SortOrder], [StageKey])
+    VALUES (5, N'Grand Parol', 31, 5, N'grand');
+    SET IDENTITY_INSERT [GrowthStages] OFF;
+
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261016160000_ProgressiveParolGrowth', N'10.0.4');
+END;
+COMMIT;
+GO
+
+-- Task 2: hashed passwordless owner sessions and recovery keys.
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261016173000_PasswordlessOwnerAccess'
+)
+BEGIN
+    CREATE TABLE [OwnerCredentials] (
+        [OwnerUserId] uniqueidentifier NOT NULL,
+        [TokenHash] varchar(64) NOT NULL,
+        [RecoveryHash] varchar(64) NOT NULL,
+        [CreatedAtUtc] datetime2 NOT NULL,
+        [SessionExpiresAtUtc] datetime2 NOT NULL,
+        [RecoveryExpiresAtUtc] datetime2 NOT NULL,
+        [RowVersion] rowversion NOT NULL,
+        CONSTRAINT [PK_OwnerCredentials] PRIMARY KEY ([OwnerUserId]),
+        CONSTRAINT [FK_OwnerCredentials_AspNetUsers_OwnerUserId] FOREIGN KEY ([OwnerUserId])
+            REFERENCES [AspNetUsers] ([Id]) ON DELETE NO ACTION
+    );
+    CREATE UNIQUE INDEX [IX_OwnerCredentials_TokenHash] ON [OwnerCredentials] ([TokenHash]);
+    CREATE UNIQUE INDEX [IX_OwnerCredentials_RecoveryHash] ON [OwnerCredentials] ([RecoveryHash]);
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261016173000_PasswordlessOwnerAccess', N'10.0.4');
+END;
+COMMIT;
+GO
+
+-- Task: Living parol design milestone seeds.
+-- DATA ONLY: preserves owner and guest tables, selected design IDs and letters.
+-- This block mirrors 20261017230000_LivingParolDesigns.cs and must be
+-- regenerated/reviewed via "bash database/bootstrap.sh" with a .NET SDK.
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT 1 FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261017230000_LivingParolDesigns'
+)
+BEGIN
+    UPDATE [ParolDesigns] SET [RequiredFriends] = 3
+      WHERE [Id] = 'c54deae0-8e9c-4a63-ae19-88989b0f3012';
+    UPDATE [ParolDesigns] SET [RequiredFriends] = 10
+      WHERE [Id] = 'c54deae0-8e9c-4a63-ae19-88989b0f3013';
+
+    INSERT INTO [ParolDesigns] ([Id], [AssetKey], [DesignKey], [IsEnabled], [Name], [RequiredFriends])
+    VALUES
+      ('c54deae0-8e9c-4a63-ae19-88989b0f3014', N'celestial', N'celestial', 1, N'Celestial Lace', 23),
+      ('c54deae0-8e9c-4a63-ae19-88989b0f3015', N'fiesta', N'fiesta', 1, N'Radiant Fiesta', 40),
+      ('c54deae0-8e9c-4a63-ae19-88989b0f3016', N'sampaguita', N'sampaguita', 1, N'Sampaguita Glow', 50);
+
+    UPDATE [GrowthStages] SET [Name] = N'Classic Gold' WHERE [Id] = 1;
+    UPDATE [GrowthStages] SET [Name] = N'Floral Bloom', [RequiredFriends] = 3,
+        [StageKey] = N'floral' WHERE [Id] = 2;
+    UPDATE [GrowthStages] SET [Name] = N'Festival Lights', [RequiredFriends] = 10,
+        [StageKey] = N'festival' WHERE [Id] = 3;
+    UPDATE [GrowthStages] SET [Name] = N'Celestial Lace', [RequiredFriends] = 23,
+        [StageKey] = N'celestial' WHERE [Id] = 4;
+    UPDATE [GrowthStages] SET [Name] = N'Radiant Fiesta', [RequiredFriends] = 40,
+        [StageKey] = N'fiesta' WHERE [Id] = 5;
+
+    SET IDENTITY_INSERT [GrowthStages] ON;
+    INSERT INTO [GrowthStages] ([Id], [Name], [RequiredFriends], [SortOrder], [StageKey])
+    VALUES (6, N'Sampaguita Glow', 50, 6, N'sampaguita');
+    SET IDENTITY_INSERT [GrowthStages] OFF;
+
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261017230000_LivingParolDesigns', N'10.0.4');
+END;
+COMMIT;
+GO

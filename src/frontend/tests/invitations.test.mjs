@@ -1,0 +1,34 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import {
+  invitationTokenFromHash, invitationUrl, isValidInvitationToken,
+} from '../src/features/invitations/invitationLinks.ts'
+
+const secret = 'A'.repeat(43)
+
+test('a shareable invitation is a URL fragment, never a query string', () => {
+  const link = invitationUrl('https://bemyparol.site', secret)
+  const parsed = new URL(link)
+  assert.equal(parsed.origin, 'https://bemyparol.site')
+  assert.equal(parsed.pathname, '/')
+  assert.equal(parsed.search, '')
+  assert.equal(parsed.hash, `#/invite/${secret}`)
+  assert.equal(invitationTokenFromHash(parsed.hash), secret)
+})
+
+test('only strict 256-bit random-token string shapes are accepted', () => {
+  assert.ok(isValidInvitationToken(secret))
+  assert.ok(isValidInvitationToken('_'.repeat(43)))
+  assert.ok(isValidInvitationToken('-'.repeat(43)))
+  for (const invalid of ['', 'x'.repeat(42), 'x'.repeat(44), 'xyz?', '../../owner', '<script>']) {
+    assert.equal(isValidInvitationToken(invalid), false)
+    assert.throws(() => invitationUrl('https://bemyparol.site', invalid))
+  }
+})
+
+test('other app fragments cannot be misidentified as invitation links', () => {
+  assert.equal(invitationTokenFromHash(''), null)
+  assert.equal(invitationTokenFromHash('#/owner'), null)
+  assert.equal(invitationTokenFromHash('#/invite/' + secret), secret)
+  assert.equal(invitationTokenFromHash('#/invite/invalid'), 'invalid')
+})

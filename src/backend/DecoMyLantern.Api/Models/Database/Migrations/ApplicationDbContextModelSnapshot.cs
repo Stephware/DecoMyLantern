@@ -170,7 +170,7 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                         new
                         {
                             Id = 1,
-                            Name = "First Light",
+                            Name = "Classic Gold",
                             RequiredFriends = 0,
                             SortOrder = 1,
                             StageKey = "base"
@@ -178,26 +178,42 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                         new
                         {
                             Id = 2,
-                            Name = "Glowing Star",
-                            RequiredFriends = 5,
+                            Name = "Floral Bloom",
+                            RequiredFriends = 3,
                             SortOrder = 2,
-                            StageKey = "enhanced"
+                            StageKey = "floral"
                         },
                         new
                         {
                             Id = 3,
-                            Name = "Radiant Parol",
-                            RequiredFriends = 15,
+                            Name = "Festival Lights",
+                            RequiredFriends = 10,
                             SortOrder = 3,
-                            StageKey = "radiant"
+                            StageKey = "festival"
                         },
                         new
                         {
                             Id = 4,
-                            Name = "Grand Parol",
-                            RequiredFriends = 30,
+                            Name = "Celestial Lace",
+                            RequiredFriends = 23,
                             SortOrder = 4,
-                            StageKey = "grand"
+                            StageKey = "celestial"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "Radiant Fiesta",
+                            RequiredFriends = 40,
+                            SortOrder = 5,
+                            StageKey = "fiesta"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Name = "Sampaguita Glow",
+                            RequiredFriends = 50,
+                            SortOrder = 6,
+                            StageKey = "sampaguita"
                         });
                 });
 
@@ -336,6 +352,49 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                     b.ToTable("MessageReports");
                 });
 
+            modelBuilder.Entity("DecoMyLantern.Api.Models.Database.OwnerCredential", b =>
+                {
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("RecoveryExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RecoveryHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("SessionExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("OwnerUserId");
+
+                    b.HasIndex("RecoveryHash")
+                        .IsUnique();
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("OwnerCredentials");
+                });
+
             modelBuilder.Entity("DecoMyLantern.Api.Models.Database.ParolDesign", b =>
                 {
                     b.Property<Guid>("Id")
@@ -387,7 +446,7 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                             DesignKey = "floral",
                             IsEnabled = true,
                             Name = "Floral Bloom",
-                            RequiredFriends = 5
+                            RequiredFriends = 3
                         },
                         new
                         {
@@ -396,7 +455,34 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                             DesignKey = "festival",
                             IsEnabled = true,
                             Name = "Festival Lights",
-                            RequiredFriends = 15
+                            RequiredFriends = 10
+                        },
+                        new
+                        {
+                            Id = new Guid("c54deae0-8e9c-4a63-ae19-88989b0f3014"),
+                            AssetKey = "celestial",
+                            DesignKey = "celestial",
+                            IsEnabled = true,
+                            Name = "Celestial Lace",
+                            RequiredFriends = 23
+                        },
+                        new
+                        {
+                            Id = new Guid("c54deae0-8e9c-4a63-ae19-88989b0f3015"),
+                            AssetKey = "fiesta",
+                            DesignKey = "fiesta",
+                            IsEnabled = true,
+                            Name = "Radiant Fiesta",
+                            RequiredFriends = 40
+                        },
+                        new
+                        {
+                            Id = new Guid("c54deae0-8e9c-4a63-ae19-88989b0f3016"),
+                            AssetKey = "sampaguita",
+                            DesignKey = "sampaguita",
+                            IsEnabled = true,
+                            Name = "Sampaguita Glow",
+                            RequiredFriends = 50
                         });
                 });
 
@@ -636,6 +722,17 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                     b.Navigation("Message");
 
                     b.Navigation("Reporter");
+                });
+
+            modelBuilder.Entity("DecoMyLantern.Api.Models.Database.OwnerCredential", b =>
+                {
+                    b.HasOne("DecoMyLantern.Api.Models.Database.ApplicationUser", "Owner")
+                        .WithOne()
+                        .HasForeignKey("DecoMyLantern.Api.Models.Database.OwnerCredential", "OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("DecoMyLantern.Api.Models.Database.ShareLink", b =>
