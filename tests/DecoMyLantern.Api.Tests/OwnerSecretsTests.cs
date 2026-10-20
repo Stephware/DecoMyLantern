@@ -22,6 +22,19 @@ public sealed class OwnerSecretsTests
         }
     }
 
+    [Fact]
+    public void Recovery_keys_are_22_characters_and_old_43_character_keys_still_work()
+    {
+        var recovery = OwnerSecrets.GenerateRecoveryKey();
+        Assert.Equal(22, recovery.Length);
+        Assert.True(OwnerSecrets.TryHashRecovery(recovery, out var hash));
+        Assert.Equal(64, hash.Length);
+        var old = OwnerSecrets.Generate();
+        Assert.True(OwnerSecrets.TryHashRecovery(old, out _));
+        Assert.False(OwnerSecrets.TryHash(recovery, out _));
+        Assert.False(OwnerSecrets.TryHashRecovery("invalid!", out _));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("123")]
