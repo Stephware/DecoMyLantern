@@ -239,6 +239,7 @@ public sealed class InvitationService(
             lantern.SelectedDesign.DesignKey,
             lantern.PatternKey,
             lights.Count,
+            GrowthPolicy.GrowthFor(lights.Count),
             GrowthPolicy.StageFor(lights.Count),
             alreadyContributed,
             lights);
