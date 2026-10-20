@@ -10,6 +10,8 @@ The owner never registers or logs in. The API creates an internal, passwordless 
 | --- | --- | --- | --- |
 | GET | `/api/owner/csrf` | Public | Issue request CSRF token |
 | POST | `/api/owner/create` | Public + CSRF + rate limit | Create anonymous owner and seasonal parol, set token cookie, return private recovery code once |
+| POST | `/api/owner/finish-setup` | Owner + CSRF | Confirm the newly created parol and close its cancellation window |
+| POST | `/api/owner/cancel-creation` | Owner + CSRF | Delete a still-pending new owner, parol, and credential; clear the owner cookie |
 | GET | `/api/owner/me` | Owner | Return `{ "id": "guid" }` |
 | POST | `/api/owner/recover` | Public + CSRF + rate limit | Redeem high-entropy recovery key, rotate both owner token and recovery key |
 | POST | `/api/owner/recovery-code` | Owner + CSRF | Rotate recovery key while still in possession of owner session |
@@ -19,6 +21,8 @@ The owner never registers or logs in. The API creates an internal, passwordless 
 | POST | `/api/owner/upgrade-legacy` | Existing legacy Identity cookie + CSRF | Transfer existing owner to token access, preserving user and lantern IDs |
 
 `POST /api/owner/create` returns status 201 with `{ "owner": { "id": "..." }, "recoveryCode": "..." }`; `recover` and `upgrade-legacy` return the same shape with 200. The recovery code is **only shown once per issue/rotation**. It is not returned from `/me`, does not appear in shareable URLs, and must never be logged or stored in a public client cache.
+
+Creation leaves setup pending while the recovery key is shown. Continuing calls `finish-setup`; cancelling calls `cancel-creation`, which removes the new owner, its parol, and credential in one transaction. Cancellation is rejected after setup finishes or the parol has been used. Recovery and legacy transfer cannot use this cancellation flow.
 
 Recovery body: `{ "recoveryCode": "base64url-secret" }`. Recovery **invalidates the old owner cookie AND old recovery key**. Both secrets are 256-bit random; their hashes are unique indexed values. Recovery is limited to 6 attempts per 15 minutes per observed IP; creation is limited to 6/hour per observed IP. These in-memory counters are per API instance, and production deployments need shared rate limiting and trusted-proxy IP configuration. Owner sessions expire after 400 days, and recovery keys after 730 days. Without a valid session or the recovery key, access cannot be regained automatically; verified email recovery is *not* provided.
 

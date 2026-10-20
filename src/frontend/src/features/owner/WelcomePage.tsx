@@ -60,7 +60,6 @@ export default function WelcomePage({ legacyAvailable, onCreate, onRecover, onUp
               <button type="submit" disabled={busy || !code.trim()} className="w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 disabled:opacity-50">
                 {busy ? 'Restoring…' : 'Restore my parol'}
               </button>
-              <p className="text-xs leading-5 text-white/45">Restoring this parol will invalidate its old browser access and recovery key. Save the new recovery key shown next.</p>
             </form>
           ) : (
             <button type="button" disabled={busy} onClick={() => void run(onCreate)}

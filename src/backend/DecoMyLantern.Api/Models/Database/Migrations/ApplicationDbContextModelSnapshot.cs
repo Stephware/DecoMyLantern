@@ -378,6 +378,9 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                     b.Property<DateTime>("SessionExpiresAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("SetupPending")
+                        .HasColumnType("bit");
+
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -392,7 +395,7 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                     b.HasIndex("TokenHash")
                         .IsUnique();
 
-                    b.ToTable("OwnerCredentials");
+                    b.ToTable("OwnerCredentials", (string)null);
                 });
 
             modelBuilder.Entity("DecoMyLantern.Api.Models.Database.ParolDesign", b =>
