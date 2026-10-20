@@ -74,13 +74,14 @@ export default function LanternScene({
 
   useEffect(() => {
     const switchedMode = previousPreview.current !== isPreview
+    const previewAddedOne = isPreview && friendCount === previousFriends.current + 1
     const previewJump = isPreview && Math.abs(friendCount - previousFriends.current) !== 1
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const returningFromAway = document.hidden || (resumedAt.current > 0 && Date.now() - resumedAt.current < 5000)
     previousPreview.current = isPreview
     previousFriends.current = friendCount
     setGrowth(current => retargetGrowth(current, friendCount,
-      switchedMode || previewJump || reducedMotion || returningFromAway))
+      (switchedMode && !previewAddedOne) || previewJump || reducedMotion || returningFromAway))
   }, [friendCount, isPreview])
 
   useEffect(() => {
