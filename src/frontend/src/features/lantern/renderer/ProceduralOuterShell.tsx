@@ -50,7 +50,7 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
   return (
     <g data-testid="living-outer-shell" data-friends={Math.floor(growthCount / GROWTH_PER_FRIEND)}
       data-growth-count={growthCount} data-layer-count={layers.length} data-recipe={recipe.key}
-      className="parol-ornament-reveal" aria-hidden="true">
+      aria-hidden="true">
       <defs>
         <linearGradient id={`${uid}-capiz`} x1="6%" y1="8%" x2="94%" y2="90%">
           <stop offset="0%" stopColor={ivory} stopOpacity=".91" />
@@ -358,10 +358,11 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
           className="parol-growth-flash" opacity=".9"/>
         {Array.from({ length: 20 }, (_, index) => {
           const pos = festivalMotifPoint(growthCount, index, 20)
-          return <g key={index} transform={`translate(${pos.x} ${pos.y})`}
-              className="parol-growth-sparkle" style={{ animationDelay: `${index * 33}ms` }}>
-            <path d="M 0 -8 L 2 -2 L 8 0 L 2 2 L 0 8 L -2 2 L -8 0 L -2 -2 Z"
-              fill={index % 2 ? rose : ivory} stroke={primary} strokeWidth=".7"/>
+          return <g key={index} transform={`translate(${pos.x} ${pos.y})`}>
+            <g className="parol-growth-sparkle" style={{ animationDelay: `${index * 33}ms` }}>
+              <path d="M 0 -8 L 2 -2 L 8 0 L 2 2 L 0 8 L -2 2 L -8 0 L -2 -2 Z"
+                fill={index % 2 ? rose : ivory} stroke={primary} strokeWidth=".7"/>
+            </g>
           </g>
         })}
       </g>}
