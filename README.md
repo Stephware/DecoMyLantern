@@ -279,6 +279,8 @@ Resolve any conflicts, rerun the relevant checks, and push your branch.
 
 ### Release from dev to main
 
+If `main` has independent commits that block a release PR, first merge `main` into a branch created from `dev`, resolve conflicts there, and merge that branch back into `dev` through a PR. Then release `dev` to `main` normally.
+
 Only the repository owner:
 
 1. Confirms `dev` is stable and the manual checks pass.
