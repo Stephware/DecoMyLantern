@@ -37,6 +37,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid #ffcf75; outline-
 }
 .parol-band-expand { animation: parol-band-expand 500ms ease-out both; transform-origin: 300px 302px; }
 
+@keyframes parol-band-detail {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.parol-band-detail-appear { animation: parol-band-detail 700ms ease-out both; }
+
 @keyframes parol-band-illuminate {
   from { opacity: .08; filter: drop-shadow(0 0 0 transparent); }
   to { opacity: 1; filter: drop-shadow(0 0 5px #ffe5aa); }
