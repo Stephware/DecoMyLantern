@@ -129,6 +129,7 @@ builder.Services.AddScoped<IDesignService, DesignService>();
 builder.Services.AddScoped<IGrowthStageService, GrowthStageService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<ILanternService, LanternService>();
+builder.Services.AddSingleton<InvitationTokenCipher>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IOwnerAccessService, OwnerAccessService>();
 
