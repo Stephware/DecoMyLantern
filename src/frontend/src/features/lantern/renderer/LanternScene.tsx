@@ -20,7 +20,7 @@ type Props = {
 
 type Camera = { zoom: number; x: number; y: number }
 type Finger = { x: number; y: number }
-const MIN_ZOOM = 0.13
+const MIN_ZOOM = 0.04
 const MAX_ZOOM = 4
 const VIEW_WIDTH = 600
 const VIEW_HEIGHT = 640
