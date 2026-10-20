@@ -1,5 +1,6 @@
 using DecoMyLantern.Api.Models.Database;
 using DecoMyLantern.Api.Services.Lanterns;
+using DecoMyLantern.Api.Services.Invitations;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,7 @@ public sealed class OwnerAccessService(
     ApplicationDbContext database,
     UserManager<ApplicationUser> userManager,
     ILanternService lanternService,
+    IInvitationService invitationService,
     TimeProvider clock) : IOwnerAccessService
 {
     public async Task<IssuedOwnerAccess> CreateAsync(CancellationToken cancellationToken)
@@ -36,6 +38,7 @@ public sealed class OwnerAccessService(
             throw new OwnerAccessException(500, "Unable to create your parol. Please try again.");
 
         await lanternService.CreateAsync(user.Id, cancellationToken);
+        await invitationService.GetOrCreateLinkAsync(user.Id, cancellationToken);
         var issued = await IssueForOwnerAsync(user.Id, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return issued;
