@@ -9,6 +9,8 @@ C# entity classes in `src/backend/DecoMyLantern.Api/Models/Database` and EF Core
 
 No SQL credentials are committed. You can also use `database/create-database.sql` (on `master`) and the generated `database/schema.sql` (on `DecoMyLanternDb`) in SQL Server Management Studio with SQLCMD mode. Use the generated EF migration as authoritative instead of manually maintaining table definitions.
 
+The local Compose SQL Server uses `127.0.0.1:14334` to avoid conflicting with other SQL Server instances on port 1433. Start it with `docker compose up -d sqlserver` after setting `MSSQL_SA_PASSWORD` in the root `.env`. Set the API's `ConnectionStrings:DefaultConnection` user secret to `Server=127.0.0.1,14334;Database=DecoMyLanternDb;User Id=sa;Password=YOUR_LOCAL_PASSWORD;Encrypt=True;TrustServerCertificate=True;`. In DBeaver, use the SQL Server driver, host `127.0.0.1`, port `14334`, database `DecoMyLanternDb`, SQL Server authentication with user `sa` and the same local password. Enable encryption and trust the server certificate for this local development instance only. Recreating the container retains the named database volume; do not run `docker compose down -v` unless you intend to delete the database.
+
 GitHub CI/CD is disabled. Run the frontend and backend builds/tests locally; this does not prove your SQL Server instance has been migrated.
 
 Task 2 adds the `20261016173000_PasswordlessOwnerAccess` migration and `OwnerCredentials` table. Stored credentials are SHA-256 hashes of random 256-bit tokens; no bearer or recovery plaintext is stored in SQL. Existing owners and lantern records are retained. The SQL idempotent schema script includes this migration; regenerate it with `bash database/bootstrap.sh` when a .NET SDK is available and review its diff.
