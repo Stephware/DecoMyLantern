@@ -88,6 +88,7 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern, grow
                 const cellColor = palette[(segment % 4 + familyIndex + n) % palette.length]
                 return (
                   <path key={segment} data-capiz-facet={segment}
+                    className={newBand && growthPhase === 2 ? 'parol-band-detail-appear' : undefined}
                     d={festivalFacetPath(n, segment)}
                     fill={segment % 3 === 0 ? glass : cellColor}
                     fillOpacity={segment % 3 === 0 ? '.4' : '.25'}
@@ -101,7 +102,8 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern, grow
                 const { x, y } = bandMotifPoint(n, sector)
                 const rotation = sector * 36
                 return (
-                  <g key={sector} transform={`translate(${x} ${y}) rotate(${rotation})`}>
+                  <g key={sector} transform={`translate(${x} ${y}) rotate(${rotation})`}
+                    className={newBand && growthPhase === 2 ? 'parol-band-detail-appear' : undefined}>
                     {zone === 'siku' && (
                       <g>
                         <path d="M 0 -5 L 4 0 L 0 5 L -4 0 Z"
