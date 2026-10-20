@@ -15,7 +15,7 @@ import {
   regionPanelPath,
 } from '../growth/outerGrowth'
 
-type Props = { theme: Theme; friendCount: number; pattern: string }
+type Props = { theme: Theme; friendCount: number; pattern: string; growthPhase?: 0 | 1 | 2 | 3 }
 const TAU = Math.PI * 2
 
 /**
@@ -28,7 +28,7 @@ const TAU = Math.PI * 2
  * 50 accepted friends ALWAYS results in precisely 50 data-friend-layer groups.
  * The small tambor/base is rendered by ParolArtwork and has no tassels.
  */
-export default function ProceduralOuterShell({ theme, friendCount, pattern }: Props) {
+export default function ProceduralOuterShell({ theme, friendCount, pattern, growthPhase = 0 }: Props) {
   const uid = useId().replace(/:/g, '')
   const recipe = OUTER_RECIPES[theme.key]
   const [primary, ivory, rose, teal] = theme.colors
@@ -39,13 +39,14 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
   const glass = `url(#${uid}-capiz)`
   const goldTrim = primary
   const glow = `url(#${uid}-jewel)`
-  const regionVisible = GROWTH_REGIONS.filter(region => friendCount >= region.from)
+  const decoratedThrough = growthPhase === 1 ? friendCount - 1 : friendCount
+  const regionVisible = GROWTH_REGIONS.filter(region => decoratedThrough >= region.from)
   const motifFill = recipe.motif === 'flower' || recipe.motif === 'jasmine' ? rose :
     recipe.motif === 'star' ? ivory : primary
 
   return (
     <g data-testid="living-outer-shell" data-friends={friendCount}
-      data-layer-count={layers.length} data-recipe={recipe.key}
+      data-layer-count={layers.length} data-recipe={recipe.key} data-growth-phase={growthPhase}
       className="parol-ornament-reveal" aria-hidden="true">
       <defs>
         <linearGradient id={`${uid}-capiz`} x1="6%" y1="8%" x2="94%" y2="90%">
@@ -75,11 +76,15 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
             zone === 'palimbun' ? 2 : zone === 'ceremonial' ? 3 : 4
           const hue = palette[(familyIndex + Math.floor(n / 3)) % palette.length]
           const trim = familyIndex % 2 === 0 ? ivory : primary
+          const newBand = growthPhase !== 0 && n === friendCount
+          const decorated = !newBand || growthPhase >= 2
+          const illuminated = !newBand || growthPhase === 3
           return (
-            <g key={n} data-friend-layer={n} data-region={zone}>
+            <g key={n} data-friend-layer={n} data-region={zone}
+              className={newBand && growthPhase === 1 ? 'parol-band-expand' : undefined}>
               <path d={festivalBandPath(n)} fill={hue} fillOpacity=".37"
                 fillRule="evenodd" stroke="none" />
-              {Array.from({ length: PANEL_SEGMENTS }, (_, segment) => {
+              {decorated && Array.from({ length: PANEL_SEGMENTS }, (_, segment) => {
                 const cellColor = palette[(segment % 4 + familyIndex + n) % palette.length]
                 return (
                   <path key={segment} data-capiz-facet={segment}
@@ -92,7 +97,7 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
 
               {/* Ten small structural inlays per person, fivefold symmetric.
                   Distinct grammar in each decorated zone. */}
-              {Array.from({ length: 10 }, (_, sector) => {
+              {decorated && Array.from({ length: 10 }, (_, sector) => {
                 const { x, y } = bandMotifPoint(n, sector)
                 const rotation = sector * 36
                 return (
@@ -143,11 +148,12 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
                 )
               })}
               {/* Every completed friend's boundary remains a true contour. */}
-              <path d={festivalOutlinePath(n)} fill="none"
+              {illuminated && <path d={festivalOutlinePath(n)} fill="none"
+                className={newBand ? 'parol-band-light-up' : undefined}
                 stroke={n % 5 === 0 ? ivory : trim}
                 strokeWidth={n % 5 === 0 ? 2.3 : .85}
                 strokeOpacity={n % 5 === 0 ? '.82' : '.31'}
-                strokeLinejoin="round"/>
+                strokeLinejoin="round"/>}
             </g>
           )
         })}
@@ -158,7 +164,7 @@ export default function ProceduralOuterShell({ theme, friendCount, pattern }: Pr
           Incomplete regions stop exactly at the current friend count. */}
       <g data-testid="festival-regional-patterns">
         {regionVisible.map((region, regionIndex) => {
-          const end = Math.min(friendCount, region.to)
+          const end = Math.min(decoratedThrough, region.to)
           return (
             <g key={region.zone} data-growth-region={region.zone}
               data-visible-through-layer={end}>
