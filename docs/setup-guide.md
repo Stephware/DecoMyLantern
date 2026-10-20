@@ -37,6 +37,12 @@ bash database/bootstrap.sh --apply
 ```
 For SQL Server Management Studio users, run `database/create-database.sql` on master and generated `database/schema.sql` on DecoMyLanternDb in SQLCMD mode. The generated migration is the source of truth. **Task 2** adds `OwnerCredentials`: apply it before opening the updated frontend. Do not run the site against production data during testing.
 
+## Single invitation configuration
+
+Before starting the API, generate and securely save a stable 32-byte Base64 key with `openssl rand -base64 32`. Run `dotnet user-secrets set "Invitations:EncryptionKey" "<generated-key>"` inside the API project directory. For Docker, set `INVITATION_ENCRYPTION_KEY` in the ignored root `.env`. Use the same key in all replicas and on subsequent deployments.
+
+Apply EF Core migration `20261020220000_SingleInvitationLink` to the existing database. It extends `ShareLinks` rather than replacing the table, preserves past contributions and letters, and retires all previous invitation links. Copy the newly issued short invitation and share it again with friends. Do not lose or regenerate the encryption key, because existing official links would become unreadable.
+
 ## Invitation flow verification
 
 Create a parol, copy an invitation link, and open it in a private browser. Enter a friend name and an optional Christmas message, then verify that the owner's parol displays a new light and that the guest can no longer contribute from the same browser.
