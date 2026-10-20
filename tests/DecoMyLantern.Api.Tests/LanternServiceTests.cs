@@ -138,6 +138,7 @@ public sealed class LanternServiceTests
         var lantern = await service.GetCurrentAsync(ownerId, CancellationToken.None);
         Assert.NotNull(lantern);
         Assert.Equal(acceptedFriends, lantern.AcceptedFriends);
+        Assert.Equal(acceptedFriends * 3, lantern.GrowthPoints);
         Assert.Equal(expectedStage, lantern.GrowthStage);
         Assert.Equal(acceptedFriends, lantern.Lights.Count);
         Assert.Equal(Enumerable.Range(0, acceptedFriends), lantern.Lights.Select(x => x.SlotIndex));
