@@ -8,8 +8,8 @@ The parol looks complete even with **zero friends**: a compact festival lantern 
 
 ## How the app is intended to work
 
-- **Owners** create a seasonal parol without signing up or logging in. The API gives the browser a secure HTTP-only owner cookie and shows a private recovery key once.
-- **Friends** open a unique invitation link without creating an account, see a guest-only page, then contribute one light per browser visitor and optionally leave a sealed Christmas message.
+- **Owners** create a seasonal parol without signing up or logging in. The API gives the browser a secure HTTP-only owner cookie and shows a reusable 22-character private recovery key once (old 43-character keys remain accepted if valid).
+- **Friends** open the owner's single short invitation link without creating an account, then contribute one light per browser visitor and optionally leave a sealed Christmas message.
 - Each accepted contribution keeps a stable central light and adds three connected ornament layers, with one visible contour after all three. The first 150 layers span 15 distinct festival-inspired regions instead of repeating the previous final design.
 - Owners can switch among designs unlocked by their reached friend milestones (0/3/10/23/40/50). A previously selected design stays available.
 - Messages are private to the lantern owner and stay sealed until **December 25, 12:00 AM Philippine Standard Time (UTC+8)**. For Christmas 2026, the server-side unlock is `2026-12-24T16:00:00Z`.
@@ -147,9 +147,17 @@ The dashboard displays real accepted contributions. Owners can create, copy and 
 
 ## Friend invitations — Task 4
 
-Once your parol exists, select **Create invitation link**, copy the link, and share it with friends. Friends can open their own guest page, enter a name, and optionally leave a Christmas note. The invitation link never contains your private owner or recovery key. One light per guest browser is enforced with a secure cookie and SQL constraints; this does not prove unique human identity. Links expire December 31 Philippine time, and revoking a link does not remove existing contributions.
+Once your parol exists, copy its single invitation link and share it with friends. Friends can open their own guest page, enter a name, and optionally leave a Christmas note. The invitation link never contains your private owner or recovery key. One light per guest browser is enforced with a secure cookie and SQL constraints; this does not prove unique human identity. Links expire December 31 Philippine time, and revoking a link does not remove existing contributions.
 
 The share secret is only returned once, so save the copied URL or create a new link when needed (old links continue working). See [Task 4: invitations, security and real-guest test plan](docs/task4-friend-invitations.md). Its local SQL smoke test inserts 51 guests and must **never** be used against production.
+
+## Short invitation link and recovery key
+
+- Each seasonal parol has one official invitation URL: `https://bemyparol.site/#/i/<16-character-token>`. It is created with the parol, stays identical after reload, and expires December 31 Philippine time. Older long invitation URLs are retired, but existing lights and messages remain.
+- New owners receive a **22-character** recovery key, reusable throughout its original one-year lifetime. Existing valid 43-character recovery keys remain accepted.
+- The server stores only the SHA-256 invitation hash plus an AES-GCM encrypted copy so the owner can retrieve the same link. Set a **persistent 32-byte Base64 encryption key** using `Invitations:EncryptionKey` (`INVITATION_ENCRYPTION_KEY` for Docker) before creating parols. Never change or lose this value while issued invitations must remain readable.
+- For local development, generate a secret once with `openssl rand -base64 32`, then set it from the API project's directory using `dotnet user-secrets set "Invitations:EncryptionKey" "<generated-secret>"`. For Docker, put it in the ignored root `.env` under `INVITATION_ENCRYPTION_KEY`.
+- Upgrade existing databases with `dotnet ef database update --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api`; the existing `database/schema.sql` also contains the new idempotent migration section.
 
 ## Existing-user migration and recovery
 
