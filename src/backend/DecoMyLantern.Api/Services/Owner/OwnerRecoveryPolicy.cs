@@ -13,4 +13,12 @@ public static class OwnerRecoveryPolicy
         var firstYearDeadline = credential.CreatedAtUtc.Add(OwnerSession.RecoveryLifetime);
         return nowUtc < firstYearDeadline && nowUtc < credential.RecoveryExpiresAtUtc;
     }
+
+    // Updates only the cookie bearer session; the recovery hash and deadline
+    // never change, including after an unlimited number of successful restores.
+    public static void RefreshSession(OwnerCredential credential, string newTokenHash, DateTime nowUtc)
+    {
+        credential.TokenHash = newTokenHash;
+        credential.SessionExpiresAtUtc = nowUtc.Add(OwnerSession.Lifetime);
+    }
 }
