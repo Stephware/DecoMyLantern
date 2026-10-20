@@ -53,15 +53,14 @@ The owner receives one short, cryptographically random 96-bit (16-character) inv
 | Method | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
 | POST | `/api/my/lantern/invitations` | Owner + CSRF | Retrieve or create the same single official invitation (returns its token and expiry) |
-| DELETE | `/api/my/lantern/invitations/{id}` | Owner + CSRF | Revoke an owned invitation without removing lights |
 | GET | `/api/invitations/csrf` | Public | Set HTTP-only guest cookie and provide CSRF token |
 | POST | `/api/invitations/preview` | Public + CSRF | `{ token }` returns safe public parol and contributed status |
 | POST | `/api/invitations/contribute` | Guest + CSRF | `{ token, displayName, message? }` returns assigned light slot and safe preview |
 
-Name: 1–80 characters after trimming; optional message: at most 500 characters. Guest cookies are random, HTTP-only, and hashed in SQL. Contribution/slot uniqueness indexes and SQL `UPDLOCK` / serializable transaction prevent accidental browser duplicates and slot collisions. Invalid/revoked/expired links yield 404; duplicate submissions yield 409. Guest previews never return message text, owner ID, owner credentials, or other contributors' display names. Links expire at 23:59:59 on December 31 Philippine time. Rate limiting is per API instance pending future production hardening.
+Name: 1–80 characters after trimming; optional message: at most 500 characters. Guest cookies are random, HTTP-only, and hashed in SQL. Contribution/slot uniqueness indexes and SQL `UPDLOCK` / serializable transaction prevent accidental browser duplicates and slot collisions. Invalid/retired/expired links yield 404; duplicate submissions yield 409. Guest previews never return message text, owner ID, owner credentials, or other contributors' display names. Links expire at 23:59:59 on December 31 Philippine time. Rate limiting is per API instance pending future production hardening.
 
 See the [Task 4 workflow and integration test guide](task4-friend-invitations.md).
 
 ## Planned for later phases
 
-Invitation creation/revocation and anonymous contributions are implemented in Task 4. Production distributed abuse controls, real-human identity verification, moderation/reporting UI and completed owner inbox UI are still pending.
+Single official invitation issuance/retrieval and anonymous contributions are implemented in Task 4. Production distributed abuse controls, real-human identity verification, moderation/reporting UI and completed owner inbox UI are still pending.
