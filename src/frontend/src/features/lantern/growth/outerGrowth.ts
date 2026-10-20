@@ -105,7 +105,6 @@ export function outerRadiusForFriends(count: number): number {
 }
 
 export function outerFitZoom(count: number): number {
-  const radius = outerRadiusForFriends(count)
   // Extra sculpted petals after layer 50 must also fit within the viewBox.
   return Math.min(1, 279 / (festivalMaxExtent(count) + 2))
 }
