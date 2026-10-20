@@ -26,7 +26,7 @@ Anonymous guest participation is convenient, but a browser token cannot prove th
 | Backend | ASP.NET Core Web API / .NET 10 / C# |
 | Backend organization | Controllers → Services → Repository → Models/Database |
 | Database | SQL Server with Entity Framework Core 10 |
-| Owner access | Hashed 256-bit random tokens in SQL Server, HTTP-only cookie, one-time recovery key; Identity database retained for existing foreign keys |
+| Owner access | Hashed 256-bit random tokens in SQL Server, HTTP-only cookie, reusable one-year recovery key; Identity database retained for existing foreign keys |
 | Validation | Local/manual lint, type-check, unit test, build, and EF migration checks |
 
 React owns the page layout. The backend follows a familiar **MVC-style folder organization**, but it exposes JSON API endpoints rather than Razor views.
@@ -139,7 +139,7 @@ On Windows PowerShell, replace the copy command with `Copy-Item .env.example .en
 
 Open **http://localhost:5173** in your browser. Vite proxies `/api` to `http://localhost:5050`.
 
-Open the site and choose **Create my parol**. No email/password is needed. **Copy your private recovery key and keep it safe before continuing.** The owner session persists in a secure HTTP-only browser cookie across refreshes. Use **Recovery key** in the dashboard to generate a replacement (the old code then stops working). Use **Leave parol** to revoke the browser session; recovering access afterward requires your recovery key. You can preview six evolving design families, simulate individual friends using the +1 friend button, and jump to 0/3/10/23/40/50 friend milestones without changing real contributions.
+Open the site and choose **Create my parol**. No email/password is needed. **Copy your private recovery key and keep it safe before continuing.** The owner session persists in a secure HTTP-only browser cookie across refreshes. The original recovery key remains usable for one year from creation and does not change when restoring the parol. Use **Leave parol** to revoke the browser session; recovering access afterward requires the same recovery key. You can preview six evolving design families, simulate individual friends using the +1 friend button, and jump to 0/3/10/23/40/50 friend milestones without changing real contributions.
 
 The dashboard displays real accepted contributions. Owners can create, copy and revoke invitation links. The Christmas inbox still needs its full owner UI; message bodies remain server-protected until December 25.
 
@@ -153,7 +153,7 @@ The share secret is only returned once, so save the copied URL or create a new l
 
 ## Existing-user migration and recovery
 
-Existing users and lantern data are retained. If you have a still-valid old `Deco.Host` cookie, use **Transfer my existing parol** to issue a new owner token and recovery key. Without that valid old cookie, a previous email/password alone cannot access the new system; plan a separately verified migration before public rollout. Newly created parols can be restored with the private recovery key. **If both your browser cookie and recovery key are lost, there is no built-in recovery mechanism.** Owner tokens have a 400-day lifetime; recovery keys expire after 730 days. Do not share a recovery key in the public friend invitation link. HTTPS is required in production.
+Existing users and lantern data are retained. If you have a still-valid old `Deco.Host` cookie, use **Transfer my existing parol** to issue a new owner token and recovery key. Without that valid old cookie, a previous email/password alone cannot access the new system; plan a separately verified migration before public rollout. Newly created parols can be restored with the private recovery key. **If both your browser cookie and recovery key are lost, there is no built-in recovery mechanism.** Owner tokens have a 400-day lifetime; recovery keys expire 365 days after issuance and can be reused without limit before then. Do not share a recovery key in the public friend invitation link. HTTPS is required in production.
 
 ## Run with Docker Compose
 
