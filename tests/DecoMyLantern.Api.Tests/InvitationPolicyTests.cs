@@ -54,6 +54,6 @@ public sealed class InvitationPolicyTests
     {
         Assert.Throws<ArgumentException>(() => InvitationPolicy.Hash("not-a-token"));
         Assert.False(InvitationPolicy.IsValidToken(OwnerSecrets.Generate()));
-        Assert.False(InvitationPolicy.IsValidToken("x".Repeat(16).Replace('x', '!')));
+        Assert.False(InvitationPolicy.IsValidToken(new string('!', 16)));
     }
 }
