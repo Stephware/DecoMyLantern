@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import {
+  advanceGrowth, completedGrowth, GROWTH_STEP_DURATIONS,
+  growthPointsDuring, retargetGrowth, visibleGrowthBands,
+} from '../growth/animation'
 import type { Theme } from '../../customization/themes'
 import { MAX_TEST_FRIENDS, stageForFriends } from '../growth/stages'
 import { outerFitZoom } from '../growth/outerGrowth'
@@ -47,10 +51,44 @@ export default function LanternScene({
   const lights = isPreview ? preview : contributions
   const friendCount = lights.length
   const designTier = stageForFriends(friendCount)
-  const fitZoom = outerFitZoom(friendCount)
+  const [growth, setGrowth] = useState(() => completedGrowth(friendCount))
+  const previousPreview = useRef(isPreview)
+  const previousFriends = useRef(friendCount)
+  const resumedAt = useRef(0)
+  const displayedFriends = visibleGrowthBands(growth)
+  const displayedLights = lights.slice(0, growth.completedFriends + (growth.phase === 3 ? 1 : 0))
+  const fitZoom = outerFitZoom(displayedFriends)
   const [camera, setCamera] = useState<Camera>(() => ({ zoom: fitZoom, x: 0, y: 0 }))
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null)
   const pointers = useRef<Map<number, Finger>>(new Map())
+
+  // Animate newly received contributions once. A fresh mount shows all saved
+  // bands immediately; design previews jumping between milestones do not replay.
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (!document.hidden) resumedAt.current = Date.now()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
+  }, [])
+
+  useEffect(() => {
+    const switchedMode = previousPreview.current !== isPreview
+    const previewJump = isPreview && Math.abs(friendCount - previousFriends.current) !== 1
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const returningFromAway = document.hidden || (resumedAt.current > 0 && Date.now() - resumedAt.current < 5000)
+    previousPreview.current = isPreview
+    previousFriends.current = friendCount
+    setGrowth(current => retargetGrowth(current, friendCount,
+      switchedMode || previewJump || reducedMotion || returningFromAway))
+  }, [friendCount, isPreview])
+
+  useEffect(() => {
+    if (growth.phase === 0) return
+    const timeout = window.setTimeout(() => setGrowth(current => advanceGrowth(current)),
+      GROWTH_STEP_DURATIONS[growth.phase - 1])
+    return () => window.clearTimeout(timeout)
+  }, [growth])
 
   // When a contribution arrives, automatically reframe the whole evolving
   // silhouette. User pinch/zoom remains available until the next friend.
@@ -62,7 +100,7 @@ export default function LanternScene({
     setSelectedFriendId(null)
   }, [isPreview, friendCount])
 
-  const selected = lights.find(light => light.id === selectedFriendId)
+  const selected = displayedLights.find(light => light.id === selectedFriendId)
   const transform = `translate(${CENTER_X + camera.x} ${CENTER_Y + camera.y}) scale(${camera.zoom}) translate(${-CENTER_X} ${-CENTER_Y})`
 
   function pointerDown(event: PointerEvent<SVGSVGElement>) {
@@ -123,7 +161,7 @@ export default function LanternScene({
       <div className="relative overflow-hidden rounded-[26px] border border-white/5 bg-[radial-gradient(ellipse_at_50%_42%,rgba(249,177,82,0.10),rgba(8,14,32,0)_65%)]">
         <svg
           role="img"
-          aria-label={`${theme.label} floral San Fernando-inspired festival lantern with ${friendCount} connected ornamental outer layers, one per ${isPreview ? 'test friend' : 'accepted friend'}; ${designTier.name} design milestone`}
+          aria-label={`${theme.label} floral San Fernando-inspired festival lantern with ${displayedFriends} ornamental bands and ${growthPointsDuring(growth)} growth points; ${designTier.name} design milestone`}
           viewBox="0 0 600 640"
           preserveAspectRatio="xMidYMid meet"
           className="block h-auto w-full cursor-grab select-none active:cursor-grabbing"
@@ -136,10 +174,10 @@ export default function LanternScene({
           <g transform={transform} style={{
             transition: pointers.current.size === 0 ? 'transform 420ms ease-out' : 'none',
           }}>
-            <ProceduralOuterShell key={friendCount} theme={theme} friendCount={friendCount} pattern={pattern} />
+            <ProceduralOuterShell theme={theme} friendCount={displayedFriends} growthPhase={growth.phase} pattern={pattern} />
             <ParolArtwork theme={theme} pattern={pattern} />
             <g className="parol-contributions">
-              {lights.map(light => {
+              {displayedLights.map(light => {
                 const { x, y, radius } = lightPosition(light.slotIndex)
                 const lightColor = theme.colors[light.slotIndex % theme.colors.length]
                 const focused = light.id === selectedFriendId
@@ -173,14 +211,17 @@ export default function LanternScene({
           <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-white transition hover:bg-white/15 disabled:opacity-30" aria-label="Zoom in" title="Zoom in" disabled={camera.zoom >= MAX_ZOOM} onClick={() => zoomBy(0.2)}>+</button>
         </div>
         <div className="pointer-events-none absolute left-3 top-3 rounded-full border border-white/10 bg-[#101b33]/80 px-3 py-2 text-[11px] text-amber-100/80 backdrop-blur">
-          {friendCount} {isPreview ? 'test' : 'accepted'} friends · {friendCount} festival layers
+          {displayedFriends} {isPreview ? 'test' : 'accepted'} friends · {growthPointsDuring(growth)} growth · {displayedFriends} bands
         </div>
       </div>
       {selected && <figcaption className="mt-2 text-center text-xs text-amber-200">
         Selected: {selected.displayName} · Light #{selected.slotIndex + 1}
       </figcaption>}
-      <figcaption className="mt-2 text-center text-xs text-white/40">
-        One friend adds one decorated festival layer · Drag to explore · Pinch to zoom · Fit to recenter
+      <figcaption role="status" aria-live="polite" className="mt-2 text-center text-xs text-white/55">
+        {growth.phase === 1 ? 'Growth +1 · Expanding the next band…' :
+          growth.phase === 2 ? 'Growth +2 · Decorating the new band…' :
+          growth.phase === 3 ? 'Growth +3 · Lighting up the new band…' :
+          'Each friend adds +3 growth and one ornamental band · Drag, pinch or fit to explore'}
       </figcaption>
     </figure>
   )
