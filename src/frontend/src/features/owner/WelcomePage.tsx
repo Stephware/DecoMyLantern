@@ -60,7 +60,7 @@ export default function WelcomePage({ legacyAvailable, onCreate, onRecover, onUp
               <button type="submit" disabled={busy || !code.trim()} className="w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 disabled:opacity-50">
                 {busy ? 'Restoring…' : 'Restore my parol'}
               </button>
-              <p className="text-xs leading-5 text-white/45">Restoring this parol will invalidate its old browser access and recovery key. Save the new recovery key shown next.</p>
+              <p className="text-xs leading-5 text-white/45">Your original recovery key works repeatedly for one year. Restoring access signs out your previous browser session, but the key stays the same.</p>
             </form>
           ) : (
             <button type="button" disabled={busy} onClick={() => void run(onCreate)}
@@ -81,7 +81,7 @@ export default function WelcomePage({ legacyAvailable, onCreate, onRecover, onUp
               </button>
             </div>
           )}
-          <p className="mt-6 text-center text-xs leading-5 text-white/40">You’ll receive a private recovery key to save for another device or if browser data is cleared.</p>
+          <p className="mt-6 text-center text-xs leading-5 text-white/40">You'll receive one private recovery key, valid for one year and reusable throughout that year. Keep it safe.</p>
         </section>
       </main>
     </div>

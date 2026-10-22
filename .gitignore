@@ -27,6 +27,7 @@
 # tooling
 .idea/
 .vscode/
+/codex/
 .DS_Store
 Thumbs.db
 *.log

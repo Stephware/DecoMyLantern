@@ -39,11 +39,11 @@ public sealed class InvitationPolicyTests
     }
 
     [Fact]
-    public void Invitation_secret_is_cryptographic_and_only_the_hash_is_persistable()
+    public void Invitation_secret_is_cryptographic_and_hashable()
     {
-        var secret = OwnerSecrets.Generate();
-        Assert.Equal(43, secret.Length);
-        Assert.True(OwnerSecrets.TryHash(secret, out var expectedHash));
+        var secret = InvitationPolicy.GenerateToken();
+        Assert.Equal(16, secret.Length);
+        Assert.True(InvitationPolicy.TryHash(secret, out var expectedHash));
         Assert.Equal(expectedHash, InvitationPolicy.Hash(secret));
         Assert.Equal(64, expectedHash.Length);
         Assert.NotEqual(secret, expectedHash);
@@ -53,5 +53,7 @@ public sealed class InvitationPolicyTests
     public void Malformed_invitation_secrets_are_rejected()
     {
         Assert.Throws<ArgumentException>(() => InvitationPolicy.Hash("not-a-token"));
+        Assert.False(InvitationPolicy.IsValidToken(OwnerSecrets.Generate()));
+        Assert.False(InvitationPolicy.IsValidToken(new string('!', 16)));
     }
 }

@@ -11,14 +11,14 @@ public interface IDesignService
 
 public sealed class DesignService(IDesignRepository repository, IMemoryCache cache) : IDesignService
 {
-    // Cache only public, non-sensitive catalog content. Owner authentication
-    // always checks the database; an in-memory cache is NOT an access token.
+    // Public catalog only. The API does not rely on cached counts for access.
     public async Task<IReadOnlyList<DesignDto>> GetEnabledAsync(CancellationToken cancellationToken) =>
-        await cache.GetOrCreateAsync("bemyparol.public.designs.v1", async entry =>
+        await cache.GetOrCreateAsync("bemyparol.public.designs.v2", async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2);
             return (IReadOnlyList<DesignDto>)(await repository.GetEnabledAsync(cancellationToken))
-                .Select(x => new DesignDto(x.DesignKey, x.Name, x.AssetKey))
+                .Select(x => new DesignDto(x.DesignKey, x.Name, x.AssetKey, x.RequiredFriends))
+                .OrderBy(x => x.RequiredFriends)
                 .ToList();
         }) ?? [];
 }

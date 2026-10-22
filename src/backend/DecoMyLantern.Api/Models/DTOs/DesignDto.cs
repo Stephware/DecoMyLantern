@@ -1,7 +1,11 @@
 namespace DecoMyLantern.Api.Models.DTOs;
 
-// All enabled designs are selectable immediately. No friend-based unlock field.
-public sealed record DesignDto(string DesignKey, string Name, string AssetKey);
+// All designs are returned publicly; owner eligibility is validated server-side.
+public sealed record DesignDto(
+    string DesignKey,
+    string Name,
+    string AssetKey,
+    int RequiredFriends);
 
-// These are visual ranges rather than requirements for access or customization.
+// Count required to unlock each selectable design.
 public sealed record GrowthStageDto(string StageKey, string Name, int StartAtFriends);

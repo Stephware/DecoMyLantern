@@ -1,46 +1,78 @@
 using Xunit;
+using DecoMyLantern.Api.Models.Database;
 using DecoMyLantern.Api.Services.Lanterns;
 using DecoMyLantern.Api.Services.Messages;
+
 namespace DecoMyLantern.Api.Tests;
+
 public sealed class PolicyTests
 {
     [Theory]
     [InlineData(0, "base")]
-    [InlineData(1, "lights")]
-    [InlineData(5, "lights")]
-    [InlineData(6, "details")]
-    [InlineData(15, "details")]
-    [InlineData(16, "fuller")]
-    [InlineData(30, "fuller")]
-    [InlineData(31, "grand")]
-    [InlineData(50, "grand")]
-    [InlineData(51, "grand")]
-    public void Growth_stage_reflects_visual_range_not_an_unlock(int count, string expected) =>
+    [InlineData(1, "base")]
+    [InlineData(2, "base")]
+    [InlineData(3, "floral")]
+    [InlineData(9, "floral")]
+    [InlineData(10, "festival")]
+    [InlineData(22, "festival")]
+    [InlineData(23, "celestial")]
+    [InlineData(39, "celestial")]
+    [InlineData(40, "fiesta")]
+    [InlineData(49, "fiesta")]
+    [InlineData(50, "sampaguita")]
+    [InlineData(51, "sampaguita")]
+    public void Growth_stage_matches_design_milestones(int count, string expected) =>
         Assert.Equal(expected, GrowthPolicy.StageFor(count));
 
     [Fact]
-    public void Every_friend_count_through_50_uses_the_agreed_visual_range()
+    public void Every_accepted_friend_count_through_50_maps_to_a_valid_design_tier()
     {
         for (var count = 0; count <= 50; count++)
         {
             var expected = count switch
             {
-                0 => "base",
-                <= 5 => "lights",
-                <= 15 => "details",
-                <= 30 => "fuller",
-                _ => "grand"
+                < 3 => "base",
+                < 10 => "floral",
+                < 23 => "festival",
+                < 40 => "celestial",
+                < 50 => "fiesta",
+                _ => "sampaguita"
             };
             Assert.Equal(expected, GrowthPolicy.StageFor(count));
         }
     }
 
     [Fact]
-    public void Fifty_is_a_visual_target_not_a_hard_backend_growth_limit()
+    public void Designs_stay_unlocked_after_a_contribution_is_removed()
     {
-        Assert.Equal("grand", GrowthPolicy.StageFor(50));
-        Assert.Equal("grand", GrowthPolicy.StageFor(51));
-        Assert.Equal("grand", GrowthPolicy.StageFor(120));
+        var design = new ParolDesign { DesignKey = "fiesta", RequiredFriends = 40, IsEnabled = true };
+        Assert.False(GrowthPolicy.DesignUnlocked(design, 39, 39));
+        Assert.True(GrowthPolicy.DesignUnlocked(design, 40, 40));
+        Assert.True(GrowthPolicy.DesignUnlocked(design, 1, 40));
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 3)]
+    [InlineData(2, 6)]
+    [InlineData(17, 51)]
+    [InlineData(50, 150)]
+    [InlineData(51, 153)]
+    public void Friends_cause_three_real_growth_layers(int friends, int expectedGrowth) =>
+        Assert.Equal(expectedGrowth, GrowthPolicy.GrowthFor(friends));
+
+    [Fact]
+    public void Invalid_growth_values_are_rejected()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => GrowthPolicy.GrowthFor(-1));
+        Assert.Throws<OverflowException>(() => GrowthPolicy.GrowthFor(int.MaxValue));
+    }
+
+    [Fact]
+    public void Final_milestone_is_not_a_contribution_cap()
+    {
+        Assert.Equal("sampaguita", GrowthPolicy.StageFor(51));
+        Assert.Equal("sampaguita", GrowthPolicy.StageFor(120));
     }
 
     [Fact]

@@ -1,0 +1,21 @@
+http://bemyparol.site {
+	@api path /api /api/*
+	handle @api {
+		reverse_proxy backend:8080 {
+			header_up X-Forwarded-Proto https
+		}
+	}
+
+	handle {
+		reverse_proxy frontend:80
+	}
+}
+
+http://api.bemyparol.site {
+	@legacyHealth path /api/health
+	redir @legacyHealth /health 308
+	rewrite /health /api/health
+	reverse_proxy backend:8080 {
+		header_up X-Forwarded-Proto https
+	}
+}
