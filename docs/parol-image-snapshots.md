@@ -103,6 +103,64 @@ selected parol design, then call again and confirm `MISS`. Verify the
 image is visually identical to the currently approved live parol at
 0, 10, 20, 35 and 50 friends. Test PNG as well.
 
-**Phase 3** will replace the expensive live public `LanternScene` with the
-cached image. **Phase 4** will adapt the growth animation using snapshots.
-Neither change is included here.
+## Phase 3 — Display the cached parol image in the frontend
+
+The owner's saved parol and an invited guest's real parol now display the
+**same 1200 × 1280 server-generated WebP** as a single `<image>` element in a
+small SVG viewport. The frontend no longer mounts `ProceduralOuterShell` or
+thousands of vector facets for these real parol views.
+
+- `LanternScene` routes **saved states** into `CachedParolScene`. The existing
+  original SVG implementation is preserved as `LegacyLanternPreview` for the
+  **unsaved Design Lab** until the separate production-control cleanup phase.
+- Only the actual, persisted owner state or valid invitation token is sent to
+  the Phase 2 snapshot endpoints. The frontend does not send simulation counts,
+  custom geometry, private messages, names or arbitrary design keys.
+- The viewer creates a temporary local object URL from the authenticated WebP
+  Blob; URLs are revoked on replacement or unmount. A canonical state key
+  (current lantern/invitation, saved design and pattern, friend count, sorted
+  slots) avoids redundant requests during the dashboard's 12-second polling.
+- When the saved parol changes, the previous image remains visible while the
+  updated image is requested. HTTP 503 busy failures are retried twice with
+  short backoff; a Retry button appears if generation still fails. Outdated
+  responses are aborted/ignored, so a slow older state cannot replace newer
+  content.
+- Drag, pinch, zoom controls and Fit work on the **single image**. Lightweight
+  selection of existing light positions remains available without mounting
+  the full procedural SVG. The snapshot is already fitted, so its initial zoom
+  is 1 rather than applying the original geometric Fit transform again.
+- Owner customizations are previewed as the saved image **after Save**, not as
+  unsaved server images. The dashboard explicitly notes this when a draft
+  is awaiting Save.
+- The approved procedural artwork and its original animation logic are not
+  changed. Live three-wave image transitions will be implemented separately
+  in **Phase 4**. Synthetic Design Lab previews still use the old live SVG
+  because they are not persisted, and Phase 5 will remove development controls
+  from the public UI.
+
+### Phase 3 smoke checks
+
+After `bash scripts/dev-with-stories.sh`, check the owner dashboard and a
+valid guest invitation at 0, 1, 11, 20 and 50 friends. Verify:
+
+1. Only one flattened image is visible in a real parol view; browser DevTools
+   shows the API `POST /api/.../image` (WebP) and no thousands of live SVG
+   ornaments.
+2. A repeated 12-second owner poll without changes produces **no further
+   image request**.
+3. An accepted contribution or saved design/pattern change replaces the image,
+   showing the updated true state. Rapid changes don't overwrite the newest
+   result with an older one.
+4. Zoom/Fit/pan and the light highlighting controls work on mobile and desktop.
+5. Stopping the private renderer shows an error and a Retry control, without
+   crashing the page. Restart it and Retry.
+6. The Story MP4/PNG exporter and synthetic Design Lab preview remain unchanged.
+   No owner session or invitation secret is exposed in an image URL.
+
+Run `npm test && npm run lint && npm run typecheck && npm run build` in
+`src/frontend`, `npm test` in `story-renderer`, and
+`dotnet test DecoMyLantern.slnx` from the repository root.
+
+**Phase 4:** Animate the image-based transition after contributions.
+**Phase 5:** Remove the remaining Design Lab and admin/test controls from the
+public UI.
