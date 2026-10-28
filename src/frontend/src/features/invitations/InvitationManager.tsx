@@ -38,6 +38,7 @@ export default function InvitationManager({lantern}: {lantern: Lantern | null}) 
   }
 
   return (
+    <>
     <section aria-label="Friend invitations"
       className="overflow-hidden rounded-[24px] border border-[#7a2530] bg-[linear-gradient(145deg,#902632,#721e2a)] p-5 text-[#fff8ea] shadow-[0_18px_35px_rgba(111,38,43,.13)] sm:p-6">
       <div className="flex items-start gap-3">
@@ -66,13 +67,6 @@ export default function InvitationManager({lantern}: {lantern: Lantern | null}) 
             className="w-full rounded-xl bg-[#ffefdc] px-4 py-3.5 text-sm font-bold text-[#7a2530] transition hover:bg-white disabled:opacity-40">
             {copied ? '✓ Link copied!' : 'Copy invitation link'}
           </button>
-          {lantern && url && <div className="border-t border-white/20 pt-3">
-            <StoryShare invitationUrl={url} data={{
-              kind:'owner', designKey:lantern.designKey, patternKey:lantern.patternKey,
-              friendCount:lantern.acceptedFriends,
-              slots:lantern.lights.map(light => light.slotIndex), highlightSlot:null,
-            }} />
-          </div>}
         </div>
       )}
       <p className="mt-4 text-xs leading-5 text-[#f5d4c7]">
@@ -80,5 +74,19 @@ export default function InvitationManager({lantern}: {lantern: Lantern | null}) 
         Your recovery key is never included.
       </p>
     </section>
+    {lantern && url && <section aria-label="Share your parol Story"
+      className="rounded-[24px] border border-[#e3d7c5] bg-[#fffdf8] p-5 shadow-[0_10px_30px_rgba(57,43,27,.05)] sm:p-6">
+      <p className="text-[11px] font-bold uppercase tracking-widest text-[#a27a45]">Share your Christmas story</p>
+      <h2 className="mt-2 font-serif text-2xl text-[#283b2f]">Show how your parol shines.</h2>
+      <p className="mb-4 mt-2 text-sm leading-6 text-[#766e60]">
+        Export your animated parol Story to share with friends.
+      </p>
+      <StoryShare invitationUrl={url} data={{
+        kind:'owner', designKey:lantern.designKey, patternKey:lantern.patternKey,
+        friendCount:lantern.acceptedFriends,
+        slots:lantern.lights.map(light => light.slotIndex), highlightSlot:null,
+      }} />
+    </section>}
+    </>
   )
 }
