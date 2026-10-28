@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import {
   BASE_FESTIVAL_RADIUS,
   FRIEND_LAYER_SPACING,
+  growthLayerSpacing,
   GROWTH_REGIONS,
   OUTER_RECIPES,
   PANEL_SEGMENTS,
@@ -46,7 +47,7 @@ test('all structural growth layers are filled without gaps', () => {
       assert.equal(layers[i].friendNumber, i + 1)
       assert.equal(layers[i].innerRadius, outerRadiusForFriends(i))
       assert.equal(layers[i].outerRadius, outerRadiusForFriends(i + 1))
-      assert.ok(Math.abs(layers[i].outerRadius - layers[i].innerRadius - FRIEND_LAYER_SPACING) < 1e-9)
+      assert.ok(Math.abs(layers[i].outerRadius - layers[i].innerRadius - growthLayerSpacing(i + 1)) < 1e-9)
       assert.equal(layers[i].zone, growthZoneForLayer(i + 1))
       const band = festivalBandPath(i + 1)
       assert.equal((band.match(/M /g) ?? []).length, 2)
@@ -124,7 +125,7 @@ test('festival silhouette stays round/floral and fits even past 50 friends', () 
     assert.ok(outerFitZoom(count) > 0)
     assert.ok(festivalMaxExtent(count) * outerFitZoom(count) < 281)
   }
-  assert.ok(outerFitZoom(growthForFriends(50)) > .13)
+  assert.ok(outerFitZoom(growthForFriends(50)) > .10)
   assert.notEqual(festivalOutlinePath(0), festivalOutlinePath(50))
   assert.equal(styles.length, 6)
   assert.equal(new Set(Object.values(OUTER_RECIPES).map(x => x.motif)).size, 6)

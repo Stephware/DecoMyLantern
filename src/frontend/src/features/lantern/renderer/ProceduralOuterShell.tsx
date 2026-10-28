@@ -169,8 +169,8 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
       <g data-testid="festival-regional-patterns">
         {regionVisible.map((region, regionIndex) => {
           const end = Math.min(growthCount, region.to)
-          // The next ornament design is 6% wider after the previous one finishes.
-          // Keep the original radial size, position and structural band spacing.
+          // A new design is 6% larger in both dimensions, with matching
+          // deeper radial space provided by its structural region.
           const ornamentEmphasis = ornamentWidthEmphasis(regionIndex)
           return (
             <g key={region.zone} data-growth-region={region.zone}
@@ -191,7 +191,7 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                       stroke={ivory} strokeOpacity=".73" strokeWidth="2.0"/>
                     {/* A coherent large-scale design appears INSIDE each
                         region as its bands arrive, rather than just a thin border. */}
-                    <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 36 + 18}) scale(${fillSize * ornamentEmphasis} ${fillSize})`}>
+                    <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 36 + 18}) scale(${fillSize * ornamentEmphasis})`}>
                       {region.zone === 'siku' && (
                         <g>
                           <path d="M 0 -25 L 15 0 L 0 25 L -15 0 Z"
