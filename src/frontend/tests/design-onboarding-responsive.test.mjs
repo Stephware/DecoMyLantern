@@ -33,7 +33,7 @@ test('the onboarding picker occurs only after owner dashboard and recovery-key f
   assert.ok(dashboard.includes('ONBOARDING_PREFIX + lantern.id'))
   assert.ok(dashboard.includes('lantern.acceptedFriends === 0'))
   assert.ok(dashboard.includes('<FirstTimeDesignPicker'))
-  assert.ok(dashboard.includes('if (changed) await onSave(draftDesign, draftPattern)'))
+  assert.ok(dashboard.includes('if (changed) await onSave(draftDesign, lantern.patternKey)'))
   assert.ok(dashboard.includes('markChoice()'))
   assert.ok(dashboard.includes('setDrawerOpen(false)'))
   assert.ok(dashboard.includes('localStorage.setItem(ONBOARDING_PREFIX + lantern.id'))
