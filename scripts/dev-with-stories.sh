@@ -85,6 +85,11 @@ echo "Starting ASP.NET Core on http://localhost:5050 ..."
 (cd "$ROOT/src/backend/DecoMyLantern.Api" && exec dotnet run) &
 API_PID="$!"
 
+if [[ ! -x "$ROOT/src/frontend/node_modules/.bin/vite" ]]; then
+  echo "Installing frontend dependencies..."
+  (cd "$ROOT/src/frontend" && npm ci --no-audit --no-fund)
+fi
+
 echo "Starting React/Vite on http://localhost:5173 ..."
 (cd "$ROOT/src/frontend" && exec npm run dev) &
 WEB_PID="$!"
