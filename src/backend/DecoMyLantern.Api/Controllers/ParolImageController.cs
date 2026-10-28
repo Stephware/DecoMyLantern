@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace DecoMyLantern.Api.Controllers;
 
-public sealed class ParolImageRequest
+public class ParolImageRequest
 {
     [Required, RegularExpression("^(webp|png)$")]
     public string Format { get; set; } = "webp";
@@ -111,7 +111,7 @@ public sealed class ParolImageController(
                     (int)response.StatusCode);
                 if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
                 {
-                    Response.Headers.RetryAfter = "2";
+                    Response.Headers["Retry-After"] = "2";
                     return StatusCode(503, new { message = "Parol image renderer is busy. Try again shortly." });
                 }
                 return StatusCode(503, new { message = "Unable to generate the parol image." });
