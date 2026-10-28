@@ -23,7 +23,10 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
   const codeInput = useRef<HTMLInputElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const busy = replacing || leaving
+  const busyRef = useRef(false)
+  busyRef.current = busy
   const code = recovery?.available ? recovery.recoveryCode : null
+  const expired = recovery !== null && new Date(recovery.expiresAtUtc).getTime() <= Date.now()
 
   useEffect(() => {
     let active = true
@@ -38,7 +41,7 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
     const oldOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape' && !busyRef.current) onClose()
     }
     document.addEventListener('keydown', onKeyDown)
     return () => {
@@ -128,11 +131,13 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
           </div>
         ) : recovery ? (
           <div className="mt-6 rounded-2xl border border-[#e2c6ab] bg-[#faeee4] p-4">
-            <h3 className="font-semibold text-[#86313b]">Your earlier key can't be displayed.</h3>
+            <h3 className="font-semibold text-[#86313b]">{expired
+              ? 'Your previous recovery key has expired.'
+              : 'Your earlier key can’t be displayed.'}</h3>
             <p className="mt-2 text-sm leading-6 text-[#746152]">
-              This parol was created before recovery keys could be securely displayed again.
-              Your existing key still works if you've saved it. You can keep using it, or
-              choose to replace it with a new key.
+              {expired
+                ? 'Your earlier key is no longer valid. While this owner session is active, you may generate a new key for another year.'
+                : 'This parol was created before keys could be securely displayed again. Your existing key still works if saved. You can keep using it, or explicitly replace it.'}
             </p>
             <button type="button" onClick={() => void replaceRecovery()} disabled={busy}
               className="mt-4 w-full rounded-xl bg-[#902632] px-4 py-3 text-sm font-bold text-white disabled:opacity-50">
