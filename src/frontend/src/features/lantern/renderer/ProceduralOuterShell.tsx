@@ -205,6 +205,10 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                 const fillSize = afterFlower
                   ? laterMotifScale(regionIndex) * growthFraction / ornamentEmphasis
                   : Math.min(3.1, Math.max(.55, (end - region.from + 1) * 10.5 / 39))
+                // Keep the approved early flower's old proportions; only
+                // later ornaments expand uniformly in both dimensions.
+                const motifScaleX = fillSize * ornamentEmphasis
+                const motifScaleY = afterFlower ? motifScaleX : fillSize
                 const control = bandMotifPoint(midIndex, sector)
                 return (
                   <g key={sector}
@@ -215,7 +219,7 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                       stroke={ivory} strokeOpacity=".73" strokeWidth="2.0"/>
                     {/* A coherent large-scale design appears INSIDE each
                         region as its bands arrive, rather than just a thin border. */}
-                    <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 36 + 18}) scale(${fillSize * ornamentEmphasis} ${fillSize})`}>
+                    <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 36 + 18}) scale(${motifScaleX} ${motifScaleY})`}>
                       {region.zone === 'siku' && (
                         <g>
                           <path d="M 0 -25 L 15 0 L 0 25 L -15 0 Z"
