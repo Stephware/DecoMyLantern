@@ -112,7 +112,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
   return (
     <div className="min-h-screen bg-[#f7f2e9] pb-28 text-[#283a30] lg:pb-10">
       <header className="relative border-b border-[#e5dac8] bg-[#fffaf2]/95">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-4 sm:px-8 lg:py-5">
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:flex-nowrap sm:gap-4 sm:px-8 lg:py-5">
           <div className="flex items-center gap-2.5">
             <span className="text-2xl text-[#a77a3d]" aria-hidden="true">✦</span>
             <span className="font-serif text-2xl font-semibold tracking-tight text-[#283b2f]">BeMyParol</span>
