@@ -1,11 +1,6 @@
 import { memo, useId } from 'react'
 import ExtendedRegionMotif from './ExtendedRegionMotif'
-import {
-  completedOrnamentRadius,
-  completedOuterOrnamentScale,
-  FLOWER_REGION_INDEX,
-  ornamentWidthEmphasis,
-} from '../growth/ornamentScaling'
+import { ornamentWidthEmphasis } from '../growth/ornamentScaling'
 import type { Theme } from '../../customization/themes'
 import {
   bandMotifPoint,
@@ -174,12 +169,9 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
       <g data-testid="festival-regional-patterns">
         {regionVisible.map((region, regionIndex) => {
           const end = Math.min(growthCount, region.to)
-          // Preserve the existing motifs through the completed palimbun flower.
-          // Later designs have different original SVG sizes, so a simple 6%
-          // transform was insufficient to make stars/diamonds visually larger.
+          // The next ornament design is 6% wider after the previous one finishes.
+          // Keep the original radial size, position and structural band spacing.
           const ornamentEmphasis = ornamentWidthEmphasis(regionIndex)
-          const postFlower = regionIndex > FLOWER_REGION_INDEX
-          const completion = (end - region.from + 1) / (region.to - region.from + 1)
           return (
             <g key={region.zone} data-growth-region={region.zone}
               data-visible-through-layer={end}>
@@ -188,33 +180,18 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                 const inner = festivalMotifPoint(region.from - 1, sector, 10)
                 const outer = festivalMotifPoint(end, sector, 10)
                 const midIndex = Math.floor((region.from + end) / 2)
-                const existingCenter = bandMotifPoint(midIndex, sector)
-                // Align the larger post-flower motifs with the middle of their
-                // actually contributed region, rather than a fixed layer.
-                const angle = -Math.PI / 2 + TAU * (sector + .5) / 10
-                const startPoint = postFlower ? festivalPointAt(region.from - 1, angle) : existingCenter
-                const endPoint = postFlower ? festivalPointAt(end, angle) : existingCenter
-                const center = postFlower ? {
-                  x: (startPoint.x + endPoint.x) / 2,
-                  y: (startPoint.y + endPoint.y) / 2,
-                } : existingCenter
-                // Keep the exact original flower size and early ornament logic.
-                // Later motifs reach successively larger *physical* dimensions
-                // as their own completed structural regions become visible.
-                const fillSize = postFlower
-                  ? completedOuterOrnamentScale(regionIndex) * completion / ornamentEmphasis
-                  : Math.min(3.1, Math.max(.55, (end - region.from + 1) * 10.5 / 39))
+                const center = bandMotifPoint(midIndex, sector)
+                const fillSize = Math.min(3.1, Math.max(.55, (end - region.from + 1) * 10.5 / 39))
                 const control = bandMotifPoint(midIndex, sector)
                 return (
-                  <g key={sector}
-                    data-completed-ornament-radius={postFlower ? completedOrnamentRadius(regionIndex).toFixed(2) : undefined}>
+                  <g key={sector}>
                     <path d={regionPanelPath(region.from, end, sector)}
                       fill={region.zone === 'palimbun' ? motifFill : color}
                       fillOpacity={region.zone === 'palimbun' ? '.42' : '.33'}
                       stroke={ivory} strokeOpacity=".73" strokeWidth="2.0"/>
                     {/* A coherent large-scale design appears INSIDE each
                         region as its bands arrive, rather than just a thin border. */}
-                    <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 36 + 18}) scale(${fillSize * ornamentEmphasis})`}>
+                    <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 36 + 18}) scale(${fillSize * ornamentEmphasis} ${fillSize})`}>
                       {region.zone === 'siku' && (
                         <g>
                           <path d="M 0 -25 L 15 0 L 0 25 L -15 0 Z"
