@@ -4,6 +4,8 @@ import { ApiError, fetchParolSnapshot } from '../../../lib/api'
 import { growthForFriends, outerFitZoom } from '../growth/outerGrowth'
 import { lightPosition } from './lightPositions'
 import { snapshotRequestKey } from './snapshotState'
+import { shouldAnimateSnapshot, SNAPSHOT_WAVE_DURATIONS_MS, SNAPSHOT_WAVE_LABEL,
+  SNAPSHOT_WAVE_RADIUS, type SnapshotWave, type SnapshotIdentity } from './snapshotReveal'
 import type { LanternLight, SavedParolSource } from './LanternScene'
 
 type Props = {
@@ -16,7 +18,8 @@ type Props = {
 
 type Point = { x: number; y: number }
 type Camera = { zoom: number; x: number; y: number }
-type RenderedImage = { key: string; url: string }
+type RenderedImage = SnapshotIdentity & { key: string; url: string }
+type ImageTransition = { next: RenderedImage; wave: SnapshotWave }
 
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 4
@@ -27,9 +30,8 @@ const CENTER_Y = 302
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
 /**
- * Phase 3 displays a single, already-fitted WebP produced by Phase 2.
- * No large procedural SVG tree is mounted for real owner or guest parols.
- * Three-wave layer animation is deliberately deferred to Phase 4.
+ * Reveal the completed cached WebP in three lightweight image-mask waves.
+ * No procedural parol SVGs are mounted in the real owner and guest viewers.
  */
 export default function CachedParolScene({
   theme, contributions, friendCount, pattern, snapshot,
