@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import {
   BASE_FESTIVAL_RADIUS,
   FRIEND_LAYER_SPACING,
+  growthLayerWidth,
   GROWTH_REGIONS,
   OUTER_RECIPES,
   PANEL_SEGMENTS,
@@ -46,7 +47,7 @@ test('all structural growth layers are filled without gaps', () => {
       assert.equal(layers[i].friendNumber, i + 1)
       assert.equal(layers[i].innerRadius, outerRadiusForFriends(i))
       assert.equal(layers[i].outerRadius, outerRadiusForFriends(i + 1))
-      assert.ok(Math.abs(layers[i].outerRadius - layers[i].innerRadius - FRIEND_LAYER_SPACING) < 1e-9)
+      assert.ok(Math.abs(layers[i].outerRadius - layers[i].innerRadius - growthLayerWidth(i + 1)) < 1e-9)
       assert.equal(layers[i].zone, growthZoneForLayer(i + 1))
       const band = festivalBandPath(i + 1)
       assert.equal((band.match(/M /g) ?? []).length, 2)
