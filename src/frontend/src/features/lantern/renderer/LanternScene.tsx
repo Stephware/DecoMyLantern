@@ -17,13 +17,15 @@ type Props = {
   theme: Theme
   pattern?: string
   contributions?: readonly LanternLight[]
+  /** The accepted friend count is authoritative even when slots have gaps. */
+  friendCount?: number
   /** Unsaved, synthetic states are strictly for the existing Design Lab. */
   previewCount?: number
   snapshot?: SavedParolSource
 }
 
 export default function LanternScene({
-  theme, pattern = 'default', contributions = [], previewCount, snapshot,
+  theme, pattern = 'default', contributions = [], friendCount, previewCount, snapshot,
 }: Props) {
   if (previewCount !== undefined) {
     return (
@@ -42,5 +44,6 @@ export default function LanternScene({
   </p>
 
   return <CachedParolScene theme={theme} pattern={pattern}
-    contributions={contributions} snapshot={snapshot} />
+    contributions={contributions} friendCount={friendCount ?? contributions.length}
+    snapshot={snapshot} />
 }
