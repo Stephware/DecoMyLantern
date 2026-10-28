@@ -2,8 +2,8 @@
  * Ligligan Parul-inspired growth grammar.
  *
  * A complete circular/floral festival lantern exists at zero friends.
- * Every friend advances THREE true geometric growth layers, with only one
- * visible outer contour after each three layers. Fifteen themed regions span
+ * Every friend advances THREE true geometric growth layers in one progressively
+ * wider band, with only one visible outer contour after each three layers. Fifteen themed regions span
  * the first 150 growth layers, maintaining an evolving festival parol.
  */
 export type OuterDesignKey =
@@ -32,8 +32,11 @@ export const OUTER_RECIPES: Readonly<Record<OuterDesignKey, OuterDesignRecipe>> 
 
 export const PAROL_CENTER = { x: 300, y: 302 } as const
 export const BASE_FESTIVAL_RADIUS = 164
+// Width of the first FRIEND'S complete three-layer contribution (not one layer).
 export const FRIEND_LAYER_SPACING = 10.5
+export const FRIEND_BAND_GROWTH = 0.06
 export const PANEL_SEGMENTS = 20
+export const SIGNATURE_SECTORS = 10
 export const GROWTH_PER_FRIEND = 3
 export const DESIGN_GROWTH_TARGET = 150
 
@@ -99,9 +102,47 @@ export function growthZoneForLayer(friendNumber: number): GrowthZone {
   return 'corona'
 }
 
+/** Width of one friend's complete three-layer addition, growing by 0.06. */
+export function friendBandWidth(friendNumber: number): number {
+  if (!Number.isSafeInteger(friendNumber) || friendNumber < 1)
+    throw new RangeError('Friend number must be a positive integer.')
+  return FRIEND_LAYER_SPACING + FRIEND_BAND_GROWTH * (friendNumber - 1)
+}
+
+/** Width of exactly one of the three incremental growth waves. */
+export function growthLayerWidth(layerIndex: number): number {
+  if (!Number.isSafeInteger(layerIndex) || layerIndex < 1)
+    throw new RangeError('Growth layer must be a positive integer.')
+  return friendBandWidth(Math.ceil(layerIndex / GROWTH_PER_FRIEND)) / GROWTH_PER_FRIEND
+}
+
+/**
+ * The argument is a GROWTH LAYER count (3 per friend), retained under the
+ * original function name for callers. Full friend bands follow an arithmetic
+ * series; partial waves use exactly one third of that friend's band.
+ * At 0/10/25/50 friends: 164 / 271.7 / 444.5 / 762.5 SVG units.
+ */
 export function outerRadiusForFriends(count: number): number {
   assertFriendCount(count)
-  return BASE_FESTIVAL_RADIUS + count * FRIEND_LAYER_SPACING
+  const full = Math.floor(count / GROWTH_PER_FRIEND)
+  const partial = count % GROWTH_PER_FRIEND
+  return BASE_FESTIVAL_RADIUS +
+    full * FRIEND_LAYER_SPACING +
+    FRIEND_BAND_GROWTH * full * (full - 1) / 2 +
+    partial * friendBandWidth(full + 1) / GROWTH_PER_FRIEND
+}
+
+/**
+ * Every friend's motif grows ~1% and each new region gains an additional
+ * 6% emphasis. Geometry is clipped to its own region by the renderer.
+ */
+export function ornamentScaleAtLayer(layerIndex: number): number {
+  if (!Number.isSafeInteger(layerIndex) || layerIndex < 1)
+    throw new RangeError('Growth layer must be a positive integer.')
+  const friendNumber = Math.ceil(layerIndex / GROWTH_PER_FRIEND)
+  const zone = growthZoneForLayer(layerIndex)
+  const regionIndex = GROWTH_REGIONS.findIndex(region => region.zone === zone)
+  return (1 + (friendNumber - 1) * 0.01) * (1 + regionIndex * 0.06)
 }
 
 export function outerFitZoom(count: number): number {
