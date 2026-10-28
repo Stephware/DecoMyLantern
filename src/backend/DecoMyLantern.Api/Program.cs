@@ -19,6 +19,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient("StoryRenderer", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["StoryRenderer:Url"] ?? "http://127.0.0.1:7070");
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
 var trustedProxyNetwork = builder.Configuration["ReverseProxy:KnownNetwork"];
 if (!string.IsNullOrWhiteSpace(trustedProxyNetwork))
 {
@@ -111,6 +116,20 @@ builder.Services.AddRateLimiter(options =>
         _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 80, Window = TimeSpan.FromMinutes(15),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("story-owner", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10, Window = TimeSpan.FromHours(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("story-guest", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 12, Window = TimeSpan.FromHours(1),
             QueueLimit = 0, AutoReplenishment = true
         }));
     options.AddPolicy("owner-recover", context => RateLimitPartition.GetFixedWindowLimiter(

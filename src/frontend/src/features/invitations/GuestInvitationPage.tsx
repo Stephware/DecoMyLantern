@@ -2,7 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { contributeInvitation, previewInvitation, type InvitationPreview } from '../../lib/api'
 import LanternScene from '../lantern/renderer/LanternScene'
 import { THEMES } from '../customization/themes'
-import { isValidInvitationToken } from './invitationLinks'
+import { isValidInvitationToken, invitationUrl } from './invitationLinks'
+import StoryShare from '../story/StoryShare'
 
 type Props = { token: string }
 
@@ -13,6 +14,7 @@ export default function GuestInvitationPage({ token }: Props) {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [ownSlot, setOwnSlot] = useState<number | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -40,6 +42,7 @@ export default function GuestInvitationPage({ token }: Props) {
       const result = await contributeInvitation(token, name.trim(), message.trim())
       setPreview(result.parol)
       setSubmitted(true)
+      setOwnSlot(result.slotIndex)
       setMessage('')
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to add your light. Try again.')
@@ -108,6 +111,12 @@ export default function GuestInvitationPage({ token }: Props) {
                   You grew the lantern by three whole decorative layers and completed one illuminated outer band. Only one light can be added per browser visitor.
                   Your Christmas message, if you left one, is visible only to the owner on December 25 (Philippine time).
                 </p>
+                {preview && <div className="mt-5">
+                  <StoryShare invitationUrl={invitationUrl(window.location.origin, token)} token={token}
+                    data={{kind:'friend',designKey:preview.designKey,patternKey:preview.patternKey,
+                      friendCount:preview.acceptedFriends,slots:preview.lights.map(light=>light.slotIndex),
+                      highlightSlot:ownSlot}} />
+                </div>}
                 <a href="/" className="mt-6 inline-block rounded-xl border border-amber-300/40 px-5 py-3 text-sm font-semibold text-amber-100">
                   Make my own parol →
                 </a>
