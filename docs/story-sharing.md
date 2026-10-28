@@ -22,7 +22,21 @@ The film-like 8-second composition reveals the three most recent growth layers, 
 - **Private Node/Remotion renderer**: `story-renderer` receives sanitized Story props over the private Docker network and renders H.264 MP4 or PNG. It caches identical exports for 24 hours (up to 32 files) and runs one render job at a time. No public ingress or social API credentials.
 - **No database migration** for Stories. The existing backend stores all required light and pattern data.
 
-## Required setup
+## Local development: single command (recommended)
+
+Stop any existing `dotnet run`, Vite and standalone renderer processes first (ports 5050, 5173 and 7070 must be free). From the **repository root**, run:
+
+```bash
+bash scripts/dev-with-stories.sh
+```
+
+The script checks tools and ports, installs the renderer dependencies on first use, runs Remotion's Chrome Headless Shell preparation, starts the private renderer, and then starts the .NET API and Vite. It generates **one temporary internal renderer secret per launch** and passes it to both the API and Node, so their credentials always match. The frontend opens at `http://localhost:5173`. On exit, the launcher stops its child services.
+
+**Do not rotate your existing invitation encryption key.** The ASP.NET API still needs its original SQL connection and `Invitations:EncryptionKey` settings (in local .NET User Secrets). This script intentionally does not alter either.
+
+If renderer startup fails, inspect `story-renderer/.dev-renderer.log`. You can verify readiness with `curl -f http://127.0.0.1:7070/health`. An H.264 export is CPU-intensive, especially for a large parol.
+
+## Required setup for Docker/production
 
 For Compose (in the untracked root `.env`) set a **new, independent** internal authentication secret:
 ```shell
