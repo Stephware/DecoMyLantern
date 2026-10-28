@@ -174,7 +174,9 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
           Incomplete regions stop exactly at the current friend count. */}
       <g data-testid="festival-regional-patterns">
         {regionVisible.map((region, regionIndex) => {
-          const end = Math.min(growthCount, region.to)
+          // After the 50-friend milestone, keep growing the final corona
+          // rather than leaving all later friend bands without large motifs.
+          const end = region.zone === 'corona' ? growthCount : Math.min(growthCount, region.to)
           return (
             <g key={region.zone} data-growth-region={region.zone}
               data-visible-through-layer={end}>
@@ -196,7 +198,7 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                 // Ten large signatures expand tangentially with every friend
                 // and gain additional emphasis when a new region starts. Radial height
                 // remains constrained by the actual region width.
-                const radialScale = Math.max(.02, bandDepth * .40 / 35)
+                const radialScale = Math.min(1.45, Math.max(.02, bandDepth * .40 / 35))
                 const tangentialScale = .7 * ornamentScaleAtLayer(end) *
                   Math.min(1, (end - region.from + 1) / 3)
                 const panel = regionPanelPath(region.from, end, sector)
