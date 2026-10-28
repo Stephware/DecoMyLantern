@@ -1,4 +1,4 @@
-import { minimumOuterRegionDepth, ornamentWidthEmphasis } from './ornamentScaling.ts'
+import { completedMotifVisualRadius, FLOWER_REGION_INDEX } from './ornamentScaling.ts'
 
 /**
  * Ligligan Parul-inspired growth grammar.
@@ -101,38 +101,9 @@ export function growthZoneForLayer(friendNumber: number): GrowthZone {
   return 'corona'
 }
 
-/**
- * Each post-flower region is deep enough for its finished ornament to exceed
- * the flower and the preceding ornament, not merely scaled by 6%. Before
- * layer 36, the existing geometry is exactly unchanged. No empty gaps or
- * changes to the 15 region thresholds and three waves per friend.
- */
-export function growthLayerSpacing(layerIndex: number): number {
-  if (!Number.isSafeInteger(layerIndex) || layerIndex < 1)
-    throw new RangeError('Growth layer index must be a positive integer.')
-  const regionIndex = GROWTH_REGIONS.findIndex(region => layerIndex <= region.to)
-  const index = regionIndex === -1 ? GROWTH_REGIONS.length - 1 : regionIndex
-  const region = GROWTH_REGIONS[index]
-  const originalDepthPerLayer = FRIEND_LAYER_SPACING * ornamentWidthEmphasis(index)
-  return Math.max(originalDepthPerLayer,
-    minimumOuterRegionDepth(index) / (region.to - region.from + 1))
-}
-
-/** Radius after a given number of structural growth layers (three per friend). */
 export function outerRadiusForFriends(count: number): number {
   assertFriendCount(count)
-  let radius = BASE_FESTIVAL_RADIUS
-  for (let i = 0; i < GROWTH_REGIONS.length; i++) {
-    const region = GROWTH_REGIONS[i]
-    const layersInRegion = Math.max(0, Math.min(count, region.to) - region.from + 1)
-    if (!layersInRegion) break
-    radius += layersInRegion * growthLayerSpacing(region.from)
-  }
-  // The final corona continues past 150 layers at its established spacing.
-  if (count > DESIGN_GROWTH_TARGET)
-    radius += (count - DESIGN_GROWTH_TARGET) *
-      growthLayerSpacing(DESIGN_GROWTH_TARGET)
-  return radius
+  return BASE_FESTIVAL_RADIUS + count * FRIEND_LAYER_SPACING
 }
 
 export function outerFitZoom(count: number): number {
@@ -255,9 +226,25 @@ export function regionPanelPath(firstLayer: number, lastLayer: number, sector: n
     Q ${cp.x.toFixed(2)} ${cp.y.toFixed(2)} ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} Z`
 }
 
-/** Conservative geometric bound, including the new floral lobes after layer 50. */
+/**
+ * Reserve room for the actual outer petals, not just the structural circle.
+ * The underlying filled growth layers retain their original spacing. The
+ * camera fits the extended motifs so zoom-out still reveals their full size.
+ */
 export function festivalMaxExtent(layerIndex: number): number {
   assertFriendCount(layerIndex)
   const grand = Math.min(1, Math.max(0, (layerIndex - 50) / 100))
-  return outerRadiusForFriends(layerIndex) + 36 + 16 * grand
+  let extent = outerRadiusForFriends(layerIndex) + 36 + 16 * grand
+  for (let index = FLOWER_REGION_INDEX + 1; index < GROWTH_REGIONS.length; index++) {
+    const region = GROWTH_REGIONS[index]
+    if (layerIndex < region.from) break
+    const last = Math.min(layerIndex, region.to)
+    const fraction = (last - region.from + 1) / (region.to - region.from + 1)
+    const centerRadius = (outerRadiusForFriends(region.from - 1) +
+      outerRadiusForFriends(last)) / 2
+    // Extra headroom for the softly scalloped radial center of each petal.
+    extent = Math.max(extent,
+      centerRadius + completedMotifVisualRadius(index) * fraction + 52)
+  }
+  return extent
 }
