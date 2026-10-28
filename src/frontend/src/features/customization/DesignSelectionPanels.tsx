@@ -94,15 +94,17 @@ export function MobileDesignDrawer({
   changed, busy, error, onSave,
 }: SheetProps) {
   const startY = useRef<number | null>(null)
+  const swiped = useRef(false)
   const onStart = (event: TouchEvent<HTMLButtonElement>) => {
     startY.current = event.changedTouches[0]?.clientY ?? null
+    swiped.current = false
   }
   const onEnd = (event: TouchEvent<HTMLButtonElement>) => {
     const end = event.changedTouches[0]?.clientY
     if (startY.current === null || end === undefined) return
     const movement = end - startY.current
-    if (movement < -35) onOpenChange(true)
-    else if (movement > 35) onOpenChange(false)
+    if (movement < -35) { swiped.current = true; onOpenChange(true) }
+    else if (movement > 35) { swiped.current = true; onOpenChange(false) }
     startY.current = null
   }
   useEffect(() => {
@@ -122,7 +124,11 @@ export function MobileDesignDrawer({
           ? 'max-h-[84dvh] overflow-y-auto'
           : 'overflow-hidden'}`}
         style={{paddingBottom:'env(safe-area-inset-bottom)'}}>
-        <button type="button" onClick={() => onOpenChange(!open)}
+        <button type="button" onClick={() => {
+            // Suppress the synthetic click generated after a vertical swipe.
+            if (swiped.current) { swiped.current = false; return }
+            onOpenChange(!open)
+          }}
           onTouchStart={onStart} onTouchEnd={onEnd} aria-expanded={open}
           aria-controls="mobile-design-choices"
           className="flex w-full touch-pan-x flex-col items-center px-5 pb-3 pt-2 text-[#263c30]">
