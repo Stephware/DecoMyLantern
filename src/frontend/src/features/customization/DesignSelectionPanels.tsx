@@ -9,6 +9,7 @@ export const PATTERNS = [
 ] as const
 
 type Picker = {
+  firstTime: boolean
   designs: readonly Design[]
   selected: string
   onSelect: (key: string) => void
@@ -19,7 +20,7 @@ type Picker = {
 }
 
 export function FirstTimeDesignPicker({
-  designs, selected, onSelect, busy, error, onSave, onLater,
+  firstTime, designs, selected, onSelect, busy, error, onSave, onLater,
 }: Picker) {
   const heading = useRef<HTMLHeadingElement>(null)
   useEffect(() => {
@@ -41,11 +42,11 @@ export function FirstTimeDesignPicker({
         <header className="border-b border-[#e5d9c7] px-5 py-4 sm:px-8 sm:py-6">
           <p className="text-[11px] font-bold uppercase tracking-[0.23em] text-[#9a5c30]">Welcome to your Christmas parol</p>
           <h2 ref={heading} tabIndex={-1} id="first-design-title" className="mt-2 font-serif text-2xl font-semibold outline-none sm:text-4xl">
-            Choose the parol you'll grow together.
+            {firstTime ? 'Choose the parol you’ll grow together.' : 'Find your next favorite parol.'}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#756b5f]">
-            Explore all six designs in their most festive 50-friend form. Your real parol starts small,
-            grows only when friends join, and can be redesigned anytime.
+            Explore all six designs in their most festive 50-friend form. Your real parol grows only
+            when friends join, and you can change styles anytime.
           </p>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-8">
@@ -60,11 +61,11 @@ export function FirstTimeDesignPicker({
           <div className="flex w-full gap-2 sm:w-auto">
             <button type="button" disabled={busy} onClick={onLater}
               className="flex-1 rounded-xl border border-[#d4c1a9] px-4 py-3 text-sm font-semibold text-[#4c443a] disabled:opacity-50 sm:flex-none">
-              Decide later
+              {firstTime ? 'Decide later' : 'Cancel'}
             </button>
             <button type="button" disabled={busy || designs.length === 0} onClick={onSave}
               className="flex-1 rounded-xl bg-[#922632] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#76202a] disabled:opacity-50 sm:flex-none">
-              {busy ? 'Saving…' : 'Choose this parol'}
+              {busy ? 'Saving…' : firstTime ? 'Choose this parol' : 'Apply my selection'}
             </button>
           </div>
           {error && <p role="alert" className="w-full text-sm text-[#9f2432]">{error}</p>}
