@@ -13,6 +13,7 @@ public sealed class OwnerCredentialConfiguration : IEntityTypeConfiguration<Owne
             .OnDelete(DeleteBehavior.Restrict);
         entity.Property(x => x.TokenHash).IsRequired().HasMaxLength(64).IsUnicode(false);
         entity.Property(x => x.RecoveryHash).IsRequired().HasMaxLength(64).IsUnicode(false);
+        entity.Property(x => x.EncryptedRecoveryCode).HasMaxLength(160).IsUnicode(false);
         entity.Property(x => x.RowVersion).IsRowVersion();
         entity.HasIndex(x => x.TokenHash).IsUnique();
         entity.HasIndex(x => x.RecoveryHash).IsUnique();
