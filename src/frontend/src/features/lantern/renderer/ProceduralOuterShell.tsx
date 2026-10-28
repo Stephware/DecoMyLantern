@@ -50,6 +50,9 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
   const goldTrim = primary
   const glow = `url(#${uid}-jewel)`
   const regionVisible = GROWTH_REGIONS.filter(region => growthCount >= region.from)
+  // Larger outer petals sit behind earlier signature motifs. This preserves
+  // the established flower even when the later ornaments overlap inward.
+  const paintedRegions = regionVisible.length > 3 ? [...regionVisible].reverse() : regionVisible
   const motifFill = recipe.motif === 'flower' || recipe.motif === 'jasmine' ? rose :
     recipe.motif === 'star' ? ivory : primary
 
@@ -174,7 +177,8 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
           bands into coherent geometric flowers, diamonds and fan windows.
           Incomplete regions stop exactly at the current friend count. */}
       <g data-testid="festival-regional-patterns">
-        {regionVisible.map((region, regionIndex) => {
+        {paintedRegions.map(region => {
+          const regionIndex = GROWTH_REGIONS.findIndex(item => item.zone === region.zone)
           const end = Math.min(growthCount, region.to)
           // Preserve the diamond, mosaic and flower exactly as they were.
           // For later regions, compensate for the artwork's intrinsic size
