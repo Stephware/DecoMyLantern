@@ -327,7 +327,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
         onSave={() => void saveDesign()} />}
 
       {lantern && pickerOpen && <FirstTimeDesignPicker
-        designs={designs} selected={draftDesign} onSelect={setDraftDesign}
+        firstTime={firstPicker} designs={designs} selected={draftDesign} onSelect={setDraftDesign}
         busy={busy} error={error} onSave={() => void saveDesign(true)}
         onLater={dismissPicker} />}
       <footer className="mx-auto max-w-[1440px] px-4 pb-5 text-center text-xs text-[#9b8e7a] sm:px-8">
