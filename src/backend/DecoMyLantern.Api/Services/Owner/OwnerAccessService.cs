@@ -76,6 +76,10 @@ public sealed class OwnerAccessService(
         // hash and the original one-year deadline. Repeated use never rotates it.
         var newToken = OwnerSecrets.Generate();
         OwnerRecoveryPolicy.RefreshSession(credential, Hash(newToken), now);
+        // An older key can now be encrypted when its rightful holder uses it;
+        // this does not rotate the code or extend its original one-year expiry.
+        if (credential.EncryptedRecoveryCode is null)
+            credential.EncryptedRecoveryCode = recoveryCipher.Protect(recoveryCode, credential.OwnerUserId);
         credential.SetupPending = false;
         try { await database.SaveChangesAsync(cancellationToken); }
         catch (DbUpdateConcurrencyException)
