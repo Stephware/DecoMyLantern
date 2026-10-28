@@ -38,10 +38,11 @@ If renderer startup fails, inspect `story-renderer/.dev-renderer.log`. You can v
 
 ## Required setup for Docker/production
 
-For Compose (in the untracked root `.env`) set a **new, independent** internal authentication secret:
-```shell
-STORY_RENDERER_SECRET=$(openssl rand -hex 32)
+For Compose, generate a **new, independent** private authentication secret:
+```bash
+openssl rand -hex 32
 ```
+Copy the output into the ignored root `.env` as `STORY_RENDERER_SECRET=your-generated-value`. **Do not** paste `$(openssl ...)` literally into `.env`, because Docker Compose does not run shell substitutions there.
 Keep `INVITATION_ENCRYPTION_KEY` from the preceding single-link feature as-is. Then build and start:
 ```shell
 docker compose -f compose.yaml up -d --build story-renderer backend frontend caddy
