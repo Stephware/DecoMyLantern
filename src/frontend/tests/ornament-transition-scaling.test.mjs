@@ -59,6 +59,36 @@ test('only existing large region motifs are uniformly scaled', () => {
   }
 })
 
+test('each decorative region has 6% more radial room with no gaps', () => {
+  assert.deepEqual(GROWTH_REGIONS.map(({ from, to }) => [from, to]), [
+    [1, 10], [11, 20], [21, 35], [36, 45], [46, 50],
+    [51, 60], [61, 70], [71, 80], [81, 90], [91, 100],
+    [101, 110], [111, 120], [121, 130], [131, 140], [141, 150],
+  ])
+  let previousSpacing = 0
+  for (let layer = 1; layer <= 165; layer++) {
+    const spacing = growthLayerSpacing(layer)
+    const actual = outerRadiusForFriends(layer) - outerRadiusForFriends(layer - 1)
+    assert.ok(Math.abs(actual - spacing) < 1e-8, `gap at layer ${layer}`)
+    assert.ok(spacing >= previousSpacing, `layer ${layer} must not shrink`)
+    previousSpacing = spacing
+  }
+  for (let regionIndex = 1; regionIndex < GROWTH_REGIONS.length; regionIndex++) {
+    const current = GROWTH_REGIONS[regionIndex].from
+    const increase = growthLayerSpacing(current) / growthLayerSpacing(current - 1)
+    assert.ok(Math.abs(increase - 1.06) < 1e-10)
+  }
+})
+
+test('both website and Story reuse the same new region geometry', () => {
+  const story = readFileSync(
+    new URL('../src/features/story/StoryFrame.tsx', import.meta.url), 'utf8',
+  )
+  assert.ok(story.includes('<ProceduralOuterShell'))
+  assert.ok(story.includes('outerFitZoom(count)'))
+  assert.ok(outerRadiusForFriends(150) > BASE_FESTIVAL_RADIUS + 150 * FRIEND_LAYER_SPACING)
+})
+
 test('reject invalid region indexes', () => {
   for (const n of [-1, 1.5, 15, NaN, Infinity]) {
     assert.throws(() => ornamentWidthEmphasis(n), RangeError)
