@@ -1,5 +1,3 @@
-import { minimumOuterRegionDepth, ornamentWidthEmphasis } from './ornamentScaling.ts'
-
 /**
  * Ligligan Parul-inspired growth grammar.
  *
@@ -101,38 +99,9 @@ export function growthZoneForLayer(friendNumber: number): GrowthZone {
   return 'corona'
 }
 
-/**
- * Each post-flower region is deep enough for its finished ornament to exceed
- * the flower and the preceding ornament, not merely scaled by 6%. Before
- * layer 36, the existing geometry is exactly unchanged. No empty gaps or
- * changes to the 15 region thresholds and three waves per friend.
- */
-export function growthLayerSpacing(layerIndex: number): number {
-  if (!Number.isSafeInteger(layerIndex) || layerIndex < 1)
-    throw new RangeError('Growth layer index must be a positive integer.')
-  const regionIndex = GROWTH_REGIONS.findIndex(region => layerIndex <= region.to)
-  const index = regionIndex === -1 ? GROWTH_REGIONS.length - 1 : regionIndex
-  const region = GROWTH_REGIONS[index]
-  const originalDepthPerLayer = FRIEND_LAYER_SPACING * ornamentWidthEmphasis(index)
-  return Math.max(originalDepthPerLayer,
-    minimumOuterRegionDepth(index) / (region.to - region.from + 1))
-}
-
-/** Radius after a given number of structural growth layers (three per friend). */
 export function outerRadiusForFriends(count: number): number {
   assertFriendCount(count)
-  let radius = BASE_FESTIVAL_RADIUS
-  for (let i = 0; i < GROWTH_REGIONS.length; i++) {
-    const region = GROWTH_REGIONS[i]
-    const layersInRegion = Math.max(0, Math.min(count, region.to) - region.from + 1)
-    if (!layersInRegion) break
-    radius += layersInRegion * growthLayerSpacing(region.from)
-  }
-  // The final corona continues past 150 layers at its established spacing.
-  if (count > DESIGN_GROWTH_TARGET)
-    radius += (count - DESIGN_GROWTH_TARGET) *
-      growthLayerSpacing(DESIGN_GROWTH_TARGET)
-  return radius
+  return BASE_FESTIVAL_RADIUS + count * FRIEND_LAYER_SPACING
 }
 
 export function outerFitZoom(count: number): number {
