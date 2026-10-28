@@ -51,6 +51,17 @@ The rendering service is reachable only on the Compose network at `http://story-
 
 For local processes without Docker, install in `story-renderer` using `npm install`, set `STORY_RENDERER_SECRET`, run `npm start`, and set the API's `StoryRenderer:SharedSecret` user secret to the same value. It defaults to `http://127.0.0.1:7070`. Linux rendering requires Chromium dependencies; the dedicated Dockerfile installs them.
 
+## Keep shared visuals in sync
+
+The dashboard, guest views, and Story video/PNG reuse the same parol
+`ProceduralOuterShell` and growth geometry. When adjusting ornamental size,
+region layout, or Fit zoom, check the **20-friend and 50-friend** Design Lab
+previews alongside both Story export formats; a change that looks good in the
+dashboard can become too small when the entire parol is fit into a portrait
+Story. Preserve the latest invitation modal, backend renderer diagnostics,
+and `scripts/dev-with-stories.sh` launcher when integrating older
+Story-sharing branches.
+
 ## Verification (required before release)
 
 - Frontend: `npm ci && npm run typecheck && npm run lint && npm test && npm run build` from `src/frontend`.
