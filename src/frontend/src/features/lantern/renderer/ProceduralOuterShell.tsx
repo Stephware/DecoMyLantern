@@ -166,7 +166,7 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
               {isFriendBoundary(n) && <path d={festivalOutlinePath(n)} fill="none"
                 stroke={n % 15 === 0 ? ivory : trim}
                 strokeWidth={n % 15 === 0 ? 2.3 : 1.05}
-                strokeOpacity={n % 15 === 0 ? '.82' : '.45'}
+                strokeOpacity={outerDetail ? (n % 15 === 0 ? '.28' : '.09') : (n % 15 === 0 ? '.82' : '.45')}
                 strokeLinejoin="round"/>}
             </g>
           )
@@ -302,7 +302,8 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
           <path key={n} d={festivalOutlinePath(n)} fill="none"
             stroke={n % 15 === 0 ? ivory : goldTrim}
             strokeWidth={n % 15 === 0 ? 1.6 : .75}
-            strokeOpacity={n % 15 === 0 ? '.82' : '.35'}/>
+            strokeOpacity={n > GROWTH_REGIONS[FLOWER_REGION_INDEX].to
+              ? (n % 15 === 0 ? '.25' : '.08') : (n % 15 === 0 ? '.82' : '.35')}/>
         ))}
       </g>
 
@@ -314,7 +315,8 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
             const pos = bandMotifPoint(layer.friendNumber, sector, 5)
             const n = layer.friendNumber
             return (
-              <g key={`${n}-${sector}`} transform={`translate(${pos.x} ${pos.y})`}>
+              <g key={`${n}-${sector}`} transform={`translate(${pos.x} ${pos.y})`}
+                opacity={n > GROWTH_REGIONS[FLOWER_REGION_INDEX].to ? .3 : 1}>
                 <circle r="9.5" fill="#263b48" fillOpacity=".82"
                   stroke={ivory} strokeWidth="1.8"/>
                 {(recipe.motif === 'flower' || recipe.motif === 'jasmine') && (
