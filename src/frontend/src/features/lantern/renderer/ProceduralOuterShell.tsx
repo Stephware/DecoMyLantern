@@ -1,6 +1,11 @@
 import { memo, useId } from 'react'
 import ExtendedRegionMotif from './ExtendedRegionMotif'
-import { ornamentWidthEmphasis } from '../growth/ornamentScaling'
+import {
+  FLOWER_REGION_INDEX,
+  laterMotifScale,
+  ornamentWidthEmphasis,
+  completedMotifVisualRadius,
+} from '../growth/ornamentScaling'
 import type { Theme } from '../../customization/themes'
 import {
   bandMotifPoint,
@@ -79,11 +84,13 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
           const familyIndex = GROWTH_REGIONS.findIndex(region => region.zone === zone)
           const hue = palette[(familyIndex + Math.floor(n / 3)) % palette.length]
           const trim = familyIndex % 2 === 0 ? ivory : primary
+          const outerDetail = n > GROWTH_REGIONS[FLOWER_REGION_INDEX].to
           return (
             <g key={n} data-growth-layer={n} data-region={zone}
               data-boundary={isFriendBoundary(n) ? "friend" : undefined}
               className={animateGrowth && n === growthCount ? "parol-growth-layer-arrive" : undefined}>
-              <path d={festivalBandPath(n)} fill={hue} fillOpacity=".37"
+              <path d={festivalBandPath(n)} fill={hue}
+                fillOpacity={outerDetail ? '.19' : '.37'}
                 fillRule="evenodd" stroke="none" />
               {Array.from({ length: PANEL_SEGMENTS }, (_, segment) => {
                 const cellColor = palette[(segment % 4 + familyIndex + n) % palette.length]
@@ -91,8 +98,8 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                   <path key={segment} data-capiz-facet={segment}
                     d={festivalFacetPath(n, segment)}
                     fill={segment % 3 === 0 ? glass : cellColor}
-                    fillOpacity={segment % 3 === 0 ? '.4' : '.25'}
-                    stroke={ivory} strokeOpacity=".12" strokeWidth=".5" />
+                    fillOpacity={outerDetail ? '.12' : segment % 3 === 0 ? '.4' : '.25'}
+                    stroke={ivory} strokeOpacity={outerDetail ? '.06' : '.12'} strokeWidth=".5" />
                 )
               })}
 
@@ -169,9 +176,12 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
       <g data-testid="festival-regional-patterns">
         {regionVisible.map((region, regionIndex) => {
           const end = Math.min(growthCount, region.to)
-          // The next ornament design is 6% wider after the previous one finishes.
-          // Keep the original radial size, position and structural band spacing.
+          // Preserve the diamond, mosaic and flower exactly as they were.
+          // For later regions, compensate for the artwork's intrinsic size
+          // rather than making the entire parol radius disproportionately big.
           const ornamentEmphasis = ornamentWidthEmphasis(regionIndex)
+          const afterFlower = regionIndex > FLOWER_REGION_INDEX
+          const growthFraction = (end - region.from + 1) / (region.to - region.from + 1)
           return (
             <g key={region.zone} data-growth-region={region.zone}
               data-visible-through-layer={end}>
@@ -180,14 +190,24 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                 const inner = festivalMotifPoint(region.from - 1, sector, 10)
                 const outer = festivalMotifPoint(end, sector, 10)
                 const midIndex = Math.floor((region.from + end) / 2)
-                const center = bandMotifPoint(midIndex, sector)
-                const fillSize = Math.min(3.1, Math.max(.55, (end - region.from + 1) * 10.5 / 39))
+                const originalCenter = bandMotifPoint(midIndex, sector)
+                const angle = -Math.PI / 2 + TAU * (sector + .5) / 10
+                const regionStart = afterFlower ? festivalPointAt(region.from - 1, angle) : originalCenter
+                const regionEnd = afterFlower ? festivalPointAt(end, angle) : originalCenter
+                const center = afterFlower ? {
+                  x: (regionStart.x + regionEnd.x) / 2,
+                  y: (regionStart.y + regionEnd.y) / 2,
+                } : originalCenter
+                const fillSize = afterFlower
+                  ? laterMotifScale(regionIndex) * growthFraction / ornamentEmphasis
+                  : Math.min(3.1, Math.max(.55, (end - region.from + 1) * 10.5 / 39))
                 const control = bandMotifPoint(midIndex, sector)
                 return (
-                  <g key={sector}>
+                  <g key={sector}
+                    data-ornament-radius={afterFlower ? completedMotifVisualRadius(regionIndex).toFixed(2) : undefined}>
                     <path d={regionPanelPath(region.from, end, sector)}
                       fill={region.zone === 'palimbun' ? motifFill : color}
-                      fillOpacity={region.zone === 'palimbun' ? '.42' : '.33'}
+                      fillOpacity={afterFlower ? '.48' : region.zone === 'palimbun' ? '.42' : '.33'}
                       stroke={ivory} strokeOpacity=".73" strokeWidth="2.0"/>
                     {/* A coherent large-scale design appears INSIDE each
                         region as its bands arrive, rather than just a thin border. */}
