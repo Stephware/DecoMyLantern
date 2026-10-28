@@ -1,7 +1,9 @@
 import http from 'node:http'
 import crypto from 'node:crypto'
 import {createReadStream} from 'node:fs'
-import {mkdir, readdir, stat, unlink} from 'node:fs/promises'
+import {mkdir, readdir, stat, unlink, rename} from 'node:fs/promises'
+import sharp from 'sharp'
+import {validParolImage, parolImageDigest, PAROL_IMAGE_COMPOSITION} from './parolImage.mjs'
 import {tmpdir} from 'node:os'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
@@ -13,7 +15,9 @@ const port = Number(process.env.PORT || 7070)
 const secret = process.env.STORY_RENDERER_SECRET
 if (!secret || secret.length < 24) throw new Error('Set a private STORY_RENDERER_SECRET (at least 24 characters).')
 const renderDir = path.join(tmpdir(), 'bemyparol-story-exports')
+const imageDir = path.join(tmpdir(), 'bemyparol-parol-images')
 await mkdir(renderDir, {recursive:true})
+await mkdir(imageDir, {recursive:true})
 const serveUrl = await bundle({
   entryPoint: path.join(directory,'remotionEntry.tsx'),
   webpackOverride: config => ({
@@ -57,6 +61,100 @@ async function cleanup() {
   }
   for (const entry of sorted.sort((a,b)=>b.time-a.time).slice(32)) await unlink(entry.full)
 }
+async function cleanupImages() {
+  const now = Date.now()
+  const keep = []
+  for (const name of await readdir(imageDir)) {
+    const file = path.join(imageDir, name)
+    const info = await stat(file).catch(() => null)
+    if (!info || !info.isFile()) continue
+    if (now - info.mtimeMs > 24 * 60 * 60 * 1000) await unlink(file).catch(() => {})
+    else if (name.endsWith('.png') || name.endsWith('.webp'))
+      keep.push({file, mtime: info.mtimeMs})
+  }
+  // Keep the cache bounded independently of Story video exports.
+  for (const item of keep.sort((a, b) => b.mtime - a.mtime).slice(128))
+    await unlink(item.file).catch(() => {})
+}
+
+async function readPayload(req, res) {
+  let payload = ''
+  for await (const chunk of req) {
+    payload += chunk.toString('utf8')
+    if (payload.length > 32_000) {
+      respond(res, 413, 'Request too large')
+      return null
+    }
+  }
+  try { return JSON.parse(payload) }
+  catch { respond(res, 400, 'Invalid JSON'); return null }
+}
+
+async function serveImage(res, file, format, cached) {
+  const info = await stat(file)
+  res.writeHead(200, {
+    'content-type': format === 'webp' ? 'image/webp' : 'image/png',
+    'content-length': info.size,
+    'cache-control': 'private, no-store',
+    'x-parol-cache': cached ? 'HIT' : 'MISS',
+  })
+  createReadStream(file).pipe(res)
+}
+
+/**
+ * Internal-only snapshot rendering. Reuses the SAME React/SVG components as
+ * the live parol; caches one flattened image per canonical parol state.
+ * The contribution endpoint is never blocked waiting for this renderer.
+ */
+async function renderParolImage(req, res) {
+  const request = await readPayload(req, res)
+  if (request === null) return
+  if (!validParolImage(request)) return respond(res, 400, 'Invalid parol image data')
+
+  const {designKey, patternKey, friendCount, slots, format} = request
+  const digest = parolImageDigest(request)
+  const file = path.join(imageDir, digest + '.' + format)
+  const cachedInfo = await stat(file).catch(() => null)
+  if (cachedInfo?.isFile() && cachedInfo.size > 512 &&
+      Date.now() - cachedInfo.mtimeMs < 24 * 60 * 60 * 1000)
+    return await serveImage(res, file, format, true)
+
+  if (busy) {
+    res.setHeader('Retry-After', '2')
+    return respond(res, 503, 'Image renderer is busy. Retry shortly.')
+  }
+
+  busy = true
+  const tmpPng = file + '.' + crypto.randomUUID() + '.tmp.png'
+  const tmpWebp = file + '.' + crypto.randomUUID() + '.tmp.webp'
+  try {
+    // Select only the snapshot composition; do not re-render a Story frame.
+    const inputProps = {designKey, patternKey, friendCount, slots}
+    const composition = await selectComposition({
+      serveUrl, id: PAROL_IMAGE_COMPOSITION, inputProps,
+    })
+    await renderStill({
+      composition, serveUrl, output: tmpPng, inputProps,
+      frame: 0, imageFormat: 'png',
+    })
+    if (format === 'webp') {
+      await sharp(tmpPng).webp({quality: 86, effort: 4}).toFile(tmpWebp)
+      await rename(tmpWebp, file)
+    } else {
+      await rename(tmpPng, file)
+    }
+    await serveImage(res, file, format, false)
+    void cleanupImages().catch(err => console.warn('Parol image cleanup failed:', err))
+  } catch (err) {
+    console.error('Parol image render failed:', err)
+    if (!res.headersSent) respond(res, 500, 'Unable to generate parol image')
+    else res.destroy()
+  } finally {
+    busy = false
+    await Promise.all([unlink(tmpPng).catch(() => {}), unlink(tmpWebp).catch(() => {})])
+  }
+}
+
 function authorized(req) {
   const given = req.headers['x-story-renderer-key']
   if (typeof given !== 'string') return false
@@ -69,8 +167,10 @@ function respond(res, status, message) {
 }
 const server = http.createServer(async(req,res)=>{
   if (req.url === '/health' && req.method === 'GET') return respond(res,200,'ready')
-  if (req.url !== '/render' || req.method !== 'POST') return respond(res,404,'Not found')
+  if (!['/render', '/render-parol'].includes(req.url) || req.method !== 'POST')
+    return respond(res,404,'Not found')
   if (!authorized(req)) return respond(res,403,'Forbidden')
+  if (req.url === '/render-parol') return await renderParolImage(req, res)
   if (busy) return respond(res,503,'Story renderer is busy. Retry shortly.')
   let payload = ''
   try {
