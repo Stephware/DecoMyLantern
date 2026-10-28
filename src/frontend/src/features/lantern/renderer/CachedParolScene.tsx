@@ -4,6 +4,8 @@ import { ApiError, fetchParolSnapshot } from '../../../lib/api'
 import { growthForFriends, outerFitZoom } from '../growth/outerGrowth'
 import { lightPosition } from './lightPositions'
 import { snapshotRequestKey } from './snapshotState'
+import { shouldAnimateSnapshot, SNAPSHOT_WAVE_DURATIONS_MS, SNAPSHOT_WAVE_LABEL,
+  SNAPSHOT_WAVE_RADIUS, type SnapshotWave, type SnapshotIdentity } from './snapshotReveal'
 import type { LanternLight, SavedParolSource } from './LanternScene'
 
 type Props = {
@@ -16,7 +18,8 @@ type Props = {
 
 type Point = { x: number; y: number }
 type Camera = { zoom: number; x: number; y: number }
-type RenderedImage = { key: string; url: string }
+type RenderedImage = SnapshotIdentity & { key: string; url: string }
+type ImageTransition = { next: RenderedImage; wave: SnapshotWave }
 
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 4
@@ -27,9 +30,8 @@ const CENTER_Y = 302
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
 /**
- * Phase 3 displays a single, already-fitted WebP produced by Phase 2.
- * No large procedural SVG tree is mounted for real owner or guest parols.
- * Three-wave layer animation is deliberately deferred to Phase 4.
+ * Reveal the completed cached WebP in three lightweight image-mask waves.
+ * No procedural parol SVGs are mounted in the real owner and guest viewers.
  */
 export default function CachedParolScene({
   theme, contributions, friendCount, pattern, snapshot,
@@ -42,6 +44,7 @@ export default function CachedParolScene({
   )
 
   const [rendered, setRendered] = useState<RenderedImage | null>(null)
+  const [transition, setTransition] = useState<ImageTransition | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
@@ -49,13 +52,48 @@ export default function CachedParolScene({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const pointers = useRef<Map<number, Point>>(new Map())
   const dragged = useRef(false)
+  const ownedUrls = useRef<Set<string>>(new Set())
+  const displayedRef = useRef<RenderedImage | null>(null)
+  const transitionRef = useRef<ImageTransition | null>(null)
+  const lastTabReturn = useRef(0)
+  const source = snapshot.kind === 'owner'
+    ? `owner:${snapshot.stateId}`
+    : `guest:${snapshot.stateId}:${snapshot.token}`
 
-  // Object URLs are local to this session, never persisted or exposed as
-  // public media URLs. Revoke after replacement/unmount to avoid memory leaks.
+  useEffect(() => { displayedRef.current = rendered }, [rendered])
+  useEffect(() => { transitionRef.current = transition }, [transition])
+
   useEffect(() => {
-    const url = rendered?.url
-    return () => { if (url) URL.revokeObjectURL(url) }
-  }, [rendered?.url])
+    const onVisibility = () => {
+      if (document.hidden) {
+        // Finishing an interrupted reveal never changes the saved parol data.
+        const pending = transitionRef.current
+        if (pending) {
+          setRendered(pending.next)
+          setTransition(null)
+        }
+      } else {
+        lastTabReturn.current = Date.now()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
+
+  // Two images only during a wave (previous + incoming); otherwise one.
+  useEffect(() => {
+    const all = ownedUrls.current
+    return () => { for (const url of all) URL.revokeObjectURL(url); all.clear() }
+  }, [])
+  useEffect(() => {
+    const needed = new Set([rendered?.url, transition?.next.url])
+    for (const url of ownedUrls.current) {
+      if (!needed.has(url)) {
+        URL.revokeObjectURL(url)
+        ownedUrls.current.delete(url)
+      }
+    }
+  }, [rendered?.url, transition?.next.url])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -63,6 +101,7 @@ export default function CachedParolScene({
     setLoading(true)
     setError('')
     setSelectedId(null)
+    setTransition(null)
 
     async function load() {
       for (let tries = 0; tries < 3; tries++) {
@@ -75,15 +114,55 @@ export default function CachedParolScene({
           )
           if (!active || controller.signal.aborted) return
           const url = URL.createObjectURL(blob)
-          setRendered({ key: stateKey, url })
-          setCamera({ zoom: 1, x: 0, y: 0 })
+          ownedUrls.current.add(url)
+          try {
+            // A predecoded image cannot flash blank on the first wave.
+            const img = new Image()
+            img.src = url
+            await img.decode()
+          } catch (failure) {
+            URL.revokeObjectURL(url)
+            ownedUrls.current.delete(url)
+            throw failure
+          }
+          if (!active || controller.signal.aborted) {
+            URL.revokeObjectURL(url)
+            ownedUrls.current.delete(url)
+            return
+          }
+
+          const next: RenderedImage = {
+            key: stateKey, url, source, designKey: theme.key,
+            patternKey: pattern, friendCount,
+          }
+          const previous = displayedRef.current
+          const animate = shouldAnimateSnapshot(previous, next, {
+            hidden: document.hidden,
+            reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+            recentlyReturned: lastTabReturn.current > 0 &&
+              Date.now() - lastTabReturn.current < 6000,
+            alreadyAnimating: transitionRef.current !== null,
+          })
+          if (animate) {
+            setTransition({next, wave: 1})
+          } else {
+            setRendered(next)
+            setTransition(null)
+            setCamera({zoom: 1, x: 0, y: 0})
+          }
           setLoading(false)
           setError('')
           return
         } catch (caught) {
           if (!active || controller.signal.aborted) return
           if (caught instanceof ApiError && caught.status === 503 && tries < 2) {
-            await new Promise(resolve => setTimeout(resolve, (tries + 1) * 2000))
+            await new Promise<void>(resolve => {
+              const timer = window.setTimeout(resolve, (tries + 1) * 2000)
+              controller.signal.addEventListener('abort', () => {
+                window.clearTimeout(timer)
+                resolve()
+              }, {once: true})
+            })
             continue
           }
           setError(caught instanceof Error ? caught.message : 'Unable to load the parol image.')
@@ -95,14 +174,33 @@ export default function CachedParolScene({
 
     void load()
     return () => { active = false; controller.abort() }
-  // stateKey is a canonical representation of the image request state.
+  // stateKey contains all request arguments; attempt is the explicit Retry.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stateKey, attempt])
 
-  const current = rendered?.key === stateKey
+  // Identical timing to the original 750ms / 850ms / 1100ms growth sequence.
+  useEffect(() => {
+    if (!transition) return
+    const timer = window.setTimeout(() => {
+      if (transition.wave === 3) {
+        setRendered(transition.next)
+        setTransition(null)
+      } else {
+        setTransition(current => current?.next.key === transition.next.key
+          ? {...current, wave: (current.wave + 1) as SnapshotWave}
+          : current)
+      }
+    }, SNAPSHOT_WAVE_DURATIONS_MS[transition.wave - 1])
+    return () => window.clearTimeout(timer)
+  }, [transition])
+
+  // Never display another owner's or invitation's earlier image by mistake.
+  const visibleImage = rendered?.source === source ? rendered : null
+  const activeWave = transition?.next.key === stateKey ? transition : null
+  const ready = visibleImage?.key === stateKey && activeWave === null
   const fit = outerFitZoom(growthForFriends(friendCount))
   const selected = contributions.find(light => light.id === selectedId)
-  const selectedPoint = selected && current ? lightPosition(selected.slotIndex) : null
+  const selectedPoint = selected && ready ? lightPosition(selected.slotIndex) : null
   const transform = `translate(${CENTER_X + camera.x} ${CENTER_Y + camera.y}) scale(${camera.zoom}) translate(${-CENTER_X} ${-CENTER_Y})`
 
   function pointerDown(event: PointerEvent<SVGSVGElement>) {
@@ -157,7 +255,7 @@ export default function CachedParolScene({
   }
 
   function selectLight(event: MouseEvent<SVGSVGElement>) {
-    if (dragged.current || !current || !contributions.length) return
+    if (dragged.current || !ready || !contributions.length) return
     const rect = event.currentTarget.getBoundingClientRect()
     if (!rect.width || !rect.height) return
     const x = CENTER_X + ((event.clientX - rect.left) * WIDTH / rect.width - CENTER_X - camera.x) / camera.zoom
@@ -195,8 +293,16 @@ export default function CachedParolScene({
           <g transform={transform} style={{
             transition: pointers.current.size === 0 ? 'transform 420ms ease-out' : 'none',
           }}>
-            {rendered && <image href={rendered.url} width="600" height="640"
+            {visibleImage && <image href={visibleImage.url} width="600" height="640"
               preserveAspectRatio="xMidYMid meet" />}
+            {activeWave && <image href={activeWave.next.url} width="600" height="640"
+              preserveAspectRatio="xMidYMid meet" pointerEvents="none"
+              className="parol-snapshot-wave-reveal"
+              style={{clipPath: `circle(${SNAPSHOT_WAVE_RADIUS[activeWave.wave]}% at 50% 47.2%)`}} />}
+            {activeWave && <circle key={activeWave.wave} cx="300" cy="302"
+              r={activeWave.wave === 1 ? 135 : activeWave.wave === 2 ? 240 : 295}
+              stroke="#ffe9a0" strokeWidth="7" fill="none" pointerEvents="none"
+              className="parol-snapshot-wave-glint" aria-hidden="true" />}
             {selectedPoint && <circle
               cx={CENTER_X + (selectedPoint.x - CENTER_X) * fit}
               cy={CENTER_Y + (selectedPoint.y - CENTER_Y) * fit}
@@ -204,18 +310,22 @@ export default function CachedParolScene({
               aria-hidden="true" />}
           </g>
         </svg>
-        {!rendered && !error && <div role="status"
+        {!visibleImage && !error && <div role="status"
           className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-amber-100/80">
           Preparing your parol image…
         </div>}
-        {loading && rendered && <div role="status" className="absolute left-3 top-3 rounded-full bg-[#101b33]/90 px-3 py-2 text-xs text-amber-100">
+        {loading && visibleImage && <div role="status" className="absolute left-3 top-3 rounded-full bg-[#101b33]/90 px-3 py-2 text-xs text-amber-100">
           Updating parol image…
         </div>}
         {error && <div role="alert"
           className="absolute inset-x-4 top-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-300/30 bg-[#101b33]/95 p-3 text-xs text-rose-100">
-          <span>{error}{rendered ? ' Showing the previous image.' : ''}</span>
+          <span>{error}{visibleImage ? ' Showing the previous image.' : ''}</span>
           <button type="button" className="rounded-lg border border-rose-200/40 px-3 py-2 font-semibold"
             onClick={() => setAttempt(n => n + 1)}>Retry</button>
+        </div>}
+        {activeWave && <div role="status" aria-live="polite"
+          className="pointer-events-none absolute left-3 top-3 rounded-full border border-amber-300/30 bg-[#101b33]/90 px-3 py-2 text-xs font-semibold text-amber-100">
+          ✦ {SNAPSHOT_WAVE_LABEL[activeWave.wave]}
         </div>}
         <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full border border-white/15 bg-[#101b33]/90 p-1.5 text-sm shadow-xl backdrop-blur">
           <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-white hover:bg-white/15 disabled:opacity-30"
@@ -238,8 +348,9 @@ export default function CachedParolScene({
         Selected: {selected.displayName} · Light #{selected.slotIndex + 1}
       </figcaption>}
       <figcaption role="status" aria-live="polite" className="mt-2 text-center text-xs text-white/50">
-        {loading ? 'Loading the completed parol snapshot…' :
-          current ? 'Saved parol image · Drag, pinch or Fit to explore' :
+        {activeWave ? SNAPSHOT_WAVE_LABEL[activeWave.wave] :
+          loading ? 'Loading the completed parol snapshot…' :
+          ready ? 'Saved parol image · Drag, pinch or Fit to explore' :
           'A newer parol image is not yet available · Retry to refresh'}
       </figcaption>
     </figure>
