@@ -9,7 +9,9 @@ type Props = {
   onUpgradeLegacy: () => Promise<void>
 }
 
-export default function WelcomePage({ legacyAvailable, onCreate, onRecover, onUpgradeLegacy }: Props) {
+export default function WelcomePage({
+  legacyAvailable, onCreate, onRecover, onUpgradeLegacy,
+}: Props) {
   const [showRecovery, setShowRecovery] = useState(false)
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
@@ -29,59 +31,91 @@ export default function WelcomePage({ legacyAvailable, onCreate, onRecover, onUp
   }
 
   return (
-    <div className="min-h-screen bg-[#080e20] text-[#fff7e5]">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_25%_14%,#27385d_0%,transparent_46%),radial-gradient(ellipse_at_88%_80%,#442c37_0%,transparent_42%)]" aria-hidden="true" />
-      <header className="relative mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
-        <div className="flex items-center gap-2.5 text-base font-bold tracking-wide"><span className="text-2xl text-amber-300">✦</span> BeMyParol</div>
-        <span className="rounded-full border border-amber-200/20 bg-amber-100/5 px-3 py-1.5 text-xs text-amber-100/70">Christmas, made together</span>
+    <div className="min-h-screen bg-[#f7f2e9] text-[#27392e]">
+      <header className="mx-auto flex max-w-[1300px] items-center justify-between gap-3 px-5 py-5 sm:px-9">
+        <div className="flex items-center gap-2 font-serif text-2xl font-semibold">
+          <span className="text-[#aa7d41]" aria-hidden="true">✦</span> BeMyParol
+        </div>
+        <span className="hidden rounded-full border border-[#dfd1bc] bg-white/75 px-4 py-2 text-xs text-[#77634c] sm:inline">
+          Christmas, made together
+        </span>
       </header>
-      <main className="relative mx-auto grid max-w-6xl items-center gap-8 px-5 pb-16 pt-8 sm:px-8 lg:min-h-[calc(100vh-85px)] lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
-        <section className="min-w-0 text-center lg:text-left">
-          <p className="mb-4 text-xs font-bold uppercase tracking-[0.32em] text-amber-300/80">Bawat ilaw, may kwento</p>
-          <h1 className="mx-auto max-w-xl font-serif text-4xl font-semibold leading-[1.13] tracking-tight sm:text-6xl lg:mx-0">Let your friends <span className="text-amber-300">light up your Pasko.</span></h1>
-          <p className="mx-auto mt-5 max-w-lg text-sm leading-7 text-white/65 sm:text-base lg:mx-0">
-            Create a Filipino Christmas parol, invite your friends to add lights, and collect private greetings that stay sealed until Christmas Day.
+
+      <main className="mx-auto grid max-w-[1300px] items-center gap-7 px-5 pb-14 pt-5 sm:px-9 lg:min-h-[calc(100dvh-90px)] lg:grid-cols-[1.2fr_.8fr] lg:gap-12">
+        <section className="min-w-0">
+          <div className="mb-5 max-w-2xl">
+            <p className="text-xs font-bold uppercase tracking-[.23em] text-[#a87b42]">Bawat ilaw, may kwento</p>
+            <h1 className="mt-3 font-serif text-4xl font-semibold leading-[1.12] tracking-tight sm:text-6xl">
+              A brighter <span className="text-[#902632]">Pasko</span>, together.
+            </h1>
+            <p className="mt-4 max-w-lg text-sm leading-7 text-[#71685a] sm:text-base">
+              Create a Filipino parol that grows as friends add their lights. Collect private greetings and share the joy of Christmas.
+            </p>
+          </div>
+          <div className="overflow-hidden rounded-[26px] border border-[#263e34] bg-[#15251e] p-3 shadow-[0_20px_55px_rgba(34,48,34,.18)] sm:p-5">
+            <LanternScene previewCount={5} theme={THEMES[0]} />
+          </div>
+          <p className="mt-3 text-center text-xs text-[#897f6f]">
+            A small glimpse of the tradition. Choose among six designs after creating yours.
           </p>
-          <div className="mx-auto mt-4 max-w-[400px] lg:mx-0"><LanternScene previewCount={5} theme={THEMES[0]} /></div>
-          <p className="text-xs text-white/40">Sample parol · Create yours to invite your friends</p>
         </section>
-        <section className="mx-auto w-full max-w-md rounded-[30px] border border-white/10 bg-[#131e35]/95 p-6 shadow-2xl shadow-black/20 sm:p-9">
-          <h2 className="font-serif text-3xl font-semibold">{showRecovery ? 'Restore your parol' : 'Your parol starts here'}</h2>
-          <p className="mt-3 text-sm leading-6 text-white/60">
-            {showRecovery ? 'Paste the private recovery key you saved when you created your parol.' : 'No sign-up, email, or password needed. We’ll securely remember your parol in this browser.'}
+
+        <section className="mx-auto w-full max-w-md rounded-[28px] border border-[#e6d8c4] bg-[#fffdf8] p-6 shadow-[0_20px_45px_rgba(64,52,34,.08)] sm:p-9">
+          <p className="text-xs font-bold uppercase tracking-[.2em] text-[#a07843]">Start something meaningful</p>
+          <h2 className="mt-3 font-serif text-3xl font-semibold">
+            {showRecovery ? 'Welcome back.' : 'Your parol starts here.'}
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-[#73695b]">
+            {showRecovery
+              ? 'Enter your private recovery key to return to your existing parol.'
+              : 'No sign-up, email, or password. Your parol is remembered securely in this browser.'}
           </p>
-          {error && <p role="alert" className="mt-5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">{error}</p>}
+          {error && <p role="alert" className="mt-5 rounded-xl border border-[#e8b0ac] bg-[#fff0ee] px-4 py-3 text-sm text-[#922632]">{error}</p>}
+
           {showRecovery ? (
-            <form onSubmit={recover} className="mt-7 space-y-4">
-              <label htmlFor="recovery-key" className="block text-sm font-semibold text-amber-100">Your private recovery key</label>
-              <input id="recovery-key" type="text" required autoComplete="off" autoCapitalize="none" spellCheck={false}
-                maxLength={128} value={code} onChange={event => setCode(event.target.value)}
-                placeholder="Paste your recovery key" className="w-full rounded-xl border border-white/15 bg-[#090f20] px-4 py-3.5 text-sm text-white placeholder:text-white/30" />
-              <button type="submit" disabled={busy || !code.trim()} className="w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 disabled:opacity-50">
+            <form onSubmit={recover} className="mt-6 space-y-4">
+              <label htmlFor="recovery-key" className="block text-sm font-semibold text-[#3a493b]">
+                Your private recovery key
+              </label>
+              <input id="recovery-key" type="text" required autoComplete="off"
+                autoCapitalize="none" spellCheck={false} maxLength={128}
+                value={code} onChange={event => setCode(event.target.value)}
+                placeholder="Paste your recovery key"
+                className="w-full rounded-xl border border-[#d8c8b2] bg-white px-4 py-3.5 text-sm text-[#27392e] placeholder:text-[#9d9284]" />
+              <button type="submit" disabled={busy || !code.trim()}
+                className="w-full rounded-xl bg-[#902632] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-50">
                 {busy ? 'Restoring…' : 'Restore my parol'}
               </button>
-              <p className="text-xs leading-5 text-white/45">Your original recovery key works repeatedly for one year. Restoring access signs out your previous browser session, but the key stays the same.</p>
+              <p className="text-xs leading-5 text-[#8b7d6c]">
+                Your original key can be reused for one year. Recovering access ends the previous browser session.
+              </p>
             </form>
           ) : (
             <button type="button" disabled={busy} onClick={() => void run(onCreate)}
-              className="mt-7 w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:opacity-50">
-              {busy ? 'Creating…' : 'Create my parol →'}
+              className="mt-7 w-full rounded-xl bg-[#902632] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#73202b] disabled:opacity-50">
+              {busy ? 'Creating…' : 'Create my parol ✦'}
             </button>
           )}
-          <button type="button" disabled={busy} onClick={() => { setShowRecovery(value => !value); setError(''); setCode('') }}
-            className="mt-5 w-full py-2 text-sm font-medium text-amber-100/80 underline decoration-white/30 underline-offset-4">
-            {showRecovery ? 'Create a new parol instead' : 'Already have a parol? Use a recovery key'}
+
+          <button type="button" disabled={busy}
+            onClick={() => {setShowRecovery(value=>!value);setError('');setCode('')}}
+            className="mt-5 w-full py-2 text-sm font-semibold text-[#745a43] underline decoration-[#bfa887] underline-offset-4">
+            {showRecovery ? 'Create a new parol instead' : 'Already have a parol? Recover it'}
           </button>
-          {legacyAvailable && (
-            <div className="mt-5 border-t border-white/10 pt-5">
-              <p className="text-xs leading-5 text-white/55">We found an existing Deco My Lantern session in this browser.</p>
-              <button type="button" disabled={busy} onClick={() => void run(onUpgradeLegacy)}
-                className="mt-3 w-full rounded-xl border border-amber-300/40 px-4 py-3 text-sm font-semibold text-amber-100 disabled:opacity-50">
-                Transfer my existing parol
-              </button>
-            </div>
-          )}
-          <p className="mt-6 text-center text-xs leading-5 text-white/40">You'll receive one private recovery key, valid for one year and reusable throughout that year. Keep it safe.</p>
+          {legacyAvailable && <div className="mt-5 border-t border-[#e8ddcf] pt-5">
+            <p className="text-xs leading-5 text-[#7b7163]">An older Deco My Lantern session was found.</p>
+            <button type="button" disabled={busy} onClick={() => void run(onUpgradeLegacy)}
+              className="mt-3 w-full rounded-xl border border-[#bb9a73] px-4 py-3 text-sm font-semibold text-[#695035] disabled:opacity-50">
+              Transfer my existing parol
+            </button>
+          </div>}
+          <div className="mt-7 rounded-2xl bg-[#f4ebdc] p-4">
+            <p className="text-sm font-semibold text-[#294334]">Your parol stays yours.</p>
+            <p className="mt-1 text-xs leading-5 text-[#7c705f]">
+              After creating your parol, save the private recovery key we show you.
+              It's valid for one year and never goes in your shared invitation.
+            </p>
+          </div>
         </section>
       </main>
     </div>
