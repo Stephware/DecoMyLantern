@@ -86,8 +86,11 @@ async function readPayload(req, res) {
       return null
     }
   }
-  try { return JSON.parse(payload) }
-  catch { respond(res, 400, 'Invalid JSON'); return null }
+  try {
+    const value = JSON.parse(payload)
+    if (value === null) { respond(res, 400, 'Invalid parol image data'); return null }
+    return value
+  } catch { respond(res, 400, 'Invalid JSON'); return null }
 }
 
 async function serveImage(res, file, format, cached) {
