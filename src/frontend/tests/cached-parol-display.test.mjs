@@ -8,7 +8,7 @@ const guest = {kind:'guest', stateId:'invite-a', token:'abcdefghijklmnop'}
 const slots = [0, 1, 5]
 
 function file(path) {
-  return readFileSync(new URL('../src/frontend/' + path, import.meta.url), 'utf8')
+  return readFileSync(new URL('../' + path, import.meta.url), 'utf8')
 }
 
 test('image is refreshed after actual growth, changed slots, design, or pattern', () => {
