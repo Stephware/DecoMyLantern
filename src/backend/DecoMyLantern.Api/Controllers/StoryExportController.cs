@@ -41,7 +41,9 @@ public sealed class StoryExportController(
     ApplicationDbContext database,
     IHttpClientFactory httpClientFactory,
     IConfiguration config,
-    IAntiforgery antiforgery) : ControllerBase
+    IAntiforgery antiforgery,
+    ILogger<StoryExportController> logger,
+    IHostEnvironment environment) : ControllerBase
 {
     [Authorize]
     [HttpPost("my/lantern/story")]
@@ -112,9 +114,17 @@ public sealed class StoryExportController(
             using var response = await client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken);
             if (!response.IsSuccessStatusCode)
-                return StatusCode(503, new { message = response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable
-                    ? "Story renderer is busy. Try again shortly."
-                    : "Story export is temporarily unavailable." });
+            {
+                logger.LogWarning("Story renderer responded with HTTP {StatusCode}", (int)response.StatusCode);
+                var description = response.StatusCode switch
+                {
+                    System.Net.HttpStatusCode.ServiceUnavailable => "Story renderer is busy. Retry shortly.",
+                    System.Net.HttpStatusCode.Forbidden when environment.IsDevelopment() =>
+                        "Story renderer credentials do not match. Restart using bash scripts/dev-with-stories.sh.",
+                    _ => "Story rendering failed. Check the renderer logs."
+                };
+                return StatusCode(503, new { message = description });
+            }
             Response.ContentType = snapshot.Format == "png" ? "image/png" : "video/mp4";
             Response.Headers.CacheControl = "no-store";
             Response.Headers["Content-Disposition"] = "attachment; filename=\"BeMyParol-Story." + snapshot.Format + "\"";
@@ -123,9 +133,18 @@ public sealed class StoryExportController(
             await stream.CopyToAsync(Response.Body, cancellationToken);
             return new EmptyResult();
         }
-        catch (HttpRequestException) { return StatusCode(503, new { message = "Story export service is unavailable." }); }
+        catch (HttpRequestException exception)
+        {
+            logger.LogWarning(exception, "Story renderer connection failed");
+            return StatusCode(503, new { message = environment.IsDevelopment()
+                ? "Story renderer is offline. Stop other dev servers and run bash scripts/dev-with-stories.sh from the repository root."
+                : "Story export service is unavailable." });
+        }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
-        { return StatusCode(504, new { message = "Story export timed out." }); }
+        {
+            logger.LogWarning("Story rendering exceeded the configured timeout");
+            return StatusCode(504, new { message = "Story export timed out. Try again later." });
+        }
     }
 
     private async Task<bool> ValidCsrfAsync()
