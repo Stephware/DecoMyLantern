@@ -58,7 +58,7 @@ test('early region decorations are preserved and later region motifs grow propor
   assert.ok(renderer.includes('const afterFlower = regionIndex > FLOWER_REGION_INDEX'))
   assert.ok(renderer.includes('laterMotifScale(regionIndex) * growthFraction'))
   assert.ok(renderer.includes("outerDetail ? '.19' : '.37'"))
-  assert.ok(renderer.includes('const fillSize = Math.min(3.1, Math.max(.55, (end - region.from + 1) * 10.5 / 39))'))
+  assert.ok(renderer.includes(': Math.min(3.1, Math.max(.55, (end - region.from + 1) * 10.5 / 39))'))
   assert.ok(renderer.includes('Array.from({ length: PANEL_SEGMENTS }'))
   assert.ok(renderer.includes('isFriendBoundary(n) && <path'))
   assert.ok(renderer.includes('ExtendedRegionMotif'))
