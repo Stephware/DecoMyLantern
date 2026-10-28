@@ -1,5 +1,6 @@
 import {THEMES} from '../customization/themes'
-import {growthForFriends, outerFitZoom} from '../lantern/growth/outerGrowth'
+import {outerFitZoom} from '../lantern/growth/outerGrowth'
+import {storyGrowthAtFrame} from './storySpec'
 import ParolArtwork from '../lantern/renderer/ParolArtwork'
 import ProceduralOuterShell from '../lantern/renderer/ProceduralOuterShell'
 import {lightPosition} from '../lantern/renderer/lightPositions'
@@ -20,11 +21,8 @@ export type StoryData = {
  */
 export function StoryFrame({data, frame}: {data: StoryData; frame: number}) {
   const theme = THEMES.find(t => t.key === data.designKey) ?? THEMES[0]
-  const capped = Math.min(50, Math.max(0, data.friendCount))
-  const last = growthForFriends(capped)
-  const previous = Math.max(0, last - 3)
+  const count = storyGrowthAtFrame(data.friendCount, frame)
   const wave = frame < 30 ? 0 : frame < 60 ? 1 : frame < 90 ? 2 : 3
-  const count = Math.min(last, previous + wave)
   const fit = outerFitZoom(count)
   const zoom = 1.12 - 0.12 * Math.min(1, Math.max(0, (frame - 96) / 55))
   const parolOpacity = Math.min(1, Math.max(0, (frame - 4) / 22))
@@ -75,7 +73,7 @@ export function StoryFrame({data, frame}: {data: StoryData; frame: number}) {
         <div style={{fontSize:65,fontWeight:800,lineHeight:1.15,
           textShadow:'0 3px 22px #09101f'}}>{title}</div>
         <div style={{fontSize:43,marginTop:29,color:'#f5d28c'}}>
-          {data.friendCount} {data.friendCount === 1 ? 'friend' : 'friends'} · {data.friendCount * 3} growth layers
+          {data.friendCount} {data.friendCount === 1 ? 'friend' : 'friends'} · {Math.min(data.friendCount, 50) * 3} Story layers
         </div>
         <div style={{fontSize:37,marginTop:39,lineHeight:1.35}}>{subtitle}</div>
       </div>
