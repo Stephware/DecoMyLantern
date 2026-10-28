@@ -7,8 +7,8 @@ export type Theme = {
   colors: readonly [string, string, string, string]
 }
 
-// Each family drives a different living outer-shell recipe. Unlock thresholds
-// are checked by the API; these definitions are presentation-only.
+// Each family drives an approved outer-shell recipe. All six are now available
+// for owner selection immediately; growth milestones remain separate.
 export const THEMES: readonly Theme[] = [
   { key: 'classic', label: 'Classic Gold', colors: ['#f8cc6f', '#ffefc5', '#bb404d', '#397867'] },
   { key: 'floral', label: 'Floral Bloom', colors: ['#f4a9bc', '#f6e5b7', '#ba547f', '#62a394'] },

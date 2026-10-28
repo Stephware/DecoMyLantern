@@ -42,7 +42,7 @@ test('real owner and guest views are a single cached image, not SVG geometry', (
   assert.ok(viewer.includes("snapshotRequestKey("))
   assert.ok(!viewer.includes('ProceduralOuterShell'))
   assert.ok(!viewer.includes('<ParolArtwork'))
-  assert.ok(owner.includes("snapshot={{kind:'owner', stateId:lantern.id}}"))
+  assert.ok(owner.includes("snapshot={{kind:'owner',stateId:lantern.id}}"))
   assert.ok(owner.includes('theme={savedTheme} pattern={lantern.patternKey}'))
   assert.ok(guestPage.includes("snapshot={{kind:'guest',stateId:token,token}}"))
 })

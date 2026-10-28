@@ -43,12 +43,13 @@ public sealed class PolicyTests
     }
 
     [Fact]
-    public void Designs_stay_unlocked_after_a_contribution_is_removed()
+    public void All_enabled_designs_are_selectable_without_friend_milestones()
     {
         var design = new ParolDesign { DesignKey = "fiesta", RequiredFriends = 40, IsEnabled = true };
-        Assert.False(GrowthPolicy.DesignUnlocked(design, 39, 39));
-        Assert.True(GrowthPolicy.DesignUnlocked(design, 40, 40));
+        Assert.True(GrowthPolicy.DesignUnlocked(design, 0, 0));
         Assert.True(GrowthPolicy.DesignUnlocked(design, 1, 40));
+        design.IsEnabled = false;
+        Assert.False(GrowthPolicy.DesignUnlocked(design, 50, 50));
     }
 
     [Theory]

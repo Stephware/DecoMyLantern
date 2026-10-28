@@ -120,6 +120,13 @@ builder.Services.AddRateLimiter(options =>
         }));
     // Snapshot requests are read-only but cold images are expensive to render.
     // Limits are per-process; renderer caches duplicate visual states.
+    options.AddPolicy("design-showcase", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 36, Window = TimeSpan.FromMinutes(10),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
     options.AddPolicy("parol-image-owner", context => RateLimitPartition.GetFixedWindowLimiter(
         context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown",
         _ => new FixedWindowRateLimiterOptions

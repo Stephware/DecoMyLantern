@@ -35,20 +35,39 @@ Every modifying request first calls `GET /api/owner/csrf` and includes `X-CSRF-T
 | --- | --- | --- | --- |
 | GET | `/api/my/lantern` | Owner token | Current Philippine-season lantern; 404 until created |
 | POST | `/api/my/lantern` | Owner token + CSRF | Create the current season's default Classic lantern; 201 or 409 if already exists |
-| PUT | `/api/my/lantern` | Owner token + CSRF | Update selected design and visual pattern; rejects a new locked design with 409, preserves a pre-existing selection |
+| PUT | `/api/my/lantern` | Owner token + CSRF | Update any enabled design family and visual pattern; friend milestones do not lock designs |
 
 PUT JSON: `{ "designKey": "classic", "patternKey": "rings" }`.
 
-Supported `patternKey` values: `default`, `rings`, `rays`. Supported designs currently seeded: `classic`, `floral`, `festival` — all available at zero friends. Pattern and selected design are persisted in the existing `Lanterns` table.
+Supported `patternKey` values: `default`, `rings`, `rays`. The six enabled families are `classic`, `floral`, `festival`, `celestial`, `fiesta` and `sampaguita` — all selectable starting at zero friends. Pattern and selected design are persisted in the existing `Lanterns` table.
 
 Lantern responses include `id`, `seasonYear`, `designKey`, `paletteKey`, `patternKey`, `acceptedFriends`, `maxReachedFriends`, `growthStage`, `unlockAtUtc`, and `createdAtUtc`. These are computed from server-side ownership and real accepted contribution rows, never from client-submitted friend counts. Unique DB index protects one lantern per host per season.
 
 ## Existing public/read-only endpoints
 
 - GET `/api/health` — liveness
-- GET `/api/designs` — enabled catalog (`designKey`, `name`, `assetKey`, `requiredFriends`); 0/3/10/23/40/50 unlock requirements are enforced by PUT `/api/my/lantern`
-- GET `/api/growth-stages` — six design unlock milestones (0, 3, 10, 23, 40, 50 friends)
+- GET `/api/designs` — enabled catalogue (`designKey`, `name`, `assetKey`, `requiredFriends`); `requiredFriends` is legacy growth milestone metadata, not a selection gate.
+- GET `/api/growth-stages` — visual growth milestones (0, 3, 10, 23, 40, 50 friends); parol growth is unchanged.
 - GET `/api/my/lanterns/{lanternId}/messages` — owner-authenticated Christmas inbox with server-side pre-unlock body redaction; full frontend inbox planned for Phase 4.
+
+## Responsive design selection and full-bloom showcases
+
+- GET `/api/designs/{designKey}/showcase` — public, rate-limited WebP preview
+  for an enabled design family rendered at **50 synthetic friends / 150 growth
+  layers** with `patternKey: default`. No real owner, message, guest or
+  invitation data is accessed or included. Browser cache is public for one day;
+  the underlying private renderer has its own content-addressed disk cache.
+- A new owner is offered a design picker **after** saving the private recovery
+  key. All six choices can be selected immediately; no fake friends are stored.
+  The choice is persisted through the existing owner-authenticated, CSRF-protected
+  `PUT /api/my/lantern` endpoint. A new owner's one-time picker dismissal is
+  remembered in localStorage **for UX only**, never for login or recovery.
+- On phones, the design gallery lives in a swipe-up/down drawer with an arrow
+  button. The real parol remains a single saved WebP; selecting a card alone
+  does not change the saved image until Save. On desktop the same gallery opens
+  in a modal. Designs can be changed later without resetting contributions.
+- The separate testing lab remains available inside a collapsed section until
+  staging deployment is implemented in a later phase.
 
 ## Task 4 — Friend invitations and contributions
 

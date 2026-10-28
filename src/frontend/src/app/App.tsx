@@ -128,18 +128,18 @@ export default function App() {
   if (invitationToken !== null) return <GuestInvitationPage token={invitationToken} />
 
   if (screen === 'loading') return (
-    <div className="flex min-h-screen items-center justify-center bg-[#080e20] px-5 text-center text-amber-100">
-      <div><div className="mb-4 text-5xl text-amber-300" aria-hidden="true">✦</div><p className="font-serif text-2xl">Lighting your parol…</p><p className="mt-3 text-sm text-white/45">Please wait a moment.</p></div>
+    <div className="flex min-h-screen items-center justify-center bg-[#f7f2e9] px-5 text-center text-[#263d32]">
+      <div><div className="mb-4 text-5xl text-[#ac804a]" aria-hidden="true">✦</div><p className="font-serif text-2xl">Lighting your parol…</p><p className="mt-3 text-sm text-[#766d5d]">Please wait a moment.</p></div>
     </div>
   )
 
   if (screen === 'error') return (
-    <div className="flex min-h-screen items-center justify-center bg-[#080e20] px-5 text-center text-white">
-      <div className="max-w-sm rounded-3xl border border-white/10 bg-[#15203a] p-8">
-        <p className="text-4xl text-amber-300" aria-hidden="true">✦</p>
+    <div className="flex min-h-screen items-center justify-center bg-[#f7f2e9] px-5 text-center text-[#27392e]">
+      <div className="max-w-sm rounded-3xl border border-[#e5d8c4] bg-[#fffdf8] p-8 shadow-xl">
+        <p className="text-4xl text-[#a77c40]" aria-hidden="true">✦</p>
         <h1 className="mt-4 font-serif text-2xl">Couldn't load your parol</h1>
-        <p role="alert" className="mt-3 text-sm leading-6 text-white/60">{error}</p>
-        <button type="button" onClick={() => window.location.reload()} className="mt-6 rounded-xl bg-amber-300 px-5 py-3 text-sm font-bold text-slate-900">Try again</button>
+        <p role="alert" className="mt-3 text-sm leading-6 text-[#765e56]">{error}</p>
+        <button type="button" onClick={() => window.location.reload()} className="mt-6 rounded-xl bg-[#902632] px-5 py-3 text-sm font-bold text-white">Try again</button>
       </div>
     </div>
   )
