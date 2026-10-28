@@ -72,7 +72,7 @@ test('geometry remains outward and free of crossing at 150 growth', () => {
 
 test('renderer only draws every third permanent outline and includes dramatic effects', () => {
   const render = readFileSync(new URL('../src/features/lantern/renderer/ProceduralOuterShell.tsx', import.meta.url), 'utf8')
-  const scene = readFileSync(new URL('../src/features/lantern/renderer/LanternScene.tsx', import.meta.url), 'utf8')
+  const scene = readFileSync(new URL('../src/features/lantern/renderer/LegacyLanternPreview.tsx', import.meta.url), 'utf8')
   assert.ok(render.includes('isFriendBoundary(n) && <path'))
   assert.ok(render.includes('layers.filter(layer => isFriendBoundary(layer.friendNumber))'))
   assert.ok(render.includes('ExtendedRegionMotif'))
