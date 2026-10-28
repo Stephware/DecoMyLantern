@@ -91,7 +91,8 @@ public sealed class StoryExportController(
 
         var snapshot = new StoryRenderPayload("friend", preview.DesignKey, preview.PatternKey,
             preview.AcceptedFriends,
-            preview.Lights.OrderBy(x => x.SlotIndex).Take(500).Select(x => x.SlotIndex).ToArray(),
+            preview.Lights.OrderBy(x => x.SlotIndex).Take(499).Select(x => x.SlotIndex)
+                .Append(ownSlot.Value).Distinct().ToArray(),
             ownSlot, request.Format);
         return await RenderAsync(snapshot, cancellationToken);
     }
