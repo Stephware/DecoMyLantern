@@ -88,7 +88,9 @@ export default function GuestInvitationPage({ token }: Props) {
             {preview ? (
               <>
                 <div className="mx-auto mt-4 max-w-[560px]">
-                  <LanternScene theme={theme} pattern={preview.patternKey} contributions={contributions} />
+                  <LanternScene theme={theme} pattern={preview.patternKey}
+                    contributions={contributions} friendCount={preview.acceptedFriends}
+                    snapshot={{kind:'guest',stateId:token,token}} />
                 </div>
                 <p className="mt-1 text-center text-xs text-white/50">
                   {preview.acceptedFriends} {preview.acceptedFriends === 1 ? 'friend has' : 'friends have'} lit this parol · {preview.growthPoints} growth layers

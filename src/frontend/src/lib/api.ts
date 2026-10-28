@@ -61,8 +61,8 @@ function errorMessage(data: unknown, fallback: string): string {
   return payload.title ?? fallback
 }
 
-async function csrfToken(path: string): Promise<string> {
-  const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store' })
+async function csrfToken(path: string, signal?: AbortSignal): Promise<string> {
+  const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', signal })
   if (!response.ok) throw new ApiError(response.status, 'Unable to initialize secure request. Refresh the page.')
   const data = await response.json() as { token: string }
   return data.token
@@ -117,6 +117,38 @@ export async function exportStoryMedia(kind: 'owner' | 'friend', format: 'mp4' |
     throw new ApiError(response.status, errorMessage(body,
       response.status === 429 ? 'Too many exports. Try again later.' : 'Story export is unavailable.'))
   }
+  return response.blob()
+}
+
+/**
+ * Phase 3: fetch a flattened, already-fitted image of the saved parol.
+ * The backend resolves authoritative design, count and slots; the browser
+ * sends neither private names nor synthetic growth states.
+ */
+export async function fetchParolSnapshot(
+  kind: 'owner' | 'guest',
+  token?: string,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  if (kind === 'guest' && !token) throw new Error('Missing invitation token.')
+  const guest = kind === 'guest'
+  const csrfPath = guest ? '/api/invitations/csrf' : '/api/owner/csrf'
+  const path = guest ? '/api/invitations/image' : '/api/my/lantern/image'
+  const csrf = await csrfToken(csrfPath, signal)
+  const response = await fetch(path, {
+    method: 'POST', credentials: 'same-origin', cache: 'no-store', signal,
+    headers: {'Content-Type':'application/json', 'X-CSRF-TOKEN':csrf},
+    body: JSON.stringify(guest ? {token, format:'webp'} : {format:'webp'}),
+  })
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null)
+    throw new ApiError(response.status, errorMessage(body,
+      response.status === 503 ? 'The parol image renderer is busy. Please retry.' :
+      response.status === 429 ? 'Too many image requests. Please try later.' :
+      'Unable to load your parol image.'))
+  }
+  if (response.headers.get('content-type')?.split(';')[0] !== 'image/webp')
+    throw new Error('The server returned an unexpected parol image format.')
   return response.blob()
 }
 
