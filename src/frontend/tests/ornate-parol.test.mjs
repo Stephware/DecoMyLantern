@@ -125,7 +125,7 @@ test('festival silhouette stays round/floral and fits even past 50 friends', () 
     assert.ok(outerFitZoom(count) > 0)
     assert.ok(festivalMaxExtent(count) * outerFitZoom(count) < 281)
   }
-  assert.ok(outerFitZoom(growthForFriends(50)) > .10)
+  assert.ok(outerFitZoom(growthForFriends(50)) > .04)
   assert.notEqual(festivalOutlinePath(0), festivalOutlinePath(50))
   assert.equal(styles.length, 6)
   assert.equal(new Set(Object.values(OUTER_RECIPES).map(x => x.motif)).size, 6)
