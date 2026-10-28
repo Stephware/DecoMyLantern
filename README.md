@@ -148,6 +148,36 @@ The dashboard displays real accepted contributions. Owners can copy their one sh
 
 **Owner API security:** The server authenticates by looking up the SHA-256 hash of a 256-bit random browser token in SQL on each protected request. The token is only sent in an HTTP-only SameSite=Strict cookie (Secure on HTTPS/production); React does not read or persist it. All writes require a fresh CSRF token from `GET /api/owner/csrf`. Only public catalogs are cached for two minutes — never owner identity or recovery codes. See the [API contracts](docs/api-contracts.md).
 
+## Recovery key popup and simplified sharing controls
+
+On the owner dashboard, **Recovery key** appears beside **Leave parol**.
+Opening it displays the owner-only recovery key and a Copy button. Leaving
+also opens this popup first, offering Copy, Stay, or Leave. The secret is
+retrieved by a CSRF-protected, authenticated API request; it is never stored
+in frontend localStorage.
+
+- New parols store a hash and an AES-GCM-encrypted recoverable copy of the
+  code. This uses a purpose-isolated derivative of the already required
+  stable `INVITATION_ENCRYPTION_KEY`; no new secret is needed.
+- Recovery keys belonging to older parols were originally hash-only. Those
+  **cannot be displayed retroactively**. An older owner can keep using their
+  saved key, or explicitly replace it. **Replacing immediately invalidates
+  the previous key**, but does not reset friends, invitations, or session.
+- An owner who recovers using an old key causes the existing code to be
+  securely saved for subsequent owner-only redisplay without rotation.
+- The `20261029080000_EncryptedOwnerRecoveryKeys` EF Core migration adds
+  two nullable database columns. **Apply it to the existing SQL Server
+  database before deploying the updated API**; back up production first.
+  Never rotate the stable invitation encryption key or recreate production
+  data as part of this change.
+
+The dashboard and mobile design drawer no longer offer the three decorative
+pattern options. Already saved patterns remain supported by the renderer so
+existing parols retain their artwork. On the guest page, the contribution
+heading and action now say **Share your light**. The owner invitation card
+shows the official link and a single **Copy invitation link** button; the
+animated Story export remains available in its **separate** panel.
+
 ## Friend invitations — Task 4
 
 Once your parol exists, copy its single invitation link and share it with friends. Friends can open their own guest page, enter a name, and optionally leave a Christmas note. The invitation link never contains your private owner or recovery key. One light per guest browser is enforced with a secure cookie and SQL constraints; this does not prove unique human identity. Links expire December 31 Philippine time. Historic links are retired without removing existing contributions.
