@@ -7,7 +7,7 @@ import {
   outerFitZoom, OUTER_RECIPES,
 } from '../src/features/lantern/growth/outerGrowth.ts'
 
-test('design unlocks remain independent of structural layers', () => {
+test('growth milestones remain independent of selectable designs and structural layers', () => {
   assert.deepEqual(STAGES.map(s => s.minFriends), [0, 3, 10, 23, 40, 50])
   for (const [count, key] of [
     [0, 'base'], [1, 'base'], [2, 'base'], [3, 'floral'], [9, 'floral'],
