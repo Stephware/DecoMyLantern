@@ -3,7 +3,6 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   BASE_FESTIVAL_RADIUS,
-  FRIEND_LAYER_SPACING,
   growthLayerWidth,
   GROWTH_REGIONS,
   OUTER_RECIPES,
