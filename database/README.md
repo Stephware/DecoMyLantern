@@ -44,10 +44,10 @@ Before starting the new backend against an existing production database:
 3. Verify both new columns exist and that legacy credentials remain intact.
 4. Deploy the new backend and frontend together.
 
-The repository's pre-generated `database/schema.sql` may lag this new
-migration; regenerate it with `bash database/bootstrap.sh` when the SDK is
-available before using that SQL script. Do **not** assume the older file has
-the latest encrypted-recovery columns.
+The tracked `database/schema.sql` includes a hand-reviewed idempotent
+section for this migration. The EF Core migration is authoritative; regenerate
+the SQL with `bash database/bootstrap.sh` using a local SDK and review the
+result before relying on the SQL script in production.
 
 Avoid `docker compose down -v` or rebuilding a production database from
 scratch. Replacing a recovery key requires deliberate owner confirmation;
