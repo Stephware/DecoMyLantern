@@ -113,7 +113,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
               className="rounded-xl border border-amber-200/35 px-5 py-3 font-semibold text-amber-100">
               Download MP4
             </button>}
-            <button type="button" disabled={busy} onClick={() => void (png ? (download(png,'BeMyParol-Story.png'), Promise.resolve()) : generate('png'))}
+            <button type="button" disabled={busy} onClick={() => { if (png) download(png,'BeMyParol-Story.png'); else void generate('png') }}
               className="rounded-xl border border-white/25 px-5 py-3 font-semibold disabled:opacity-50">
               Save static PNG instead
             </button>
