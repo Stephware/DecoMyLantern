@@ -195,7 +195,11 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                 const outer = festivalMotifPoint(end, sector, 10)
                 const midIndex = Math.floor((region.from + end) / 2)
                 const originalCenter = bandMotifPoint(midIndex, sector)
-                const angle = -Math.PI / 2 + TAU * (sector + .5) / 10
+                // Alternate the large outer motifs between the earlier
+                // flower petals so adjacent designs remain individually visible.
+                const phaseDegrees = afterFlower && regionIndex % 2 === 1 ? -18 : 0
+                const angle = -Math.PI / 2 + TAU * (sector + .5) / 10 +
+                  phaseDegrees * Math.PI / 180
                 const regionStart = afterFlower ? festivalPointAt(region.from - 1, angle) : originalCenter
                 const regionEnd = afterFlower ? festivalPointAt(end, angle) : originalCenter
                 const center = afterFlower ? {
@@ -219,7 +223,7 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                       stroke={ivory} strokeOpacity=".73" strokeWidth="2.0"/>
                     {/* A coherent large-scale design appears INSIDE each
                         region as its bands arrive, rather than just a thin border. */}
-                    <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 36 + 18}) scale(${motifScaleX} ${motifScaleY})`}>
+                    <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 36 + 18 + phaseDegrees}) scale(${motifScaleX} ${motifScaleY})`}>
                       {region.zone === 'siku' && (
                         <g>
                           <path d="M 0 -25 L 15 0 L 0 25 L -15 0 Z"
