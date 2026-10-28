@@ -71,6 +71,9 @@ If you develop on an Apple Silicon Mac, using a supported Windows or remote SQL 
 
 ## Run locally
 
+**Animated Story exports:** Instead of starting Vite and .NET separately, stop existing local servers and run **`bash scripts/dev-with-stories.sh`** from the repository root. This starts the API, frontend and private video renderer with matching temporary renderer credentials, then serves the frontend at http://localhost:5173. Your existing SQL connection and invitation encryption key must already be configured in .NET User Secrets; the script never changes them. Renderer startup logs are in `story-renderer/.dev-renderer.log` (ignored by Git). See [Story sharing setup](docs/story-sharing.md) for details.
+
+
 ### 1. Clone the repository
 
 ```bash
