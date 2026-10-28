@@ -25,7 +25,7 @@ test('the recovery popup fetches a private code on demand and never stores it lo
   assert.ok(dialog.includes("mode === 'leave'"))
   assert.ok(dialog.includes("'Leave anyway'"))
   assert.ok(dialog.includes('replaceOwnerRecoveryKey()'))
-  assert.ok(dialog.includes('old key'))
+  assert.ok(dialog.includes('previous recovery key'))
   assert.ok(!dialog.includes('localStorage'))
   assert.ok(!dialog.includes('sessionStorage'))
   assert.ok(api.includes("'/api/owner/recovery-key', { method: 'POST' }"))
