@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { createInvitation } from '../../lib/api'
 import { invitationUrl } from './invitationLinks'
+import StoryShare from '../story/StoryShare'
+import type {Lantern} from '../../lib/api'
 
-export default function InvitationManager() {
+export default function InvitationManager({lantern}: {lantern: Lantern | null}) {
   const [url, setUrl] = useState('')
+  const [inviteToken, setInviteToken] = useState('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [showLinkPage, setShowLinkPage] = useState(false)
@@ -17,7 +20,10 @@ export default function InvitationManager() {
     let active = true
     void createInvitation()
       .then(issued => {
-        if (active) setUrl(invitationUrl(window.location.origin, issued.token))
+        if (active) {
+          setUrl(invitationUrl(window.location.origin, issued.token))
+          setInviteToken(issued.token)
+        }
       })
       .catch(caught => {
         if (active) setError(caught instanceof Error ? caught.message : 'Unable to load your invitation.')
@@ -100,7 +106,11 @@ export default function InvitationManager() {
               className="mt-2 w-full rounded-xl border border-white/15 bg-[#080e20] px-4 py-3.5 text-sm text-amber-100" />
             {copyError && <p role="alert" className="mt-3 text-sm text-rose-200">{copyError}</p>}
             <div className="mt-6 flex gap-3">
-              <button type="button" onClick={() => void copy()}
+              {lantern && inviteToken && <StoryShare invitationUrl={url}
+            data={{kind:'owner',designKey:lantern.designKey,patternKey:lantern.patternKey,
+              friendCount:lantern.acceptedFriends,slots:lantern.lights.map(light=>light.slotIndex),
+              highlightSlot:null}} />}
+          <button type="button" onClick={() => void copy()}
                 className="min-w-0 flex-1 rounded-xl bg-amber-300 px-4 py-3.5 text-sm font-bold text-slate-900 hover:bg-amber-200">
                 {copied ? 'Copied!' : 'Copy link'}
               </button>
