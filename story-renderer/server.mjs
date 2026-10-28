@@ -85,6 +85,7 @@ const server = http.createServer(async(req,res)=>{
     const inputProps = {kind,designKey,patternKey,friendCount,slots,highlightSlot}
     const digest = crypto.createHash('sha256').update(JSON.stringify({...inputProps,format})).digest('hex')
     const file = path.join(renderDir, digest+(format==='png'?'.png':'.mp4'))
+    if (busy) return respond(res,503,'Story renderer is busy. Retry shortly.')
     busy = true
     try {
       let cached = false
