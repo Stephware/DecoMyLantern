@@ -200,7 +200,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
                 </div>
                 <button type="button" disabled={!changed || busy || designs.length === 0 || invalidDesign} onClick={() => void run(() => onSave(draftDesign, draftPattern), 'Your lantern customization has been saved.')} className="mt-6 w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Saving…' : invalidDesign ? `Locked until ${selectedDesign?.requiredFriends ?? 'more'} friends` : changed ? 'Save customization →' : 'All changes saved'}</button>
               </section>
-              <InvitationManager />
+              <InvitationManager lantern={lantern} />
             </aside>
           </div>
         )}
