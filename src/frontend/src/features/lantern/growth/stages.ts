@@ -1,11 +1,12 @@
 export type GrowthStage = {
   key: 'base' | 'floral' | 'festival' | 'celestial' | 'fiesta' | 'sampaguita'
   name: string
-  /** Friend count needed to unlock this selectable design. */
+  /** Historical growth milestone, no longer a design-selection restriction. */
   minFriends: number
 }
 
-// The final DESIGN milestone is 50; actual parol growth continues beyond 50.
+// The final visual milestone is 50; design selection is open from the start.
+// Actual parol growth continues beyond 50.
 export const DESIGN_TARGET_FRIENDS = 50
 export const MAX_TEST_FRIENDS = 60
 export const STAGES: readonly GrowthStage[] = [
