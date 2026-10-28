@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { createInvitation } from '../../lib/api'
 import { invitationUrl } from './invitationLinks'
+import StoryShare from '../story/StoryShare'
+import type {Lantern} from '../../lib/api'
 
-export default function InvitationManager() {
+export default function InvitationManager({lantern}: {lantern: Lantern | null}) {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -75,6 +77,10 @@ export default function InvitationManager() {
                 className="w-full rounded-lg border border-white/15 bg-[#080e20] px-3 py-3 text-xs text-amber-100" />
             </>
           )}
+          {lantern && url && <StoryShare invitationUrl={url}
+            data={{kind:'owner',designKey:lantern.designKey,patternKey:lantern.patternKey,
+              friendCount:lantern.acceptedFriends,slots:lantern.lights.map(light=>light.slotIndex),
+              highlightSlot:null}} />}
           <button type="button" disabled={busy} onClick={() => void showInvitation()}
             className="w-full rounded-xl bg-amber-300 px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:opacity-50">
             {busy ? 'Preparing…' : url ? 'View invitation link' : 'Create invitation link'}
