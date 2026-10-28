@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
 using DecoMyLantern.Api.Models.Database;
+using DecoMyLantern.Api.Models.DTOs;
 using DecoMyLantern.Api.Services.Invitations;
 using DecoMyLantern.Api.Services.Lanterns;
 using DecoMyLantern.Api.Services.Owner;
@@ -16,7 +17,7 @@ namespace DecoMyLantern.Api.Controllers;
 
 public class StoryExportRequest
 {
-    [RegularExpression("^(mp4|png)$")]
+    [Required, RegularExpression("^(mp4|png)$")]
     public string Format { get; set; } = "mp4";
 }
 
