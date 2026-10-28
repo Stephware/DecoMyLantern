@@ -37,6 +37,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
   }, [lantern?.id, lantern?.designKey, lantern?.patternKey])
 
   const theme = THEMES.find(item => item.key === draftDesign) ?? THEMES[0]
+  const savedTheme = THEMES.find(item => item.key === lantern?.designKey) ?? THEMES[0]
   const accepted = lantern?.acceptedFriends ?? 0
   const unlockProgress = Math.max(accepted, lantern?.maxReachedFriends ?? accepted)
   const nextDesign = nextDesignMilestone(unlockProgress)
@@ -115,7 +116,17 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
                   </div>
                   <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/65">{previewCount === null ? 'Your evolving parol' : 'Design lab · Test friends only'}</span>
                 </div>
-                <div className="mx-auto max-w-[620px]"><LanternScene theme={theme} pattern={draftPattern} contributions={previewCount === null ? lantern.lights : []} previewCount={previewCount === null ? undefined : previewCount} /></div>
+                <div className="mx-auto max-w-[620px]">
+                  {previewCount === null
+                    ? <LanternScene theme={savedTheme} pattern={lantern.patternKey}
+                        contributions={lantern.lights} friendCount={lantern.acceptedFriends}
+                        snapshot={{kind:'owner', stateId:lantern.id}} />
+                    : <LanternScene theme={theme} pattern={draftPattern} previewCount={previewCount} />}
+                </div>
+                {changed && previewCount === null && <p role="status"
+                  className="mt-2 text-center text-xs text-amber-200/80">
+                  Showing your saved parol. Save customization to update the image.
+                </p>}
                 <div className="mt-2 space-y-3" aria-label="Simulate a friend joining without saving">
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     <button type="button" onClick={() => setPreviewCount(null)} aria-pressed={previewCount === null}
