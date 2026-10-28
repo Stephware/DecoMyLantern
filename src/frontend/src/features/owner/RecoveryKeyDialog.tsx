@@ -24,7 +24,7 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
   const heading = useRef<HTMLHeadingElement>(null)
   const busy = replacing || leaving
   const busyRef = useRef(false)
-  busyRef.current = busy
+  useEffect(() => { busyRef.current = busy }, [busy])
   const code = recovery?.available ? recovery.recoveryCode : null
   const expired = recovery !== null && new Date(recovery.expiresAtUtc).getTime() <= Date.now()
 
