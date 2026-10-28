@@ -1,5 +1,5 @@
 import {THEMES} from '../customization/themes'
-import {outerFitZoom} from '../lantern/growth/outerGrowth'
+import {festivalOutlinePath, festivalPointAt, outerFitZoom} from '../lantern/growth/outerGrowth'
 import {storyGrowthAtFrame} from './storySpec'
 import ParolArtwork from '../lantern/renderer/ParolArtwork'
 import ProceduralOuterShell from '../lantern/renderer/ProceduralOuterShell'
@@ -34,6 +34,8 @@ export function StoryFrame({data, frame}: {data: StoryData; frame: number}) {
     ? 'Add your own light to our Christmas parol'
     : 'Add your light to my Christmas parol'
   const sparkle = 0.65 + 0.35 * Math.cos(frame * 0.12)
+  const waveAge = frame < 30 ? 50 : frame < 60 ? frame-30 : frame < 90 ? frame-60 : frame-90
+  const waveFlash = frame < 30 || frame >= 122 ? 0 : Math.max(0, 1-waveAge/25)
   return (
     <div style={{
       position: 'relative', width:1080, height:1920, overflow:'hidden',
@@ -54,6 +56,18 @@ export function StoryFrame({data, frame}: {data: StoryData; frame: number}) {
           <g transform={`translate(300 302) scale(${fit}) translate(-300 -302)`}>
             <ProceduralOuterShell theme={theme} growthCount={count} pattern={data.patternKey}/>
             <ParolArtwork theme={theme} pattern={data.patternKey}/>
+            {waveFlash > 0 && <g opacity={waveFlash} aria-hidden="true">
+              <path d={festivalOutlinePath(count)} fill="none" stroke="#fff5bf"
+                strokeWidth={5 + 9*waveFlash}/>
+              {Array.from({length:20},(_,index)=>{
+                const p=festivalPointAt(count, -Math.PI/2 + index*Math.PI/10)
+                return <g key={index} transform={`translate(${p.x} ${p.y})`}>
+                  <path d="M 0 -9 L 3 -3 L 9 0 L 3 3 L 0 9 L -3 3 L -9 0 L -3 -3 Z"
+                    fill={index%2===0 ? '#fff9d4' : theme.colors[0]}
+                    transform={`scale(${.5 + waveFlash})`}/>
+                </g>
+              })}
+            </g>}
             {lights.slice(0, wave === 3 ? lights.length : Math.max(0, lights.length - 1)).map(slot=>{
               const point=lightPosition(slot)
               const chosen=slot === data.highlightSlot
