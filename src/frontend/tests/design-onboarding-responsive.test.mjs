@@ -42,8 +42,8 @@ test('the onboarding picker occurs only after owner dashboard and recovery-key f
 test('mobile drawer has handle, arrow, swipes, keyboard and an accessible save', () => {
   const panels=read('features/customization/DesignSelectionPanels.tsx')
   assert.ok(panels.includes('onTouchStart={onStart} onTouchEnd={onEnd}'))
-  assert.ok(panels.includes('if (movement < -35) onOpenChange(true)'))
-  assert.ok(panels.includes('else if (movement > 35) onOpenChange(false)'))
+  assert.ok(panels.includes('if (movement < -35) { swiped.current = true; onOpenChange(true) }'))
+  assert.ok(panels.includes('else if (movement > 35) { swiped.current = true; onOpenChange(false) }'))
   assert.ok(panels.includes("event.key === 'Escape'"))
   assert.ok(panels.includes('aria-expanded={open}'))
   assert.ok(panels.includes('aria-controls="mobile-design-choices"'))
