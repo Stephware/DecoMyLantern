@@ -3,6 +3,7 @@ import type { Theme } from '../../customization/themes'
 import { ApiError, fetchParolSnapshot } from '../../../lib/api'
 import { growthForFriends, outerFitZoom } from '../growth/outerGrowth'
 import { lightPosition } from './lightPositions'
+import { snapshotRequestKey } from './snapshotState'
 import type { LanternLight, SavedParolSource } from './LanternScene'
 
 type Props = {
@@ -33,13 +34,12 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 export default function CachedParolScene({
   theme, contributions, friendCount, pattern, snapshot,
 }: Props) {
-  const sortedSlots = contributions.map(x => x.slotIndex).sort((a, b) => a - b).join(',')
-  // The authoritative endpoint always re-reads the saved state. A change of
-  // actual friend/slot/design state triggers a new image request, not a poll.
-  const stateKey = [
-    snapshot.kind, snapshot.stateId, snapshot.kind === 'guest' ? snapshot.token : '',
-    theme.key, pattern, friendCount, sortedSlots,
-  ].join('|')
+  // The backend always re-reads the saved state. Only a meaningful change
+  // to the owner, invitation or parol requests another flattened image.
+  const stateKey = snapshotRequestKey(
+    snapshot, theme.key, pattern, friendCount,
+    contributions.map(light => light.slotIndex),
+  )
 
   const [rendered, setRendered] = useState<RenderedImage | null>(null)
   const [loading, setLoading] = useState(true)
