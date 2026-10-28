@@ -9,7 +9,7 @@ The parol looks complete even with **zero friends**: a compact festival lantern 
 ## How the app is intended to work
 
 - **Owners** create a seasonal parol without signing up or logging in. The API gives the browser a secure HTTP-only owner cookie and shows a reusable 22-character private recovery key once (old 43-character keys remain accepted if valid).
-- **Friends** open the owner's single short invitation link without creating an account, then contribute one light per browser visitor and optionally leave a sealed Christmas message. After contributing, they can share an animated Story inviting more friends.
+- **Friends** open the owner's single short invitation link without creating an account, then contribute one light per browser visitor and optionally leave a sealed Christmas message.
 - Each accepted contribution keeps a stable central light and adds three connected ornament layers, with one visible contour after all three. The first 150 layers span 15 distinct festival-inspired regions instead of repeating the previous final design.
 - Owners can switch among designs unlocked by their reached friend milestones (0/3/10/23/40/50). A previously selected design stays available.
 - Messages are private to the lantern owner and stay sealed until **December 25, 12:00 AM Philippine Standard Time (UTC+8)**. For Christmas 2026, the server-side unlock is `2026-12-24T16:00:00Z`.
@@ -70,6 +70,9 @@ Install the following before running the project:
 If you develop on an Apple Silicon Mac, using a supported Windows or remote SQL Server instance is recommended.
 
 ## Run locally
+
+**Animated Story exports:** Instead of starting Vite and .NET separately, stop existing local servers and run **`bash scripts/dev-with-stories.sh`** from the repository root. This starts the API, frontend and private video renderer with matching temporary renderer credentials, then serves the frontend at http://localhost:5173. Your existing SQL connection and invitation encryption key must already be configured in .NET User Secrets; the script never changes them. Renderer startup logs are in `story-renderer/.dev-renderer.log` (ignored by Git). See [Story sharing setup](docs/story-sharing.md) for details.
+
 
 ### 1. Clone the repository
 
@@ -150,12 +153,6 @@ The dashboard displays real accepted contributions. Owners can copy their one sh
 Once your parol exists, copy its single invitation link and share it with friends. Friends can open their own guest page, enter a name, and optionally leave a Christmas note. The invitation link never contains your private owner or recovery key. One light per guest browser is enforced with a secure cookie and SQL constraints; this does not prove unique human identity. Links expire December 31 Philippine time. Historic links are retired without removing existing contributions.
 
 The same invitation URL can be copied again after refreshing the dashboard. Old invitation URLs no longer work after the migration. See [Task 4: invitations, security and real-guest test plan](docs/task4-friend-invitations.md). Its local SQL smoke test inserts 51 guests and must **never** be used against production.
-
-## Instagram and Facebook Story sharing (web-first)
-
-Owners and contributing friends can prepare an eight-second portrait Story MP4 (H.264, 1080 × 1920, 30fps) using the saved parol design and three-wave light growth. The Story dialog offers video preview, mobile native share (where supported), MP4 download, a static PNG alternative, and one-click invitation-link copying. Instagram/Facebook publishing and Link sticker insertion remain manual. **No Meta account login or auto-posting.**
-
-Run the private Node/Remotion renderer alongside the .NET API. In the ignored root `.env`, configure an independent `STORY_RENDERER_SECRET` (generate with `openssl rand -hex 32`), then run `docker compose -f compose.yaml up -d --build story-renderer backend frontend caddy`. Review [Story sharing, configuration and testing](docs/story-sharing.md). No new database tables are required for Story export.
 
 ## Short invitation link and recovery key
 

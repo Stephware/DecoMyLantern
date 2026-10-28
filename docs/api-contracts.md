@@ -65,15 +65,6 @@ Name: 1–80 characters after trimming; optional message: at most 500 characters
 
 See the [Task 4 workflow and integration test guide](task4-friend-invitations.md).
 
-## Animated Story sharing (web-first)
-
-| Method | Endpoint | Access | Purpose |
-| --- | --- | --- | --- |
-| POST | `/api/my/lantern/story` | Owner + CSRF + hourly rate limit | Render owner's saved parol MP4 or PNG |
-| POST | `/api/invitations/story` | Guest who already contributed + valid invitation + CSRF + hourly rate limit | Render contributor's parol MP4 or PNG |
-
-Both accept `{ "format": "mp4" }` or `{ "format": "png" }`; the guest request also includes the 16-character `token` as a JSON field. The API reads design, pattern, current light slots and verified contributor identity from SQL, never from untrusted client media props. Both endpoints stream binary output with `video/mp4` or `image/png` and never include message bodies, recovery keys or names. The backend sends sanitized data over its private network to the Remotion service authenticated by `StoryRenderer:SharedSecret`. See [Story sharing setup and limitations](story-sharing.md).
-
 ## Planned for later phases
 
 Single official invitation issuance/retrieval and anonymous contributions are implemented in Task 4. Production distributed abuse controls, real-human identity verification, moderation/reporting UI and completed owner inbox UI are still pending.

@@ -22,12 +22,27 @@ The film-like 8-second composition reveals the three most recent growth layers, 
 - **Private Node/Remotion renderer**: `story-renderer` receives sanitized Story props over the private Docker network and renders H.264 MP4 or PNG. It caches identical exports for 24 hours (up to 32 files) and runs one render job at a time. No public ingress or social API credentials.
 - **No database migration** for Stories. The existing backend stores all required light and pattern data.
 
-## Required setup
+## Local development: single command (recommended)
 
-For Compose (in the untracked root `.env`) set a **new, independent** internal authentication secret:
-```shell
-STORY_RENDERER_SECRET=$(openssl rand -hex 32)
+Stop any existing `dotnet run`, Vite and standalone renderer processes first (ports 5050, 5173 and 7070 must be free). From the **repository root**, run:
+
+```bash
+bash scripts/dev-with-stories.sh
 ```
+
+The script checks tools and ports, installs the renderer dependencies on first use, runs Remotion's Chrome Headless Shell preparation, starts the private renderer, and then starts the .NET API and Vite. It generates **one temporary internal renderer secret per launch** and passes it to both the API and Node, so their credentials always match. The frontend opens at `http://localhost:5173`. On exit, the launcher stops its child services.
+
+**Do not rotate your existing invitation encryption key.** The ASP.NET API still needs its original SQL connection and `Invitations:EncryptionKey` settings (in local .NET User Secrets). This script intentionally does not alter either.
+
+If renderer startup fails, inspect `story-renderer/.dev-renderer.log`. You can verify readiness with `curl -f http://127.0.0.1:7070/health`. An H.264 export is CPU-intensive, especially for a large parol.
+
+## Required setup for Docker/production
+
+For Compose, generate a **new, independent** private authentication secret:
+```bash
+openssl rand -hex 32
+```
+Copy the output into the ignored root `.env` as `STORY_RENDERER_SECRET=your-generated-value`. **Do not** paste `$(openssl ...)` literally into `.env`, because Docker Compose does not run shell substitutions there.
 Keep `INVITATION_ENCRYPTION_KEY` from the preceding single-link feature as-is. Then build and start:
 ```shell
 docker compose -f compose.yaml up -d --build story-renderer backend frontend caddy
@@ -35,6 +50,17 @@ docker compose -f compose.yaml up -d --build story-renderer backend frontend cad
 The rendering service is reachable only on the Compose network at `http://story-renderer:7070`, not as a public URL. The API receives `StoryRenderer__Url` and `StoryRenderer__SharedSecret` from Compose.
 
 For local processes without Docker, install in `story-renderer` using `npm install`, set `STORY_RENDERER_SECRET`, run `npm start`, and set the API's `StoryRenderer:SharedSecret` user secret to the same value. It defaults to `http://127.0.0.1:7070`. Linux rendering requires Chromium dependencies; the dedicated Dockerfile installs them.
+
+## Keep shared visuals in sync
+
+The dashboard, guest views, and Story video/PNG reuse the same parol
+`ProceduralOuterShell` and growth geometry. When adjusting ornamental size,
+region layout, or Fit zoom, check the **20-friend and 50-friend** Design Lab
+previews alongside both Story export formats; a change that looks good in the
+dashboard can become too small when the entire parol is fit into a portrait
+Story. Preserve the latest invitation modal, backend renderer diagnostics,
+and `scripts/dev-with-stories.sh` launcher when integrating older
+Story-sharing branches.
 
 ## Verification (required before release)
 
