@@ -44,6 +44,7 @@ export default function CachedParolScene({
   )
 
   const [rendered, setRendered] = useState<RenderedImage | null>(null)
+  const [transition, setTransition] = useState<ImageTransition | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
@@ -51,13 +52,48 @@ export default function CachedParolScene({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const pointers = useRef<Map<number, Point>>(new Map())
   const dragged = useRef(false)
+  const ownedUrls = useRef<Set<string>>(new Set())
+  const displayedRef = useRef<RenderedImage | null>(null)
+  const transitionRef = useRef<ImageTransition | null>(null)
+  const lastTabReturn = useRef(0)
+  const source = snapshot.kind === 'owner'
+    ? `owner:${snapshot.stateId}`
+    : `guest:${snapshot.stateId}:${snapshot.token}`
 
-  // Object URLs are local to this session, never persisted or exposed as
-  // public media URLs. Revoke after replacement/unmount to avoid memory leaks.
+  useEffect(() => { displayedRef.current = rendered }, [rendered])
+  useEffect(() => { transitionRef.current = transition }, [transition])
+
   useEffect(() => {
-    const url = rendered?.url
-    return () => { if (url) URL.revokeObjectURL(url) }
-  }, [rendered?.url])
+    const onVisibility = () => {
+      if (document.hidden) {
+        // Finishing an interrupted reveal never changes the saved parol data.
+        const pending = transitionRef.current
+        if (pending) {
+          setRendered(pending.next)
+          setTransition(null)
+        }
+      } else {
+        lastTabReturn.current = Date.now()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
+
+  // Two images only during a wave (previous + incoming); otherwise one.
+  useEffect(() => {
+    const all = ownedUrls.current
+    return () => { for (const url of all) URL.revokeObjectURL(url); all.clear() }
+  }, [])
+  useEffect(() => {
+    const needed = new Set([rendered?.url, transition?.next.url])
+    for (const url of ownedUrls.current) {
+      if (!needed.has(url)) {
+        URL.revokeObjectURL(url)
+        ownedUrls.current.delete(url)
+      }
+    }
+  }, [rendered?.url, transition?.next.url])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -65,6 +101,7 @@ export default function CachedParolScene({
     setLoading(true)
     setError('')
     setSelectedId(null)
+    setTransition(null)
 
     async function load() {
       for (let tries = 0; tries < 3; tries++) {
@@ -77,15 +114,55 @@ export default function CachedParolScene({
           )
           if (!active || controller.signal.aborted) return
           const url = URL.createObjectURL(blob)
-          setRendered({ key: stateKey, url })
-          setCamera({ zoom: 1, x: 0, y: 0 })
+          ownedUrls.current.add(url)
+          try {
+            // A predecoded image cannot flash blank on the first wave.
+            const img = new Image()
+            img.src = url
+            await img.decode()
+          } catch (failure) {
+            URL.revokeObjectURL(url)
+            ownedUrls.current.delete(url)
+            throw failure
+          }
+          if (!active || controller.signal.aborted) {
+            URL.revokeObjectURL(url)
+            ownedUrls.current.delete(url)
+            return
+          }
+
+          const next: RenderedImage = {
+            key: stateKey, url, source, designKey: theme.key,
+            patternKey: pattern, friendCount,
+          }
+          const previous = displayedRef.current
+          const animate = shouldAnimateSnapshot(previous, next, {
+            hidden: document.hidden,
+            reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+            recentlyReturned: lastTabReturn.current > 0 &&
+              Date.now() - lastTabReturn.current < 6000,
+            alreadyAnimating: transitionRef.current !== null,
+          })
+          if (animate) {
+            setTransition({next, wave: 1})
+          } else {
+            setRendered(next)
+            setTransition(null)
+            setCamera({zoom: 1, x: 0, y: 0})
+          }
           setLoading(false)
           setError('')
           return
         } catch (caught) {
           if (!active || controller.signal.aborted) return
           if (caught instanceof ApiError && caught.status === 503 && tries < 2) {
-            await new Promise(resolve => setTimeout(resolve, (tries + 1) * 2000))
+            await new Promise<void>(resolve => {
+              const timer = window.setTimeout(resolve, (tries + 1) * 2000)
+              controller.signal.addEventListener('abort', () => {
+                window.clearTimeout(timer)
+                resolve()
+              }, {once: true})
+            })
             continue
           }
           setError(caught instanceof Error ? caught.message : 'Unable to load the parol image.')
@@ -97,14 +174,33 @@ export default function CachedParolScene({
 
     void load()
     return () => { active = false; controller.abort() }
-  // stateKey is a canonical representation of the image request state.
+  // stateKey contains all request arguments; attempt is the explicit Retry.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stateKey, attempt])
 
-  const current = rendered?.key === stateKey
+  // Identical timing to the original 750ms / 850ms / 1100ms growth sequence.
+  useEffect(() => {
+    if (!transition) return
+    const timer = window.setTimeout(() => {
+      if (transition.wave === 3) {
+        setRendered(transition.next)
+        setTransition(null)
+      } else {
+        setTransition(current => current?.next.key === transition.next.key
+          ? {...current, wave: (current.wave + 1) as SnapshotWave}
+          : current)
+      }
+    }, SNAPSHOT_WAVE_DURATIONS_MS[transition.wave - 1])
+    return () => window.clearTimeout(timer)
+  }, [transition])
+
+  // Never display another owner's or invitation's earlier image by mistake.
+  const visibleImage = rendered?.source === source ? rendered : null
+  const activeWave = transition?.next.key === stateKey ? transition : null
+  const ready = visibleImage?.key === stateKey && activeWave === null
   const fit = outerFitZoom(growthForFriends(friendCount))
   const selected = contributions.find(light => light.id === selectedId)
-  const selectedPoint = selected && current ? lightPosition(selected.slotIndex) : null
+  const selectedPoint = selected && ready ? lightPosition(selected.slotIndex) : null
   const transform = `translate(${CENTER_X + camera.x} ${CENTER_Y + camera.y}) scale(${camera.zoom}) translate(${-CENTER_X} ${-CENTER_Y})`
 
   function pointerDown(event: PointerEvent<SVGSVGElement>) {
@@ -159,7 +255,7 @@ export default function CachedParolScene({
   }
 
   function selectLight(event: MouseEvent<SVGSVGElement>) {
-    if (dragged.current || !current || !contributions.length) return
+    if (dragged.current || !ready || !contributions.length) return
     const rect = event.currentTarget.getBoundingClientRect()
     if (!rect.width || !rect.height) return
     const x = CENTER_X + ((event.clientX - rect.left) * WIDTH / rect.width - CENTER_X - camera.x) / camera.zoom
