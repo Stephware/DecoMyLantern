@@ -13,7 +13,6 @@ type Props = {
   designs: Design[]
   onCreate: () => Promise<void>
   onSave: (designKey: string, patternKey: string) => Promise<void>
-  onRegenerateRecovery: () => Promise<void>
   onLogout: () => Promise<void>
 }
 
@@ -23,7 +22,7 @@ const PATTERNS = [
   { key: 'rays', label: 'Radiant rays', detail: 'A brighter starburst' },
 ] as const
 
-export default function HostDashboard({ lantern, designs, onCreate, onSave, onRegenerateRecovery, onLogout }: Props) {
+export default function HostDashboard({ lantern, designs, onCreate, onSave, onLogout }: Props) {
   const [draftDesign, setDraftDesign] = useState(lantern?.designKey ?? 'classic')
   const [draftPattern, setDraftPattern] = useState(lantern?.patternKey ?? 'default')
   const [busy, setBusy] = useState(false)
@@ -78,10 +77,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8">
           <div className="flex items-center gap-2 text-sm font-bold tracking-wide sm:text-lg"><span className="text-2xl text-amber-300">✦</span> BeMyParol</div>
           <div className="flex items-center gap-4">
-            <button type="button" disabled={busy || signingOut} onClick={() => {
-              if (window.confirm('Generate a new recovery key? Your previous recovery key will immediately stop working.'))
-                void run(onRegenerateRecovery, 'New recovery key generated.')
-            }} className="rounded-full border border-amber-300/25 px-4 py-2 text-xs font-semibold text-amber-100 transition hover:border-amber-300/50 disabled:opacity-50">Recovery key</button>
+            <span className="hidden text-xs text-amber-100/60 sm:inline">Keep your original recovery key safe for one year.</span>
             <button type="button" disabled={signingOut || busy} onClick={signOut} className="rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white/75 transition hover:border-amber-300/40 hover:text-white disabled:opacity-50">{signingOut ? 'Leaving…' : 'Leave parol'}</button>
           </div>
         </div>
@@ -204,7 +200,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onRe
                 </div>
                 <button type="button" disabled={!changed || busy || designs.length === 0 || invalidDesign} onClick={() => void run(() => onSave(draftDesign, draftPattern), 'Your lantern customization has been saved.')} className="mt-6 w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-40">{busy ? 'Saving…' : invalidDesign ? `Locked until ${selectedDesign?.requiredFriends ?? 'more'} friends` : changed ? 'Save customization →' : 'All changes saved'}</button>
               </section>
-              <InvitationManager />
+              <InvitationManager lantern={lantern} />
             </aside>
           </div>
         )}

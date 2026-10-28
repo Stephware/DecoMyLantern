@@ -7,13 +7,13 @@ public sealed record InvitationInfoDto(Guid Id, DateTime? ExpiresAtUtc, DateTime
 
 public sealed class InvitationTokenRequest
 {
-    [Required, StringLength(128, MinimumLength = 43)]
+    [Required, StringLength(16, MinimumLength = 16)]
     public string Token { get; init; } = "";
 }
 
 public sealed class GuestContributionRequest
 {
-    [Required, StringLength(128, MinimumLength = 43)]
+    [Required, StringLength(16, MinimumLength = 16)]
     public string Token { get; init; } = "";
 
     [Required, StringLength(80, MinimumLength = 1)]

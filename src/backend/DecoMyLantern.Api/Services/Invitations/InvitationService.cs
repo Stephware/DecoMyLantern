@@ -26,16 +26,35 @@ public static class InvitationPolicy
     public static DateTime EndOfSeasonUtc(int seasonYear) =>
         new(seasonYear, 12, 31, 15, 59, 59, DateTimeKind.Utc);
 
+    // 12 bytes of cryptographic randomness -> exactly 16 URL-safe characters.
+    public static string GenerateToken() => Microsoft.AspNetCore.WebUtilities.WebEncoders
+        .Base64UrlEncode(System.Security.Cryptography.RandomNumberGenerator.GetBytes(12));
+
+    public static bool IsValidToken(string? secret) => TryHash(secret, out _);
+
+    public static bool TryHash(string? secret, out string hash)
+    {
+        hash = "";
+        if (secret is null || secret.Length != 16) return false;
+        try
+        {
+            var bytes = Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlDecode(secret);
+            if (bytes.Length != 12 ||
+                Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlEncode(bytes) != secret) return false;
+            hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+            return true;
+        }
+        catch (FormatException) { return false; }
+    }
+
     public static string Hash(string secret) =>
-        OwnerSecrets.TryHash(secret, out var hash) ? hash :
-        throw new ArgumentException("Malformed invitation or visitor token.", nameof(secret));
+        TryHash(secret, out var hash) ? hash :
+        throw new ArgumentException("Malformed invitation token.", nameof(secret));
 }
 
 public interface IInvitationService
 {
-    Task<CreatedInvitationDto> CreateLinkAsync(Guid ownerId, CancellationToken cancellationToken);
-    Task<IReadOnlyList<InvitationInfoDto>> GetLinksAsync(Guid ownerId, CancellationToken cancellationToken);
-    Task RevokeLinkAsync(Guid ownerId, Guid linkId, CancellationToken cancellationToken);
+    Task<CreatedInvitationDto> GetOrCreateLinkAsync(Guid ownerId, CancellationToken cancellationToken);
     Task<InvitationPreviewDto> PreviewAsync(string inviteToken, string? guestToken, CancellationToken cancellationToken);
     Task<GuestContributionResultDto> ContributeAsync(
         GuestContributionRequest request, string guestToken, Guid? authenticatedOwnerId, CancellationToken cancellationToken);
@@ -43,52 +62,56 @@ public interface IInvitationService
 
 public sealed class InvitationService(
     ApplicationDbContext database,
+    InvitationTokenCipher cipher,
     TimeProvider clock) : IInvitationService
 {
-    public async Task<CreatedInvitationDto> CreateLinkAsync(Guid ownerId, CancellationToken cancellationToken)
+    public async Task<CreatedInvitationDto> GetOrCreateLinkAsync(
+        Guid ownerId, CancellationToken cancellationToken)
     {
         var season = LanternPolicy.SeasonFor(clock.GetUtcNow().UtcDateTime);
-        var lantern = await database.Lanterns.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.OwnerUserId == ownerId && x.SeasonYear == season, cancellationToken)
+        // Serializes creation for one lantern across all API instances.
+        // Reuse the owner-creation transaction if one is already active.
+        var ownsTransaction = database.Database.CurrentTransaction is null;
+        await using var transaction = ownsTransaction
+            ? await database.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
+            : null;
+
+        var lantern = await database.Lanterns
+            .FromSqlInterpolated($"SELECT * FROM [Lanterns] WITH (UPDLOCK, HOLDLOCK) WHERE [OwnerUserId] = {ownerId} AND [SeasonYear] = {season}")
+            .SingleOrDefaultAsync(cancellationToken)
             ?? throw new InvitationException(404, "Create your parol before inviting friends.");
 
         var expiresAt = InvitationPolicy.EndOfSeasonUtc(lantern.SeasonYear);
         if (clock.GetUtcNow().UtcDateTime >= expiresAt)
             throw new InvitationException(409, "This Christmas season is closed.");
 
-        var token = OwnerSecrets.Generate();
-        var link = new ShareLink
-        {
-            LanternId = lantern.Id,
-            TokenHash = InvitationPolicy.Hash(token),
-            ExpiresAtUtc = expiresAt
-        };
-        database.ShareLinks.Add(link);
-        await database.SaveChangesAsync(cancellationToken);
-        return new CreatedInvitationDto(link.Id, token, expiresAt);
-    }
+        var official = await database.ShareLinks.SingleOrDefaultAsync(
+            x => x.LanternId == lantern.Id && x.IsOfficial, cancellationToken);
 
-    public async Task<IReadOnlyList<InvitationInfoDto>> GetLinksAsync(
-        Guid ownerId, CancellationToken cancellationToken)
-    {
-        var season = LanternPolicy.SeasonFor(clock.GetUtcNow().UtcDateTime);
-        return await database.ShareLinks.AsNoTracking()
-            .Where(x => x.Lantern.OwnerUserId == ownerId && x.Lantern.SeasonYear == season)
-            .OrderByDescending(x => x.ExpiresAtUtc)
-            .Select(x => new InvitationInfoDto(x.Id, x.ExpiresAtUtc, x.RevokedAtUtc))
-            .ToListAsync(cancellationToken);
-    }
-
-    public async Task RevokeLinkAsync(Guid ownerId, Guid linkId, CancellationToken cancellationToken)
-    {
-        var link = await database.ShareLinks
-            .FirstOrDefaultAsync(x => x.Id == linkId && x.Lantern.OwnerUserId == ownerId, cancellationToken)
-            ?? throw new InvitationException(404, "Invitation not found.");
-        if (link.RevokedAtUtc is null)
+        if (official is null)
         {
-            link.RevokedAtUtc = clock.GetUtcNow().UtcDateTime;
+            var token = InvitationPolicy.GenerateToken();
+            official = new ShareLink
+            {
+                LanternId = lantern.Id,
+                TokenHash = InvitationPolicy.Hash(token),
+                EncryptedToken = cipher.Protect(token, lantern.Id),
+                IsOfficial = true,
+                ExpiresAtUtc = expiresAt
+            };
+            database.ShareLinks.Add(official);
             await database.SaveChangesAsync(cancellationToken);
         }
+
+        if (official.EncryptedToken is null)
+            throw new InvitationException(409, "Invitation is missing its secure saved link.");
+
+        var savedToken = cipher.Unprotect(official.EncryptedToken, lantern.Id);
+        if (InvitationPolicy.Hash(savedToken) != official.TokenHash)
+            throw new InvalidOperationException("Stored invitation token does not match its hash.");
+
+        if (ownsTransaction) await transaction!.CommitAsync(cancellationToken);
+        return new CreatedInvitationDto(official.Id, savedToken, official.ExpiresAtUtc ?? expiresAt);
     }
 
     public async Task<InvitationPreviewDto> PreviewAsync(
@@ -107,7 +130,7 @@ public sealed class InvitationService(
             throw new InvitationException(400, "Your Christmas message must be 500 characters or fewer.");
         if (!OwnerSecrets.TryHash(guestToken, out var visitorHash))
             throw new InvitationException(400, "Refresh the invitation page and try again.");
-        if (!OwnerSecrets.TryHash(request.Token, out var inviteHash))
+        if (!InvitationPolicy.TryHash(request.Token, out var inviteHash))
             throw new InvitationException(404, "This invitation is invalid.");
 
         // An exclusive lock on this single lantern's row serializes NextSlotIndex
@@ -121,9 +144,9 @@ public sealed class InvitationService(
             var now = clock.GetUtcNow().UtcDateTime;
             var link = await database.ShareLinks.AsNoTracking()
                 .SingleOrDefaultAsync(x => x.TokenHash == inviteHash &&
-                    x.RevokedAtUtc == null &&
+                    x.IsOfficial && x.RevokedAtUtc == null &&
                     (x.ExpiresAtUtc == null || x.ExpiresAtUtc > now), cancellationToken)
-                ?? throw new InvitationException(404, "This invitation has expired or was revoked.");
+                ?? throw new InvitationException(404, "This invitation is unavailable or has expired.");
 
             var lantern = await database.Lanterns
                 .FromSqlInterpolated($"SELECT * FROM [Lanterns] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {link.LanternId}")
@@ -175,10 +198,8 @@ public sealed class InvitationService(
             await database.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            // Re-read public data after commit, using the link validated inside
-            // the transaction. If the owner revokes the link immediately after
-            // acceptance, the guest still receives success for their saved light.
-            // This response never contains private message text.
+            // Re-read public data after commit using the validated link.
+            // Never include private message text in guest responses.
             var preview = await PublicPreviewAsync(link, guestToken, cancellationToken);
             return new GuestContributionResultDto(contribution.Id, slot,
                 !string.IsNullOrEmpty(body), preview);
@@ -201,16 +222,16 @@ public sealed class InvitationService(
     private async Task<ShareLink> FindActiveLinkAsync(
         string inviteToken, CancellationToken cancellationToken)
     {
-        if (!OwnerSecrets.TryHash(inviteToken, out var hash))
+        if (!InvitationPolicy.TryHash(inviteToken, out var hash))
             throw new InvitationException(404, "This invitation is invalid.");
 
         var now = clock.GetUtcNow().UtcDateTime;
         return await database.ShareLinks.AsNoTracking()
             .SingleOrDefaultAsync(x => x.TokenHash == hash &&
-                x.RevokedAtUtc == null &&
+                x.IsOfficial && x.RevokedAtUtc == null &&
                 (x.ExpiresAtUtc == null || x.ExpiresAtUtc > now),
                 cancellationToken)
-            ?? throw new InvitationException(404, "This invitation has expired or was revoked.");
+            ?? throw new InvitationException(404, "This invitation is unavailable or has expired.");
     }
 
     private async Task<InvitationPreviewDto> PublicPreviewAsync(

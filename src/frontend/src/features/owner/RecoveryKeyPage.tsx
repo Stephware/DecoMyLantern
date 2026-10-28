@@ -1,10 +1,25 @@
 import { useState } from 'react'
 
-type Props = { code: string; onContinue: () => void }
+type Props = { code: string; onContinue: () => Promise<void>; onCancel?: () => Promise<void> }
 
-export default function RecoveryKeyPage({ code, onContinue }: Props) {
+export default function RecoveryKeyPage({ code, onContinue, onCancel }: Props) {
   const [acknowledged, setAcknowledged] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true)
+    setError('')
+    try { await action() }
+    catch (caught) { setError(caught instanceof Error ? caught.message : 'Please try again.') }
+    finally { setBusy(false) }
+  }
+
+  function cancel() {
+    if (!onCancel || !window.confirm('Cancel this new parol? Its parol and recovery key will be permanently deleted.')) return
+    void run(onCancel)
+  }
 
   async function copy() {
     try {
@@ -22,7 +37,7 @@ export default function RecoveryKeyPage({ code, onContinue }: Props) {
         <h1 className="mt-4 font-serif text-3xl font-semibold">Save your recovery key</h1>
         <p className="mt-3 text-sm leading-7 text-white/65">
           Your parol is protected by a private browser session. Save this key in a safe place.
-          You’ll need it to recover access from another device or after clearing browser data.
+          This original recovery key is valid for one year and can be reused during that year, even after restoring access. Save it for another device or after clearing browser data.
         </p>
         <div className="mt-6 rounded-xl border border-white/15 bg-[#080e20] p-4">
           <p className="text-xs font-bold uppercase tracking-widest text-white/50">Private key — shown only now</p>
@@ -40,10 +55,17 @@ export default function RecoveryKeyPage({ code, onContinue }: Props) {
             className="mt-1 h-4 w-4 accent-amber-300" />
           I have saved my recovery key somewhere private.
         </label>
-        <button type="button" disabled={!acknowledged} onClick={onContinue}
-          className="mt-6 w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 disabled:cursor-not-allowed disabled:opacity-40">
-          Continue to my parol →
-        </button>
+        {error && <p role="alert" className="mt-5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">{error}</p>}
+        <div className="mt-6 flex gap-3">
+          {onCancel && <button type="button" disabled={busy} onClick={cancel}
+            className="min-w-0 flex-1 rounded-xl border border-rose-400/50 bg-rose-500/15 px-4 py-3.5 text-sm font-bold text-rose-100 hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-40">
+            {busy ? 'Please wait…' : 'Cancel'}
+          </button>}
+          <button type="button" disabled={!acknowledged || busy} onClick={() => void run(onContinue)}
+            className="min-w-0 flex-1 rounded-xl bg-amber-300 px-4 py-3.5 text-sm font-bold text-slate-900 disabled:cursor-not-allowed disabled:opacity-40">
+            Continue to my parol →
+          </button>
+        </div>
       </section>
     </main>
   )

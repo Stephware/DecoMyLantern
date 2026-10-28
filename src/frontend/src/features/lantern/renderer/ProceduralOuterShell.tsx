@@ -1,5 +1,11 @@
 import { memo, useId } from 'react'
 import ExtendedRegionMotif from './ExtendedRegionMotif'
+import {
+  FLOWER_REGION_INDEX,
+  laterMotifScale,
+  ornamentWidthEmphasis,
+  completedMotifVisualRadius,
+} from '../growth/ornamentScaling'
 import type { Theme } from '../../customization/themes'
 import {
   bandMotifPoint,
@@ -44,6 +50,9 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
   const goldTrim = primary
   const glow = `url(#${uid}-jewel)`
   const regionVisible = GROWTH_REGIONS.filter(region => growthCount >= region.from)
+  // Larger outer petals sit behind earlier signature motifs. This preserves
+  // the established flower even when the later ornaments overlap inward.
+  const paintedRegions = regionVisible.length > 3 ? [...regionVisible].reverse() : regionVisible
   const motifFill = recipe.motif === 'flower' || recipe.motif === 'jasmine' ? rose :
     recipe.motif === 'star' ? ivory : primary
 
@@ -78,11 +87,13 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
           const familyIndex = GROWTH_REGIONS.findIndex(region => region.zone === zone)
           const hue = palette[(familyIndex + Math.floor(n / 3)) % palette.length]
           const trim = familyIndex % 2 === 0 ? ivory : primary
+          const outerDetail = n > GROWTH_REGIONS[FLOWER_REGION_INDEX].to
           return (
             <g key={n} data-growth-layer={n} data-region={zone}
               data-boundary={isFriendBoundary(n) ? "friend" : undefined}
               className={animateGrowth && n === growthCount ? "parol-growth-layer-arrive" : undefined}>
-              <path d={festivalBandPath(n)} fill={hue} fillOpacity=".37"
+              <path d={festivalBandPath(n)} fill={hue}
+                fillOpacity={outerDetail ? '.19' : '.37'}
                 fillRule="evenodd" stroke="none" />
               {Array.from({ length: PANEL_SEGMENTS }, (_, segment) => {
                 const cellColor = palette[(segment % 4 + familyIndex + n) % palette.length]
@@ -90,8 +101,8 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                   <path key={segment} data-capiz-facet={segment}
                     d={festivalFacetPath(n, segment)}
                     fill={segment % 3 === 0 ? glass : cellColor}
-                    fillOpacity={segment % 3 === 0 ? '.4' : '.25'}
-                    stroke={ivory} strokeOpacity=".12" strokeWidth=".5" />
+                    fillOpacity={outerDetail ? '.12' : segment % 3 === 0 ? '.4' : '.25'}
+                    stroke={ivory} strokeOpacity={outerDetail ? '.06' : '.12'} strokeWidth=".5" />
                 )
               })}
 
@@ -155,7 +166,7 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
               {isFriendBoundary(n) && <path d={festivalOutlinePath(n)} fill="none"
                 stroke={n % 15 === 0 ? ivory : trim}
                 strokeWidth={n % 15 === 0 ? 2.3 : 1.05}
-                strokeOpacity={n % 15 === 0 ? '.82' : '.45'}
+                strokeOpacity={outerDetail ? (n % 15 === 0 ? '.28' : '.09') : (n % 15 === 0 ? '.82' : '.45')}
                 strokeLinejoin="round"/>}
             </g>
           )
@@ -166,8 +177,15 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
           bands into coherent geometric flowers, diamonds and fan windows.
           Incomplete regions stop exactly at the current friend count. */}
       <g data-testid="festival-regional-patterns">
-        {regionVisible.map((region, regionIndex) => {
+        {paintedRegions.map(region => {
+          const regionIndex = GROWTH_REGIONS.findIndex(item => item.zone === region.zone)
           const end = Math.min(growthCount, region.to)
+          // Preserve the diamond, mosaic and flower exactly as they were.
+          // For later regions, compensate for the artwork's intrinsic size
+          // rather than making the entire parol radius disproportionately big.
+          const ornamentEmphasis = ornamentWidthEmphasis(regionIndex)
+          const afterFlower = regionIndex > FLOWER_REGION_INDEX
+          const growthFraction = (end - region.from + 1) / (region.to - region.from + 1)
           return (
             <g key={region.zone} data-growth-region={region.zone}
               data-visible-through-layer={end}>
@@ -176,18 +194,36 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                 const inner = festivalMotifPoint(region.from - 1, sector, 10)
                 const outer = festivalMotifPoint(end, sector, 10)
                 const midIndex = Math.floor((region.from + end) / 2)
-                const center = bandMotifPoint(midIndex, sector)
-                const fillSize = Math.min(3.1, Math.max(.55, (end - region.from + 1) * 10.5 / 39))
+                const originalCenter = bandMotifPoint(midIndex, sector)
+                // Alternate the large outer motifs between the earlier
+                // flower petals so adjacent designs remain individually visible.
+                const phaseDegrees = afterFlower && regionIndex % 2 === 1 ? -18 : 0
+                const angle = -Math.PI / 2 + TAU * (sector + .5) / 10 +
+                  phaseDegrees * Math.PI / 180
+                const regionStart = afterFlower ? festivalPointAt(region.from - 1, angle) : originalCenter
+                const regionEnd = afterFlower ? festivalPointAt(end, angle) : originalCenter
+                const center = afterFlower ? {
+                  x: (regionStart.x + regionEnd.x) / 2,
+                  y: (regionStart.y + regionEnd.y) / 2,
+                } : originalCenter
+                const fillSize = afterFlower
+                  ? laterMotifScale(regionIndex) * growthFraction / ornamentEmphasis
+                  : Math.min(3.1, Math.max(.55, (end - region.from + 1) * 10.5 / 39))
+                // Keep the approved early flower's old proportions; only
+                // later ornaments expand uniformly in both dimensions.
+                const motifScaleX = fillSize * ornamentEmphasis
+                const motifScaleY = afterFlower ? motifScaleX : fillSize
                 const control = bandMotifPoint(midIndex, sector)
                 return (
-                  <g key={sector}>
+                  <g key={sector}
+                    data-ornament-radius={afterFlower ? completedMotifVisualRadius(regionIndex).toFixed(2) : undefined}>
                     <path d={regionPanelPath(region.from, end, sector)}
                       fill={region.zone === 'palimbun' ? motifFill : color}
-                      fillOpacity={region.zone === 'palimbun' ? '.42' : '.33'}
+                      fillOpacity={afterFlower ? '.48' : region.zone === 'palimbun' ? '.42' : '.33'}
                       stroke={ivory} strokeOpacity=".73" strokeWidth="2.0"/>
                     {/* A coherent large-scale design appears INSIDE each
                         region as its bands arrive, rather than just a thin border. */}
-                    <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 36 + 18}) scale(${fillSize})`}>
+                    <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 36 + 18 + phaseDegrees}) scale(${motifScaleX} ${motifScaleY})`}>
                       {region.zone === 'siku' && (
                         <g>
                           <path d="M 0 -25 L 15 0 L 0 25 L -15 0 Z"
@@ -266,7 +302,8 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
           <path key={n} d={festivalOutlinePath(n)} fill="none"
             stroke={n % 15 === 0 ? ivory : goldTrim}
             strokeWidth={n % 15 === 0 ? 1.6 : .75}
-            strokeOpacity={n % 15 === 0 ? '.82' : '.35'}/>
+            strokeOpacity={n > GROWTH_REGIONS[FLOWER_REGION_INDEX].to
+              ? (n % 15 === 0 ? '.25' : '.08') : (n % 15 === 0 ? '.82' : '.35')}/>
         ))}
       </g>
 
@@ -278,7 +315,8 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
             const pos = bandMotifPoint(layer.friendNumber, sector, 5)
             const n = layer.friendNumber
             return (
-              <g key={`${n}-${sector}`} transform={`translate(${pos.x} ${pos.y})`}>
+              <g key={`${n}-${sector}`} transform={`translate(${pos.x} ${pos.y})`}
+                opacity={n > GROWTH_REGIONS[FLOWER_REGION_INDEX].to ? .3 : 1}>
                 <circle r="9.5" fill="#263b48" fillOpacity=".82"
                   stroke={ivory} strokeWidth="1.8"/>
                 {(recipe.motif === 'flower' || recipe.motif === 'jasmine') && (

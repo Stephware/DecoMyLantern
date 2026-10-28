@@ -10,17 +10,20 @@ The owner never registers or logs in. The API creates an internal, passwordless 
 | --- | --- | --- | --- |
 | GET | `/api/owner/csrf` | Public | Issue request CSRF token |
 | POST | `/api/owner/create` | Public + CSRF + rate limit | Create anonymous owner and seasonal parol, set token cookie, return private recovery code once |
+| POST | `/api/owner/finish-setup` | Owner + CSRF | Confirm the newly created parol and close its cancellation window |
+| POST | `/api/owner/cancel-creation` | Owner + CSRF | Delete a still-pending new owner, parol, and credential; clear the owner cookie |
 | GET | `/api/owner/me` | Owner | Return `{ "id": "guid" }` |
-| POST | `/api/owner/recover` | Public + CSRF + rate limit | Redeem high-entropy recovery key, rotate both owner token and recovery key |
-| POST | `/api/owner/recovery-code` | Owner + CSRF | Rotate recovery key while still in possession of owner session |
+| POST | `/api/owner/recover` | Public + CSRF + rate limit | Reuse the same high-entropy recovery key within one year, refresh owner session only |
 | POST | `/api/owner/sign-out` | Owner + CSRF | Revoke the token in SQL; recovery key remains usable |
 | GET | `/api/owner/legacy-available` | Existing legacy Identity cookie | Detect an old logged-in owner |
 | GET | `/api/owner/legacy-csrf` | Existing legacy Identity cookie | Issue legacy-identity-bound CSRF token |
 | POST | `/api/owner/upgrade-legacy` | Existing legacy Identity cookie + CSRF | Transfer existing owner to token access, preserving user and lantern IDs |
 
-`POST /api/owner/create` returns status 201 with `{ "owner": { "id": "..." }, "recoveryCode": "..." }`; `recover` and `upgrade-legacy` return the same shape with 200. The recovery code is **only shown once per issue/rotation**. It is not returned from `/me`, does not appear in shareable URLs, and must never be logged or stored in a public client cache.
+`POST /api/owner/create` returns status 201 with `{ "owner": { "id": "..." }, "recoveryCode": "..." }`; `upgrade-legacy` returns the same shape with 200. `recover` returns `{ "owner": { "id": "..." } }` with 200 and sets a new session cookie. The original recovery key is shown when first issued, reused without rotation during its one-year lifetime, and is not returned from `/me` or `recover`. It must never appear in invitation URLs, logs, or public caches.
 
-Recovery body: `{ "recoveryCode": "base64url-secret" }`. Recovery **invalidates the old owner cookie AND old recovery key**. Both secrets are 256-bit random; their hashes are unique indexed values. Recovery is limited to 6 attempts per 15 minutes per observed IP; creation is limited to 6/hour per observed IP. These in-memory counters are per API instance, and production deployments need shared rate limiting and trusted-proxy IP configuration. Owner sessions expire after 400 days, and recovery keys after 730 days. Without a valid session or the recovery key, access cannot be regained automatically; verified email recovery is *not* provided.
+Creation leaves setup pending while the recovery key is shown. Continuing calls `finish-setup`; cancelling calls `cancel-creation`, which removes the new owner, its parol, official invitation, and credential in one transaction. Cancellation is rejected after setup finishes or the parol has been used. Recovery and legacy transfer cannot use this cancellation flow.
+
+Recovery body: `{ "recoveryCode": "base64url-secret" }`. Recovery invalidates the old owner cookie but **does not change or consume the original recovery key**. Owner browser sessions are 256-bit random, while newly issued recovery keys are 128-bit random (22 characters); existing 256-bit recovery keys remain accepted. Their hashes are unique indexed values. Recovery is limited to 6 attempts per 15 minutes per observed IP; creation is limited to 6/hour per observed IP. These in-memory counters are per API instance, and production deployments need shared rate limiting and trusted-proxy IP configuration. Owner sessions expire after 400 days; recovery keys expire 365 days after original issuance without renewal on use. Existing keys with longer stored expiration dates are also restricted to one year from their credential creation. Without a valid session or the recovery key, access cannot be regained automatically; verified email recovery is *not* provided.
 
 Every modifying request first calls `GET /api/owner/csrf` and includes `X-CSRF-TOKEN` plus the same cookies. The legacy migration uses `/api/owner/legacy-csrf` instead. Responses containing owner tokens or recovery codes carry `Cache-Control: no-store`. Owner validation **never trusts the memory cache**; the 2-minute `IMemoryCache` is used only for read-only public design and growth catalog responses.
 
@@ -49,21 +52,19 @@ Lantern responses include `id`, `seasonYear`, `designKey`, `paletteKey`, `patter
 
 ## Task 4 — Friend invitations and contributions
 
-A passwordless owner creates a random 256-bit invitation token with `POST /api/my/lantern/invitations`; only its SHA-256 hash is stored in SQL. The frontend builds a share URL of the form `https://bemyparol.site/#/invite/<token>`. The guest submits the token in a **POST JSON body**, not in an HTTP path or query.
+The owner receives one short, cryptographically random 96-bit (16-character) invitation per seasonal parol through the idempotent `POST /api/my/lantern/invitations`. It is issued automatically when creating a new parol, while existing parols receive it on their first dashboard visit. A SHA-256 hash plus an AES-GCM encrypted copy are stored in the existing `ShareLinks` table; the encrypted token is recoverable only using the persistent configured `Invitations:EncryptionKey`. The frontend builds `https://bemyparol.site/#/i/<token>` and sends tokens in POST JSON bodies, not paths or query strings. Historical invitation rows remain but are no longer valid.
 
 | Method | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
-| GET | `/api/my/lantern/invitations` | Owner | List current-season link metadata, never plaintext tokens |
-| POST | `/api/my/lantern/invitations` | Owner + CSRF | Issue one new share token and its expiry |
-| DELETE | `/api/my/lantern/invitations/{id}` | Owner + CSRF | Revoke an owned invitation without removing lights |
+| POST | `/api/my/lantern/invitations` | Owner + CSRF | Retrieve or create the same single official invitation (returns its token and expiry) |
 | GET | `/api/invitations/csrf` | Public | Set HTTP-only guest cookie and provide CSRF token |
 | POST | `/api/invitations/preview` | Public + CSRF | `{ token }` returns safe public parol and contributed status |
 | POST | `/api/invitations/contribute` | Guest + CSRF | `{ token, displayName, message? }` returns assigned light slot and safe preview |
 
-Name: 1–80 characters after trimming; optional message: at most 500 characters. Guest cookies are random, HTTP-only, and hashed in SQL. Contribution/slot uniqueness indexes and SQL `UPDLOCK` / serializable transaction prevent accidental browser duplicates and slot collisions. Invalid/revoked/expired links yield 404; duplicate submissions yield 409. Guest previews never return message text, owner ID, owner credentials, or other contributors' display names. Links expire at 23:59:59 on December 31 Philippine time. Rate limiting is per API instance pending future production hardening.
+Name: 1–80 characters after trimming; optional message: at most 500 characters. Guest cookies are random, HTTP-only, and hashed in SQL. Contribution/slot uniqueness indexes and SQL `UPDLOCK` / serializable transaction prevent accidental browser duplicates and slot collisions. Invalid/retired/expired links yield 404; duplicate submissions yield 409. Guest previews never return message text, owner ID, owner credentials, or other contributors' display names. Links expire at 23:59:59 on December 31 Philippine time. Rate limiting is per API instance pending future production hardening.
 
 See the [Task 4 workflow and integration test guide](task4-friend-invitations.md).
 
 ## Planned for later phases
 
-Invitation creation/revocation and anonymous contributions are implemented in Task 4. Production distributed abuse controls, real-human identity verification, moderation/reporting UI and completed owner inbox UI are still pending.
+Single official invitation issuance/retrieval and anonymous contributions are implemented in Task 4. Production distributed abuse controls, real-human identity verification, moderation/reporting UI and completed owner inbox UI are still pending.

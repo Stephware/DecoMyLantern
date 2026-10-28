@@ -50,6 +50,10 @@ public sealed class ShareLink
     public Guid LanternId { get; set; }
     public Lantern Lantern { get; set; } = null!;
     public string TokenHash { get; set; } = "";
+    // Only one canonical invitation per lantern. Older rows stay for auditing.
+    public bool IsOfficial { get; set; }
+    // AES-GCM ciphertext; plaintext tokens must not be stored in SQL.
+    public string? EncryptedToken { get; set; }
     public DateTime? ExpiresAtUtc { get; set; }
     public DateTime? RevokedAtUtc { get; set; }
     public ICollection<Contribution> Contributions { get; set; } = new List<Contribution>();

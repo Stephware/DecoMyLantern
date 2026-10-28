@@ -64,14 +64,15 @@ function ok(response, status, step) {
 
 const owner = new Browser()
 const issuedOwner = ok(await owner.ownerPost('/api/owner/create'), 201, 'create owner')
-assert.equal(typeof issuedOwner.recoveryCode, 'string')
+assert.equal(issuedOwner.recoveryCode.length, 22)
 const lantern = ok(await owner.call('/api/my/lantern'), 200, 'get owner parol')
 assert.equal(lantern.acceptedFriends, 0)
 
-const invitation = ok(await owner.ownerPost('/api/my/lantern/invitations'), 200, 'create invite')
-assert.equal(invitation.token.length, 43)
-const ownerLinks = ok(await owner.call('/api/my/lantern/invitations'), 200, 'owner invite list')
-assert.ok(ownerLinks.some(link => link.id === invitation.id))
+const invitation = ok(await owner.ownerPost('/api/my/lantern/invitations'), 200, 'official invite')
+assert.equal(invitation.token.length, 16)
+const sameInvitation = ok(await owner.ownerPost('/api/my/lantern/invitations'), 200, 'reload same invite')
+assert.equal(sameInvitation.token, invitation.token)
+assert.equal(sameInvitation.id, invitation.id)
 
 const ownLight = await owner.guestPost('/api/invitations/contribute', {
   token: invitation.token,
@@ -123,7 +124,7 @@ assert.equal(after.acceptedFriends, 51)
 assert.equal(after.lights.length, 51)
 assert.equal(new Set(after.lights.map(x => x.slotIndex)).size, 51)
 assert.deepEqual(after.lights.map(x => x.slotIndex), Array.from({ length: 51 }, (_, i) => i))
-assert.equal(after.growthStage, 'grand')
+assert.equal(after.growthStage, 'sampaguita')
 
 const duplicate = await guests[0].guestPost('/api/invitations/contribute', {
   token: invitation.token,
@@ -145,9 +146,9 @@ const firstOwnerAsFriend = ok(
     message: '',
   }), 201, 'owner contributes to a friend parol')
 assert.equal(firstOwnerAsFriend.parol.acceptedFriends, 1)
-const unauthorizedRevoke = await secondOwner.ownerDelete(
-  `/api/my/lantern/invitations/${invitation.id}`)
-assert.equal(unauthorizedRevoke.status, 404, 'other owner cannot revoke invite')
+const secondInviteAgain = ok(await secondOwner.ownerPost('/api/my/lantern/invitations'), 200, 'retrieve second invite')
+assert.equal(secondInvite.token, secondInviteAgain.token)
+assert.notEqual(invitation.token, secondInvite.token)
 
 const inbox = ok(await owner.call(`/api/my/lanterns/${lantern.id}/messages`), 200, 'owner inbox')
 if (!inbox.unlocked) {
@@ -157,12 +158,21 @@ if (!inbox.unlocked) {
 const guestInbox = await guests[0].call(`/api/my/lanterns/${lantern.id}/messages`)
 assert.equal(guestInbox.status, 401, 'guest never receives owner inbox')
 
-ok(await owner.ownerDelete(`/api/my/lantern/invitations/${invitation.id}`), 204, 'revoke invite')
-const afterRevokeGuest = new Browser()
-const revoked = await afterRevokeGuest.guestPost('/api/invitations/preview', { token: invitation.token })
-assert.equal(revoked.status, 404, 'revoked invite cannot resolve')
-assert.equal(ok(await owner.call('/api/my/lantern'), 200, 'retained lights').acceptedFriends, 51)
+const recoveredBrowser = new Browser()
+const recovered = ok(await recoveredBrowser.ownerPost('/api/owner/recover', {
+  recoveryCode: issuedOwner.recoveryCode,
+}), 200, 'first recovery')
+assert.equal(recovered.owner.id, issuedOwner.owner.id)
+const recoveredAgain = new Browser()
+const secondRecovery = ok(await recoveredAgain.ownerPost('/api/owner/recover', {
+  recoveryCode: issuedOwner.recoveryCode,
+}), 200, 'same recovery key works again')
+assert.equal(secondRecovery.owner.id, issuedOwner.owner.id)
+assert.equal(ok(await recoveredAgain.ownerPost('/api/my/lantern/invitations'), 200,
+  'link survives recovery').token, invitation.token)
+assert.equal(ok(await recoveredAgain.call('/api/my/lantern'), 200, 'retained lights').acceptedFriends, 51)
 
-console.log('PASS: owner links, 49 sequential + 2 concurrent guests (51 total), unique stable slots,')
-console.log('duplicate rejection, owner isolation, Christmas inbox redaction and link revocation.')
+console.log('PASS: one 16-character invitation reused across sessions and devices,')
+console.log('49 sequential + 2 concurrent guests (51 total), unique slots,')
+console.log('duplicate rejection, owner isolation, inbox redaction, and reusable recovery key.')
 console.log('All records were inserted into your disposable LOCAL development database.')

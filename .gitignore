@@ -31,3 +31,6 @@
 .DS_Store
 Thumbs.db
 *.log
+# Local renderer cache and generated NPM lockfile are not secrets.
+# Keep the renderer's machine-specific Chromium install out of Git.
+**/.dev-renderer.log

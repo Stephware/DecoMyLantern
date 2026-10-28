@@ -1,39 +1,48 @@
-import { useEffect, useState } from 'react'
-import {
-  createInvitation,
-  getInvitations,
-  revokeInvitation,
-  type InvitationInfo,
-} from '../../lib/api'
+import { useEffect, useRef, useState } from 'react'
+import { createInvitation } from '../../lib/api'
 import { invitationUrl } from './invitationLinks'
+import StoryShare from '../story/StoryShare'
+import type {Lantern} from '../../lib/api'
 
-export default function InvitationManager() {
-  const [links, setLinks] = useState<InvitationInfo[]>([])
+export default function InvitationManager({lantern}: {lantern: Lantern | null}) {
   const [url, setUrl] = useState('')
+  const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [showLinkPage, setShowLinkPage] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
+  const [copyError, setCopyError] = useState('')
+  const linkInput = useRef<HTMLInputElement>(null)
 
+  // The endpoint always returns the same official invitation, including after refresh.
   useEffect(() => {
     let active = true
-    void getInvitations()
-      .then(items => { if (active) setLinks(items) })
-      .catch(() => { if (active) setError('Unable to load invitation history.') })
+    void createInvitation()
+      .then(issued => {
+        if (active) setUrl(invitationUrl(window.location.origin, issued.token))
+      })
+      .catch(caught => {
+        if (active) setError(caught instanceof Error ? caught.message : 'Unable to load your invitation.')
+      })
+      .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [])
 
-  async function generate() {
+  useEffect(() => {
+    if (showLinkPage) linkInput.current?.focus()
+  }, [showLinkPage])
+
+  async function showInvitation() {
     setBusy(true)
     setError('')
-    setNotice('')
+    setCopyError('')
     try {
       const issued = await createInvitation()
       setUrl(invitationUrl(window.location.origin, issued.token))
-      setNotice('Your invitation is ready. Copy and share the link below.')
-      try { setLinks(await getInvitations()) }
-      catch { setError('Link created, but the invitation history could not be refreshed.') }
+      setCopied(false)
+      setShowLinkPage(true)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to create invitation.')
+      setError(caught instanceof Error ? caught.message : 'Unable to load your invitation.')
     } finally {
       setBusy(false)
     }
@@ -41,80 +50,71 @@ export default function InvitationManager() {
 
   async function copy() {
     if (!url) return
+    setCopyError('')
     try {
       await navigator.clipboard.writeText(url)
-      setNotice('Invitation link copied.')
+      setCopied(true)
     } catch {
-      setError('Could not copy automatically. Select the link below to copy it.')
+      setCopied(false)
+      setCopyError('Could not copy automatically. Select the link to copy it manually.')
     }
   }
-
-  async function revoke(id: string) {
-    if (!window.confirm('Revoke this invitation? Friends with this link will no longer be able to contribute. Existing lights remain.')) return
-    setBusy(true)
-    setError('')
-    try {
-      await revokeInvitation(id)
-      setLinks(previous => previous.map(link => link.id === id
-        ? { ...link, revokedAtUtc: new Date().toISOString() }
-        : link))
-      setNotice('Invitation revoked. Existing contributions were preserved.')
-      try { setLinks(await getInvitations()) }
-      catch { setError('Link revoked, but the invitation history could not be refreshed.') }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to revoke invitation.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const active = links.filter(link =>
-    !link.revokedAtUtc && (!link.expiresAtUtc || Date.parse(link.expiresAtUtc) > Date.now()))
 
   return (
     <section className="rounded-2xl border border-amber-200/25 bg-amber-300/5 p-5" aria-label="Friend invitations">
-      <h3 className="text-sm font-bold text-amber-100">Invite your friends</h3>
+      <h3 className="text-sm font-bold text-amber-100">Your parol invitation</h3>
       <p className="mt-2 text-sm leading-6 text-white/60">
-        Give a friend a private invitation link. They can add one light and an optional Christmas message without logging in.
+        Share the same invitation with all your friends. Each friend can add one light and an optional Christmas message without an account.
       </p>
 
       {error && <p role="alert" className="mt-3 rounded-lg bg-rose-400/10 p-3 text-xs text-rose-200">{error}</p>}
-      {notice && <p role="status" className="mt-3 text-xs text-amber-200">{notice}</p>}
-
-      <button type="button" disabled={busy} onClick={() => void generate()}
-        className="mt-4 w-full rounded-xl bg-amber-300 px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:opacity-50">
-        {busy ? 'Please wait…' : 'Create invitation link →'}
-      </button>
-
-      {url && (
-        <div className="mt-4 space-y-2">
-          <label htmlFor="invitation-url" className="block text-xs font-semibold text-white/75">Your shareable invitation</label>
-          <input id="invitation-url" readOnly value={url} onFocus={event => event.currentTarget.select()}
-            className="w-full rounded-lg border border-white/15 bg-[#080e20] px-3 py-3 text-xs text-amber-100" />
-          <button type="button" onClick={() => void copy()}
-            className="w-full rounded-lg border border-amber-200/40 px-4 py-2.5 text-xs font-bold text-amber-100">
-            Copy invitation link
+      {loading ? <p className="mt-4 text-sm text-white/55">Preparing your invitation…</p> : (
+        <div className="mt-4 space-y-3">
+          {url && (
+            <>
+              <label htmlFor="invitation-url" className="block text-xs font-semibold text-white/75">One link for your whole parol</label>
+              <input id="invitation-url" readOnly value={url} onFocus={event => event.currentTarget.select()}
+                className="w-full rounded-lg border border-white/15 bg-[#080e20] px-3 py-3 text-xs text-amber-100" />
+            </>
+          )}
+          {lantern && url && <StoryShare invitationUrl={url}
+            data={{kind:'owner',designKey:lantern.designKey,patternKey:lantern.patternKey,
+              friendCount:lantern.acceptedFriends,slots:lantern.lights.map(light=>light.slotIndex),
+              highlightSlot:null}} />}
+          <button type="button" disabled={busy} onClick={() => void showInvitation()}
+            className="w-full rounded-xl bg-amber-300 px-4 py-3 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:opacity-50">
+            {busy ? 'Preparing…' : url ? 'View invitation link' : 'Create invitation link'}
           </button>
         </div>
       )}
 
       <p className="mt-4 text-xs leading-5 text-white/45">
-        Creating another link doesn't invalidate earlier ones. Invitations expire after December 31 (Philippine time).
-        Your private owner recovery key is never included.
+        This link stays the same for the current Christmas season and expires on December 31 (Philippine time).
+        Your private recovery key is never included.
       </p>
-      {active.length > 0 && (
-        <div className="mt-4 border-t border-white/10 pt-4">
-          <h4 className="text-xs font-bold text-amber-100/80">Active invitations ({active.length})</h4>
-          <div className="mt-2 space-y-2">
-            {active.map((link, index) => (
-              <div key={link.id} className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-[#0e192c] p-2.5">
-                <span className="text-xs text-white/65">Invitation {index + 1}</span>
-                <button type="button" disabled={busy} onClick={() => void revoke(link.id)}
-                  className="rounded-lg border border-rose-300/25 px-3 py-1.5 text-xs text-rose-200 disabled:opacity-50">
-                  Revoke
-                </button>
-              </div>
-            ))}
+
+      {showLinkPage && (
+        <div role="dialog" aria-modal="true" aria-labelledby="invitation-ready-title"
+          className="fixed inset-0 z-50 flex min-h-screen items-center justify-center overflow-y-auto bg-[#080e20] px-5 py-10 text-[#fff7e5]">
+          <div className="w-full max-w-lg rounded-3xl border border-amber-300/25 bg-[#131e35] p-6 shadow-2xl sm:p-10">
+            <div className="text-4xl text-amber-300" aria-hidden="true">✦</div>
+            <h2 id="invitation-ready-title" className="mt-4 font-serif text-3xl font-semibold">Your invitation link is ready</h2>
+            <p className="mt-3 text-sm leading-6 text-white/60">Copy this link and send it to a friend so they can add a light to your parol.</p>
+            <label htmlFor="invitation-popup-url" className="mt-6 block text-xs font-bold uppercase tracking-widest text-white/60">Shareable link</label>
+            <input ref={linkInput} id="invitation-popup-url" readOnly value={url}
+              onFocus={event => event.currentTarget.select()}
+              className="mt-2 w-full rounded-xl border border-white/15 bg-[#080e20] px-4 py-3.5 text-sm text-amber-100" />
+            {copyError && <p role="alert" className="mt-3 text-sm text-rose-200">{copyError}</p>}
+            <div className="mt-6 flex gap-3">
+              <button type="button" onClick={() => void copy()}
+                className="min-w-0 flex-1 rounded-xl bg-amber-300 px-4 py-3.5 text-sm font-bold text-slate-900 hover:bg-amber-200">
+                {copied ? 'Copied!' : 'Copy link'}
+              </button>
+              <button type="button" onClick={() => setShowLinkPage(false)}
+                className="min-w-0 flex-1 rounded-xl border border-white/25 px-4 py-3.5 text-sm font-bold text-white hover:bg-white/10">
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

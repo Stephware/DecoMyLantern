@@ -1,3 +1,5 @@
+import { completedMotifVisualRadius, FLOWER_REGION_INDEX } from './ornamentScaling.ts'
+
 /**
  * Ligligan Parul-inspired growth grammar.
  *
@@ -224,9 +226,25 @@ export function regionPanelPath(firstLayer: number, lastLayer: number, sector: n
     Q ${cp.x.toFixed(2)} ${cp.y.toFixed(2)} ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} Z`
 }
 
-/** Conservative geometric bound, including the new floral lobes after layer 50. */
+/**
+ * Reserve room for the actual outer petals, not just the structural circle.
+ * The underlying filled growth layers retain their original spacing. The
+ * camera fits the extended motifs so zoom-out still reveals their full size.
+ */
 export function festivalMaxExtent(layerIndex: number): number {
   assertFriendCount(layerIndex)
   const grand = Math.min(1, Math.max(0, (layerIndex - 50) / 100))
-  return outerRadiusForFriends(layerIndex) + 36 + 16 * grand
+  let extent = outerRadiusForFriends(layerIndex) + 36 + 16 * grand
+  for (let index = FLOWER_REGION_INDEX + 1; index < GROWTH_REGIONS.length; index++) {
+    const region = GROWTH_REGIONS[index]
+    if (layerIndex < region.from) break
+    const last = Math.min(layerIndex, region.to)
+    const fraction = (last - region.from + 1) / (region.to - region.from + 1)
+    const centerRadius = (outerRadiusForFriends(region.from - 1) +
+      outerRadiusForFriends(last)) / 2
+    // Extra headroom for the softly scalloped radial center of each petal.
+    extent = Math.max(extent,
+      centerRadius + completedMotifVisualRadius(index) * fraction + 52)
+  }
+  return extent
 }

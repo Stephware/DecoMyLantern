@@ -1,4 +1,4 @@
-import { growthForFriends } from './outerGrowth'
+import { growthForFriends } from './outerGrowth.ts'
 
 /** One real contribution reveals three entire structural growth layers. */
 export const STEP_DURATIONS_MS = [750, 850, 1100] as const
