@@ -293,8 +293,16 @@ export default function CachedParolScene({
           <g transform={transform} style={{
             transition: pointers.current.size === 0 ? 'transform 420ms ease-out' : 'none',
           }}>
-            {rendered && <image href={rendered.url} width="600" height="640"
+            {visibleImage && <image href={visibleImage.url} width="600" height="640"
               preserveAspectRatio="xMidYMid meet" />}
+            {activeWave && <image href={activeWave.next.url} width="600" height="640"
+              preserveAspectRatio="xMidYMid meet" pointerEvents="none"
+              className="parol-snapshot-wave-reveal"
+              style={{clipPath: `circle(${SNAPSHOT_WAVE_RADIUS[activeWave.wave]}% at 50% 47.2%)`}} />}
+            {activeWave && <circle key={activeWave.wave} cx="300" cy="302"
+              r={activeWave.wave === 1 ? 135 : activeWave.wave === 2 ? 240 : 295}
+              stroke="#ffe9a0" strokeWidth="7" fill="none" pointerEvents="none"
+              className="parol-snapshot-wave-glint" aria-hidden="true" />}
             {selectedPoint && <circle
               cx={CENTER_X + (selectedPoint.x - CENTER_X) * fit}
               cy={CENTER_Y + (selectedPoint.y - CENTER_Y) * fit}
@@ -302,18 +310,22 @@ export default function CachedParolScene({
               aria-hidden="true" />}
           </g>
         </svg>
-        {!rendered && !error && <div role="status"
+        {!visibleImage && !error && <div role="status"
           className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-amber-100/80">
           Preparing your parol image…
         </div>}
-        {loading && rendered && <div role="status" className="absolute left-3 top-3 rounded-full bg-[#101b33]/90 px-3 py-2 text-xs text-amber-100">
+        {loading && visibleImage && <div role="status" className="absolute left-3 top-3 rounded-full bg-[#101b33]/90 px-3 py-2 text-xs text-amber-100">
           Updating parol image…
         </div>}
         {error && <div role="alert"
           className="absolute inset-x-4 top-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-300/30 bg-[#101b33]/95 p-3 text-xs text-rose-100">
-          <span>{error}{rendered ? ' Showing the previous image.' : ''}</span>
+          <span>{error}{visibleImage ? ' Showing the previous image.' : ''}</span>
           <button type="button" className="rounded-lg border border-rose-200/40 px-3 py-2 font-semibold"
             onClick={() => setAttempt(n => n + 1)}>Retry</button>
+        </div>}
+        {activeWave && <div role="status" aria-live="polite"
+          className="pointer-events-none absolute left-3 top-3 rounded-full border border-amber-300/30 bg-[#101b33]/90 px-3 py-2 text-xs font-semibold text-amber-100">
+          ✦ {SNAPSHOT_WAVE_LABEL[activeWave.wave]}
         </div>}
         <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full border border-white/15 bg-[#101b33]/90 p-1.5 text-sm shadow-xl backdrop-blur">
           <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-white hover:bg-white/15 disabled:opacity-30"
@@ -336,8 +348,9 @@ export default function CachedParolScene({
         Selected: {selected.displayName} · Light #{selected.slotIndex + 1}
       </figcaption>}
       <figcaption role="status" aria-live="polite" className="mt-2 text-center text-xs text-white/50">
-        {loading ? 'Loading the completed parol snapshot…' :
-          current ? 'Saved parol image · Drag, pinch or Fit to explore' :
+        {activeWave ? SNAPSHOT_WAVE_LABEL[activeWave.wave] :
+          loading ? 'Loading the completed parol snapshot…' :
+          ready ? 'Saved parol image · Drag, pinch or Fit to explore' :
           'A newer parol image is not yet available · Retry to refresh'}
       </figcaption>
     </figure>
