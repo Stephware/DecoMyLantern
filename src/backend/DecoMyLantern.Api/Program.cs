@@ -155,6 +155,22 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = 12, Window = TimeSpan.FromHours(1),
             QueueLimit = 0, AutoReplenishment = true
         }));
+    options.AddPolicy("owner-recovery-display", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 18, Window = TimeSpan.FromHours(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("owner-recovery-replace", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 3, Window = TimeSpan.FromHours(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
     options.AddPolicy("owner-recover", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
@@ -174,6 +190,7 @@ builder.Services.AddScoped<IGrowthStageService, GrowthStageService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<ILanternService, LanternService>();
 builder.Services.AddSingleton<InvitationTokenCipher>();
+builder.Services.AddSingleton<OwnerRecoveryCipher>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IOwnerAccessService, OwnerAccessService>();
 
