@@ -1,7 +1,8 @@
 /**
  * A new completed decorative design is slightly more prominent than the one
- * before it. Only the ornament's tangential (side-to-side) dimension changes;
- * structural rings, radial spacing and three-wave growth stay untouched.
+ * before it. Its width and height now increase proportionally, and each
+ * successive region has matching radial room for the larger ornament.
+ * The original motif paths, region boundaries and three-wave timing remain.
  */
 export const NEXT_ORNAMENT_SIZE_STEP = 1.06
 
