@@ -8,10 +8,22 @@ services:
       ReverseProxy__KnownNetwork: 172.16.0.0/12
       ConnectionStrings__DefaultConnection: ${DATABASE_CONNECTION_STRING:?Set DATABASE_CONNECTION_STRING in .env}
       Invitations__EncryptionKey: ${INVITATION_ENCRYPTION_KEY:?Set stable INVITATION_ENCRYPTION_KEY in .env}
+      StoryRenderer__Url: http://story-renderer:7070
+      StoryRenderer__SharedSecret: ${STORY_RENDERER_SECRET:?Set STORY_RENDERER_SECRET in .env}
     extra_hosts:
       - host.docker.internal:host-gateway
     ports:
       - "127.0.0.1:${BACKEND_PORT:-5050}:8080"
+
+  story-renderer:
+    build:
+      context: .
+      dockerfile: story-renderer/Dockerfile
+    restart: unless-stopped
+    environment:
+      STORY_RENDERER_SECRET: ${STORY_RENDERER_SECRET:?Set STORY_RENDERER_SECRET in .env}
+      PORT: "7070"
+    # Not published: only the backend can reach the private render service.
 
   frontend:
     build:
