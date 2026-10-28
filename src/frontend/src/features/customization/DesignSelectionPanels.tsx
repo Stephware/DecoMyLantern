@@ -2,12 +2,6 @@ import { useEffect, useRef, type TouchEvent } from 'react'
 import type { Design } from '../../lib/api'
 import DesignShowcaseGallery from './DesignShowcaseGallery'
 
-export const PATTERNS = [
-  { key:'default', label:'Traditional' },
-  { key:'rings', label:'Filigree trim' },
-  { key:'rays', label:'Radiant rays' },
-] as const
-
 type Picker = {
   firstTime: boolean
   designs: readonly Design[]
@@ -81,8 +75,6 @@ type SheetProps = {
   designs: readonly Design[]
   selected: string
   onSelect: (key: string) => void
-  pattern: string
-  onPattern: (key: string) => void
   changed: boolean
   busy: boolean
   error: string
@@ -90,7 +82,7 @@ type SheetProps = {
 }
 
 export function MobileDesignDrawer({
-  open, onOpenChange, designs, selected, onSelect, pattern, onPattern,
+  open, onOpenChange, designs, selected, onSelect,
   changed, busy, error, onSave,
 }: SheetProps) {
   const startY = useRef<number | null>(null)
@@ -151,16 +143,6 @@ export function MobileDesignDrawer({
           </p>
           <DesignShowcaseGallery designs={designs} selected={selected} onChoose={onSelect}
             enabled={open} disabled={busy} />
-          <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-widest text-[#6f5d49]">Decorative pattern</p>
-          <div className="flex flex-wrap gap-2">
-            {PATTERNS.map(option => <button key={option.key} type="button" disabled={busy}
-              aria-pressed={pattern === option.key} onClick={() => onPattern(option.key)}
-              className={`rounded-full border px-4 py-2 text-xs font-semibold ${pattern === option.key
-                ? 'border-[#8c262e] bg-[#8c262e] text-white'
-                : 'border-[#d7c6ae] bg-white text-[#4b493c]'}`}>
-              {option.label}
-            </button>)}
-          </div>
           {error && <p role="alert" className="mt-3 text-sm text-[#9c2630]">{error}</p>}
           <button type="button" disabled={!changed || busy || designs.length === 0} onClick={onSave}
             className="mt-5 w-full rounded-xl bg-[#922632] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-45">

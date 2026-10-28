@@ -612,3 +612,19 @@ BEGIN
 END;
 COMMIT;
 GO
+
+-- Owner-only recovery key redisplay: nullable encrypted data, no owner changes.
+-- Mirrors 20261029080000_EncryptedOwnerRecoveryKeys; EF migration is canonical.
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT 1 FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261029080000_EncryptedOwnerRecoveryKeys'
+)
+BEGIN
+    ALTER TABLE [OwnerCredentials] ADD [EncryptedRecoveryCode] varchar(160) NULL;
+    ALTER TABLE [OwnerCredentials] ADD [RecoveryIssuedAtUtc] datetime2 NULL;
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261029080000_EncryptedOwnerRecoveryKeys', N'10.0.4');
+END;
+COMMIT;
+GO

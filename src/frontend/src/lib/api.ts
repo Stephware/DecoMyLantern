@@ -1,5 +1,6 @@
 export type Owner = { id: string }
 export type OwnerIssue = { owner: Owner; recoveryCode: string }
+export type OwnerRecoveryKey = { available: boolean; recoveryCode: string | null; expiresAtUtc: string }
 
 export type CreatedInvitation = { id: string; token: string; expiresAtUtc: string }
 export type PublicLight = { id: string; slotIndex: number }
@@ -96,6 +97,11 @@ export const recoverOwner = (recoveryCode: string) =>
 export const getLegacyOwner = () => api<{ available: boolean }>('/api/owner/legacy-available')
 export const upgradeLegacyOwner = () =>
   api<OwnerIssue>('/api/owner/upgrade-legacy', { method: 'POST' }, '/api/owner/legacy-csrf')
+// Both use authenticated owner cookies and CSRF; the plaintext is never stored locally.
+export const getOwnerRecoveryKey = () =>
+  api<OwnerRecoveryKey>('/api/owner/recovery-key', { method: 'POST' })
+export const replaceOwnerRecoveryKey = () =>
+  api<OwnerRecoveryKey>('/api/owner/replace-recovery-key', { method: 'POST' })
 export const signOutOwner = () => api<void>('/api/owner/sign-out', { method: 'POST' })
 export const finishOwnerSetup = () => api<void>('/api/owner/finish-setup', { method: 'POST' })
 export const cancelOwnerCreation = () => api<void>('/api/owner/cancel-creation', { method: 'POST' })

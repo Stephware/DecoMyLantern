@@ -363,6 +363,14 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                     b.Property<DateTime>("RecoveryExpiresAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("EncryptedRecoveryCode")
+                        .HasMaxLength(160)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(160)");
+
+                    b.Property<DateTime?>("RecoveryIssuedAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("RecoveryHash")
                         .IsRequired()
                         .HasMaxLength(64)

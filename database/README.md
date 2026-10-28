@@ -17,6 +17,38 @@ The `20261020220000_SingleInvitationLink` migration updates the existing `ShareL
 
 The `20261020220811_PendingOwnerSetup` migration adds `OwnerCredentials.SetupPending` so a newly created, unused parol can be cancelled while its recovery key is shown. The idempotent SQL script includes this migration after `SingleInvitationLink`.
 
-Task 2 adds the `20261016173000_PasswordlessOwnerAccess` migration and `OwnerCredentials` table. Stored credentials are SHA-256 hashes of random 256-bit tokens; no bearer or recovery plaintext is stored in SQL. Existing owners and lantern records are retained. The SQL idempotent schema script includes this migration; regenerate it with `bash database/bootstrap.sh` when a .NET SDK is available and review its diff.
+Task 2 adds the `20261016173000_PasswordlessOwnerAccess` migration and `OwnerCredentials` table. Owner bearer tokens stay hash-only; recovery keys have SHA-256 hashes and, for keys issued after the new migration, an authenticated AES-GCM encrypted copy (never raw plaintext in SQL). Existing owners and lantern records are retained. The SQL idempotent schema script includes this migration; regenerate it with `bash database/bootstrap.sh` when a .NET SDK is available and review its diff.
 
 The Task 1 progressive-growth update includes a **seed-data-only** migration (`20261016160000_ProgressiveParolGrowth`) and a matching idempotent SQL section. Existing lanterns/contributions are preserved. Prefer `dotnet ef database update` when using .NET; if applying `database/schema.sql` directly, review the script and migration history first. After changes to migrations, run `bash database/bootstrap.sh` with the local SDK to regenerate this script from EF Core, and review the resulting diff.
+
+## Owner recovery-key redisplay migration (October 29, 2026)
+
+The non-destructive `20261029080000_EncryptedOwnerRecoveryKeys` migration
+adds two **nullable** fields on `OwnerCredentials`:
+
+- `EncryptedRecoveryCode` — owner-scoped encrypted copy for currently issued
+  recovery keys. Existing owners receive NULL, since historical SHA-256 hashes
+  cannot be converted back into the original code.
+- `RecoveryIssuedAtUtc` — optional replacement issuance date. Existing keys
+  keep the original `CreatedAtUtc` deadline until the user explicitly replaces
+  the code.
+
+The existing `Invitations:EncryptionKey` / `INVITATION_ENCRYPTION_KEY`
+must remain identical across deploys. The recovery cipher derives a distinct
+AES key from that secret; don't rotate it for the recovery UI.
+
+Before starting the new backend against an existing production database:
+
+1. Back up the production SQL Server database.
+2. Apply `dotnet ef database update --project src/backend/DecoMyLantern.Api --startup-project src/backend/DecoMyLantern.Api` using production-safe credentials only in a secured migration session.
+3. Verify both new columns exist and that legacy credentials remain intact.
+4. Deploy the new backend and frontend together.
+
+The tracked `database/schema.sql` includes a hand-reviewed idempotent
+section for this migration. The EF Core migration is authoritative; regenerate
+the SQL with `bash database/bootstrap.sh` using a local SDK and review the
+result before relying on the SQL script in production.
+
+Avoid `docker compose down -v` or rebuilding a production database from
+scratch. Replacing a recovery key requires deliberate owner confirmation;
+opening its dialog never rotates any key.

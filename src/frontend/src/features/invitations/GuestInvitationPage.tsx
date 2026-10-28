@@ -83,7 +83,7 @@ export default function GuestInvitationPage({ token }: Props) {
           </p>
           {!alreadyContributed && <a href="#add-light"
             className="mt-3 inline-flex rounded-full border border-[#d2bda1] px-4 py-2 text-sm font-semibold text-[#832c31] lg:hidden">
-            Add my light ↓
+            Share my light ↓
           </a>}
         </div>
 
@@ -140,7 +140,7 @@ export default function GuestInvitationPage({ token }: Props) {
             ) : (
               <>
                 <p className="text-[11px] font-bold uppercase tracking-widest text-[#a47a43]">A simple gift of friendship</p>
-                <h2 className="mt-2 font-serif text-3xl font-semibold">Leave your light.</h2>
+                <h2 className="mt-2 font-serif text-3xl font-semibold">Share your light.</h2>
                 <p className="mt-3 text-sm leading-6 text-[#746b5d]">
                   No account required. Your name helps your friend recognize your light.
                 </p>
@@ -165,7 +165,7 @@ export default function GuestInvitationPage({ token }: Props) {
                   </div>
                   <button type="submit" disabled={!preview || !name.trim() || sending}
                     className="w-full rounded-xl bg-[#902632] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#74202b] disabled:opacity-45">
-                    {sending ? 'Adding your light…' : 'Add my light ✦'}
+                    {sending ? 'Sharing your light…' : 'Share my light ✦'}
                   </button>
                 </form>
                 <p className="mt-4 text-xs leading-5 text-[#887c6e]">

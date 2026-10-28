@@ -138,6 +138,42 @@ public sealed class OwnerController(
         catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
     }
 
+    // A POST (not GET) protects secret display behind owner authentication
+    // AND antiforgery. Never cache or persist the plaintext in browser storage.
+    [Authorize]
+    [EnableRateLimiting("owner-recovery-display")]
+    [HttpPost("recovery-key")]
+    public async Task<IActionResult> RecoveryKey(CancellationToken cancellationToken)
+    {
+        if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid security token. Refresh and try again." });
+        if (!TryOwner(out var id)) return Unauthorized();
+        NoStore();
+        try
+        {
+            var result = await access.GetRecoveryKeyAsync(id, cancellationToken);
+            return Ok(result);
+        }
+        catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
+    }
+
+    // For keys originally stored only as one-way hashes, issue a replacement
+    // only after explicit user confirmation that the old key stops working.
+    [Authorize]
+    [EnableRateLimiting("owner-recovery-replace")]
+    [HttpPost("replace-recovery-key")]
+    public async Task<IActionResult> ReplaceRecoveryKey(CancellationToken cancellationToken)
+    {
+        if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid security token. Refresh and try again." });
+        if (!TryOwner(out var id)) return Unauthorized();
+        NoStore();
+        try
+        {
+            var result = await access.ReplaceRecoveryKeyAsync(id, cancellationToken);
+            return Ok(result);
+        }
+        catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
+    }
+
     [Authorize]
     [HttpPost("sign-out")]
     public async Task<IActionResult> SignOut(CancellationToken cancellationToken)

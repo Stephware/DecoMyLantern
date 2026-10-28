@@ -14,20 +14,60 @@ The owner never registers or logs in. The API creates an internal, passwordless 
 | POST | `/api/owner/cancel-creation` | Owner + CSRF | Delete a still-pending new owner, parol, and credential; clear the owner cookie |
 | GET | `/api/owner/me` | Owner | Return `{ "id": "guid" }` |
 | POST | `/api/owner/recover` | Public + CSRF + rate limit | Reuse the same high-entropy recovery key within one year, refresh owner session only |
+| POST | `/api/owner/recovery-key` | Owner + CSRF + rate limit | Show current still-valid recovery key if an encrypted copy is available; otherwise `available: false` |
+| POST | `/api/owner/replace-recovery-key` | Owner + CSRF + rate limit | Explicitly issue and display a new recovery key; invalidates the previous key but keeps the current session, parol and invitation intact |
 | POST | `/api/owner/sign-out` | Owner + CSRF | Revoke the token in SQL; recovery key remains usable |
 | GET | `/api/owner/legacy-available` | Existing legacy Identity cookie | Detect an old logged-in owner |
 | GET | `/api/owner/legacy-csrf` | Existing legacy Identity cookie | Issue legacy-identity-bound CSRF token |
 | POST | `/api/owner/upgrade-legacy` | Existing legacy Identity cookie + CSRF | Transfer existing owner to token access, preserving user and lantern IDs |
 
-`POST /api/owner/create` returns status 201 with `{ "owner": { "id": "..." }, "recoveryCode": "..." }`; `upgrade-legacy` returns the same shape with 200. `recover` returns `{ "owner": { "id": "..." } }` with 200 and sets a new session cookie. The original recovery key is shown when first issued, reused without rotation during its one-year lifetime, and is not returned from `/me` or `recover`. It must never appear in invitation URLs, logs, or public caches.
+`POST /api/owner/create` returns status 201 with `{ "owner": { "id": "..." }, "recoveryCode": "..." }`; `upgrade-legacy` returns the same shape with 200. `recover` returns `{ "owner": { "id": "..." } }` with 200 and sets a new session cookie. The original recovery key is shown when first issued and reused without rotation during its one-year lifetime. New keys are stored as a hash plus a per-owner AES-GCM-encrypted copy; only an authenticated, CSRF-protected recovery-key popup can reveal the encrypted copy. The key is not returned from `/me` or `recover`, nor included in invitation URLs, logs or public caches. Recovery codes are never saved to frontend localStorage.
 
 Creation leaves setup pending while the recovery key is shown. Continuing calls `finish-setup`; cancelling calls `cancel-creation`, which removes the new owner, its parol, official invitation, and credential in one transaction. Cancellation is rejected after setup finishes or the parol has been used. Recovery and legacy transfer cannot use this cancellation flow.
 
-Recovery body: `{ "recoveryCode": "base64url-secret" }`. Recovery invalidates the old owner cookie but **does not change or consume the original recovery key**. Owner browser sessions are 256-bit random, while newly issued recovery keys are 128-bit random (22 characters); existing 256-bit recovery keys remain accepted. Their hashes are unique indexed values. Recovery is limited to 6 attempts per 15 minutes per observed IP; creation is limited to 6/hour per observed IP. These in-memory counters are per API instance, and production deployments need shared rate limiting and trusted-proxy IP configuration. Owner sessions expire after 400 days; recovery keys expire 365 days after original issuance without renewal on use. Existing keys with longer stored expiration dates are also restricted to one year from their credential creation. Without a valid session or the recovery key, access cannot be regained automatically; verified email recovery is *not* provided.
+Recovery body: `{ "recoveryCode": "base64url-secret" }`. Recovery invalidates the old owner cookie but **does not change or consume the original recovery key**. Owner browser sessions are 256-bit random, while newly issued recovery keys are 128-bit random (22 characters); existing 256-bit recovery keys remain accepted. Their hashes are unique indexed values. Recovery is limited to 6 attempts per 15 minutes per observed IP; creation is limited to 6/hour per observed IP. Authenticated key reveal is limited to 18/hour per owner and replacement to 3/hour per owner. These in-memory counters are per API instance, and production deployments need shared rate limiting and trusted-proxy IP configuration. Owner sessions expire after 400 days; recovery keys expire 365 days after their issuance and are not renewed on use. Legacy keys keep their original one-year deadline; an explicitly replaced key receives a new one-year deadline and its previous key stops working immediately. Without a valid session or the recovery key, access cannot be regained automatically; verified email recovery is *not* provided.
 
 Every modifying request first calls `GET /api/owner/csrf` and includes `X-CSRF-TOKEN` plus the same cookies. The legacy migration uses `/api/owner/legacy-csrf` instead. Responses containing owner tokens or recovery codes carry `Cache-Control: no-store`. Owner validation **never trusts the memory cache**; the 2-minute `IMemoryCache` is used only for read-only public design and growth catalog responses.
 
 **Migration caveat:** An existing owner can transfer an old parol only while an old, valid `Deco.Host` login cookie is still present. Existing lantern/user records are NOT deleted. Legacy owners without a valid cookie and without a recovery key cannot migrate by password through the new UI; arrange a separately verified migration before production rollout. The former `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, and login page are removed.
+
+### Redisplaying and replacing owner recovery keys
+
+The owner header has a **Recovery key** action beside **Leave parol**.
+Both open a popup; Leave must first display this popup, allowing Copy, Stay
+or Leave. The original single-link invitation is never affected.
+
+The new migration `20261029080000_EncryptedOwnerRecoveryKeys` adds nullable
+`OwnerCredentials.EncryptedRecoveryCode` and
+`OwnerCredentials.RecoveryIssuedAtUtc` columns. Existing hashes, owner
+cookies, invitations, lights, and parol records are preserved.
+
+- New keys: encrypted using AES-256-GCM with a distinct purpose-derived key
+  from the **existing stable** `Invitations:EncryptionKey`, authenticated
+  against `OwnerUserId`; still stored as SHA-256 hashes for redemption.
+  Rotating `Invitations:EncryptionKey` will now prevent redisplay of saved
+  owner recovery codes as well as existing invitation links.
+- Existing owners: their stored one-way hash cannot be decrypted. A read
+  returns `available: false`. They can use their saved original recovery key
+  unchanged, or **explicitly** confirm a replacement key. The old key becomes
+  invalid only if the replacement is committed.
+- A legacy key supplied successfully during `/api/owner/recover` can
+  additionally be encrypted without changing its hash or lifetime.
+- The frontend never stores these keys in localStorage or sessionStorage.
+  The popup contains the plaintext only while mounted. Both new endpoints
+  are POST actions requiring an authenticated owner cookie and CSRF, and use
+  no-store responses.
+- `POST /api/owner/recovery-key` yields
+  `{ "available": true|false, "recoveryCode": "...|null", "expiresAtUtc": "..." }`.
+  `POST /api/owner/replace-recovery-key` yields the new key with
+  `available: true`, expiring one year from replacement. A replacement
+  does not revoke a valid *browser session*; sign-out does.
+
+**Before deploying** this new API, back up the production database and
+apply the latest EF Core migration to that same existing database. Do not
+recreate or overwrite it. Without the migration, owner key operations will
+fail. There is no need for a new environment secret because it derives a
+purpose-separated key from the stable invitation encryption secret.
 
 ## Phase 1 — Host's seasonal lantern
 

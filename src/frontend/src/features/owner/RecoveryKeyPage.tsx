@@ -42,7 +42,7 @@ export default function RecoveryKeyPage({ code, onContinue, onCancel }: Props) {
           reusable for one year.
         </p>
         <div className="mt-6 rounded-2xl border border-[#d9c5a9] bg-[#f7eee0] p-4 sm:p-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-[#776048]">Private key — shown only now</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-[#776048]">Private key — save a personal copy</p>
           <code className="mt-3 block break-all rounded-xl border border-[#decbb1] bg-white px-3 py-4 font-mono text-sm leading-7 text-[#7b2a30]"
             data-testid="recovery-key">{code}</code>
           <button type="button" onClick={() => void copy()}
@@ -52,7 +52,7 @@ export default function RecoveryKeyPage({ code, onContinue, onCancel }: Props) {
         </div>
         <p className="mt-4 rounded-xl bg-[#fae9e5] px-4 py-3 text-xs leading-6 text-[#8e3340]">
           Keep this key private. Never send it to friends or include it in your invitation.
-          We cannot recover your parol if both your browser session and recovery key are lost.
+          You can view this key again from the signed-in parol, but after signing out you must have saved it. If both your session and key are lost, access cannot be restored.
         </p>
         <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm leading-6 text-[#4e564b]">
           <input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)}
