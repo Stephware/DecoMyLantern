@@ -161,6 +161,50 @@ Run `npm test && npm run lint && npm run typecheck && npm run build` in
 `src/frontend`, `npm test` in `story-renderer`, and
 `dotnet test DecoMyLantern.slnx` from the repository root.
 
-**Phase 4:** Animate the image-based transition after contributions.
+## Phase 4 — Three-wave animation of a single cached image
+
+The real owner dashboard and invited-guest view now animate **one newly
+accepted friend** using only the old and new, already-completed WebP images.
+The browser never mounts the procedural SVG to animate a real contribution.
+
+1. The Phase 3 request waits for and decodes the newly cached WebP. The
+   previously displayed image stays visible until the new image is ready.
+2. The updated image is revealed with three progressively larger circular
+   masks and a brief illuminated ring on each wave:
+   **750 ms → 850 ms → 1100 ms**, matching the original wave durations.
+3. After 2.7 seconds, the completed WebP replaces the previous image;
+   the old temporary object URL is revoked. Zoom, pan and Fit remain
+   available, and existing contributor selection works after completion.
+
+These are **three image reveal effects**, not the former three separately
+rendered geometry frames. This saves CPU and network traffic because one
+final server snapshot is reused; the approved complete parol appearance
+stays identical to Phase 2. No new backend endpoints or additional images
+per contribution are needed.
+
+The three-wave effect is deliberately skipped on initial load, after
+simultaneous/multiple contributions, when switching owner/invitation or
+design/pattern, during rapid back-to-back changes, and when a page is
+hidden or has just returned from a background tab. Users requesting
+reduced motion always see the completed snapshot immediately. An
+interrupted animation finishes on tab hide; an interrupted image request
+is aborted, and a renderer failure retains the last available image.
+
+### Phase 4 checks
+
+- Owner watching a parol at 10 friends: accept one real friend and verify
+  three light-reveal waves, then a **single** final image at 11 friends.
+- Guest opens a valid invitation: add one light and verify the same effect,
+  with no additional server snapshot calls for each animation wave.
+- Submit two or more contributions before an owner poll; ensure the
+  display skips the old replay and shows the newest complete image.
+- Change a design/pattern; it must update instantly, not pretend a new
+  friend joined.
+- Reload at 20/35/50 friends, background and return to the tab, or enable
+  reduced motion: do not replay animation.
+- Verify mobile pinch, pan, Fit, and saved light highlighting while the
+  same approved parol remains crisp and correctly fitted.
+- Stop the renderer and confirm retry/error behavior remains functional.
+
 **Phase 5:** Remove the remaining Design Lab and admin/test controls from the
 public UI.
