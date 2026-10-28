@@ -54,7 +54,9 @@ test('early region decorations are preserved and later region motifs grow propor
     'utf8',
   )
   assert.ok(renderer.includes('ornamentWidthEmphasis(regionIndex)'))
-  assert.ok(renderer.includes('scale(${fillSize * ornamentEmphasis})'))
+  assert.ok(renderer.includes('scale(${motifScaleX} ${motifScaleY})'))
+  assert.ok(renderer.includes('const motifScaleY = afterFlower ? motifScaleX : fillSize'))
+  assert.ok(renderer.includes('regionVisible.length > 3 ? [...regionVisible].reverse() : regionVisible'))
   assert.ok(renderer.includes('const afterFlower = regionIndex > FLOWER_REGION_INDEX'))
   assert.ok(renderer.includes('laterMotifScale(regionIndex) * growthFraction'))
   assert.ok(renderer.includes("outerDetail ? '.19' : '.37'"))
