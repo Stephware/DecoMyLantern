@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  BASE_FESTIVAL_RADIUS, PANEL_SEGMENTS,
+  BASE_FESTIVAL_RADIUS, FRIEND_LAYER_SPACING, PANEL_SEGMENTS,
   GROWTH_REGIONS, festivalLayers, growthForFriends, outerRadiusForFriends,
   outerFitZoom, festivalFacetPath,
 } from '../src/features/lantern/growth/outerGrowth.ts'
@@ -25,7 +25,7 @@ test('50 friends produce 150 filled growth layers and 3000 capiz facet panels', 
   const layers = festivalLayers(growthForFriends(50))
   assert.equal(layers.length, 150)
   assert.equal(layers[0].innerRadius, BASE_FESTIVAL_RADIUS)
-  assert.ok(Math.abs(layers[149].outerRadius - 762.5) < 1e-8)
+  assert.equal(layers[149].outerRadius, BASE_FESTIVAL_RADIUS + 150 * FRIEND_LAYER_SPACING)
   assert.equal(PANEL_SEGMENTS * layers.length, 3000)
   for (const layer of layers) {
     assert.ok(festivalFacetPath(layer.friendNumber, 0).startsWith('M '))

@@ -13,10 +13,8 @@ import {
   GROWTH_PER_FRIEND,
   isFriendBoundary,
   OUTER_RECIPES,
-  ornamentScaleAtLayer,
   outerRadiusForFriends,
   PANEL_SEGMENTS,
-  SIGNATURE_SECTORS,
   regionPanelPath,
 } from '../growth/outerGrowth'
 
@@ -97,18 +95,13 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                 )
               })}
 
-              {/* Ten fine inlays per growth wave, with larger region signatures above.
+              {/* Ten small structural inlays per person, fivefold symmetric.
                   Distinct grammar in each decorated zone. */}
-              {Array.from({ length: SIGNATURE_SECTORS }, (_, sector) => {
+              {Array.from({ length: 10 }, (_, sector) => {
                 const { x, y } = bandMotifPoint(n, sector)
-                const rotation = (sector + .5) * 360 / SIGNATURE_SECTORS
-                // Small glass inlays grow along the circumference, but their
-                // radial size stays within one of the three narrow waves.
-                const horizontal = .7 * ornamentScaleAtLayer(n)
-                const vertical = Math.min(.45, (outerRadiusForFriends(n) -
-                  outerRadiusForFriends(n - 1)) / 18)
+                const rotation = sector * 36
                 return (
-                  <g key={sector} transform={`translate(${x} ${y}) rotate(${rotation}) scale(${horizontal} ${vertical})`}>
+                  <g key={sector} transform={`translate(${x} ${y}) rotate(${rotation})`}>
                     {zone === 'siku' && (
                       <g>
                         <path d="M 0 -5 L 4 0 L 0 5 L -4 0 Z"
@@ -174,51 +167,27 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
           Incomplete regions stop exactly at the current friend count. */}
       <g data-testid="festival-regional-patterns">
         {regionVisible.map((region, regionIndex) => {
-          // After the 50-friend milestone, keep growing the final corona
-          // rather than leaving all later friend bands without large motifs.
-          const end = region.zone === 'corona' ? growthCount : Math.min(growthCount, region.to)
+          const end = Math.min(growthCount, region.to)
           return (
             <g key={region.zone} data-growth-region={region.zone}
               data-visible-through-layer={end}>
-              {Array.from({ length: SIGNATURE_SECTORS }, (_, sector) => {
+              {Array.from({ length: 10 }, (_, sector) => {
                 const color = palette[(sector % 2 + regionIndex) % palette.length]
-                const inner = festivalMotifPoint(region.from - 1, sector, SIGNATURE_SECTORS)
-                const outer = festivalMotifPoint(end, sector, SIGNATURE_SECTORS)
+                const inner = festivalMotifPoint(region.from - 1, sector, 10)
+                const outer = festivalMotifPoint(end, sector, 10)
                 const midIndex = Math.floor((region.from + end) / 2)
-                const control = bandMotifPoint(midIndex, sector, SIGNATURE_SECTORS)
-                const angle = -Math.PI / 2 + TAU * (sector + .5) / SIGNATURE_SECTORS
-                const innerCenter = festivalPointAt(region.from - 1, angle)
-                const outerCenter = festivalPointAt(end, angle)
-                const center = {
-                  x: (innerCenter.x + outerCenter.x) / 2,
-                  y: (innerCenter.y + outerCenter.y) / 2,
-                }
-                const bandDepth = Math.hypot(outerCenter.x - innerCenter.x,
-                  outerCenter.y - innerCenter.y)
-                // Ten large signatures expand tangentially with every friend
-                // and gain additional emphasis when a new region starts. Radial height
-                // remains constrained by the actual region width.
-                const radialScale = Math.min(1.45, Math.max(.02, bandDepth * .40 / 35))
-                const tangentialScale = .7 * ornamentScaleAtLayer(end) *
-                  Math.min(1, (end - region.from + 1) / 3)
-                const panel = regionPanelPath(region.from, end, sector)
-                const clipId = `${uid}-region-${regionIndex}-${sector}`
+                const center = bandMotifPoint(midIndex, sector)
+                const fillSize = Math.min(3.1, Math.max(.55, (end - region.from + 1) * 10.5 / 39))
+                const control = bandMotifPoint(midIndex, sector)
                 return (
-                  <g key={sector} data-signature-ornament={sector}
-                    data-ornament-scale={ornamentScaleAtLayer(end).toFixed(3)}>
-                    <defs>
-                      <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
-                        <path d={panel}/>
-                      </clipPath>
-                    </defs>
-                    <path d={panel}
+                  <g key={sector}>
+                    <path d={regionPanelPath(region.from, end, sector)}
                       fill={region.zone === 'palimbun' ? motifFill : color}
                       fillOpacity={region.zone === 'palimbun' ? '.42' : '.33'}
                       stroke={ivory} strokeOpacity=".73" strokeWidth="2.0"/>
-                    {/* Ten prominent decorations stay within the contributed
-                        region. The twenty glass facets remain visible beneath. */}
-                    <g clipPath={`url(#${clipId})`}>
-                      <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 360 / SIGNATURE_SECTORS + 18}) scale(${tangentialScale} ${radialScale})`}>
+                    {/* A coherent large-scale design appears INSIDE each
+                        region as its bands arrive, rather than just a thin border. */}
+                    <g transform={`translate(${center.x} ${center.y}) rotate(${sector * 36 + 18}) scale(${fillSize})`}>
                       {region.zone === 'siku' && (
                         <g>
                           <path d="M 0 -25 L 15 0 L 0 25 L -15 0 Z"
@@ -273,7 +242,6 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                       )}
                       {region.from > 50 && <ExtendedRegionMotif zone={region.zone}
                         primary={primary} ivory={ivory} rose={rose} teal={teal} color={color}/>}
-                      </g>
                     </g>
                     {end - region.from >= 2 && (
                       <path d={`M ${inner.x.toFixed(2)} ${inner.y.toFixed(2)}
