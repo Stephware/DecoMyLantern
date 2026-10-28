@@ -72,7 +72,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
 
   return <>
     <button type="button" onClick={() => setOpen(true)}
-      className="w-full rounded-xl border border-amber-300/50 bg-amber-300/10 px-5 py-3 text-sm font-bold text-amber-100 transition hover:bg-amber-300/20">
+      className="w-full rounded-xl border border-[#e8d6ba] bg-[#ffefdc] px-5 py-3 text-sm font-bold text-[#762732] transition hover:bg-white">
       ✦ Share animated Story
     </button>
     {open && (

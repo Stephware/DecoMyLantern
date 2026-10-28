@@ -31,38 +31,42 @@ export default function RecoveryKeyPage({ code, onContinue, onCancel }: Props) {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#080e20] px-5 py-12 text-[#fff7e5]">
-      <section className="w-full max-w-lg rounded-3xl border border-amber-300/25 bg-[#131e35] p-6 shadow-xl sm:p-10">
-        <div className="text-4xl text-amber-300" aria-hidden="true">✦</div>
-        <h1 className="mt-4 font-serif text-3xl font-semibold">Save your recovery key</h1>
-        <p className="mt-3 text-sm leading-7 text-white/65">
-          Your parol is protected by a private browser session. Save this key in a safe place.
-          This original recovery key is valid for one year and can be reused during that year, even after restoring access. Save it for another device or after clearing browser data.
+    <main className="flex min-h-screen items-center justify-center bg-[#f7f2e9] px-4 py-10 text-[#273a30]">
+      <section className="w-full max-w-xl rounded-[28px] border border-[#e5d8c4] bg-[#fffdf8] p-6 shadow-[0_16px_45px_rgba(54,43,27,.08)] sm:p-10">
+        <div className="font-serif text-2xl font-semibold text-[#27392d]"><span className="text-[#aa7e45]">✦</span> BeMyParol</div>
+        <p className="mt-7 text-[11px] font-bold uppercase tracking-[.24em] text-[#9c7041]">One important step</p>
+        <h1 className="mt-2 font-serif text-3xl font-semibold sm:text-4xl">Save your recovery key.</h1>
+        <p className="mt-3 text-sm leading-7 text-[#70685a]">
+          Your parol is protected by a private browser session. This key lets you recover
+          your parol on another device or after clearing browser data. It is valid and
+          reusable for one year.
         </p>
-        <div className="mt-6 rounded-xl border border-white/15 bg-[#080e20] p-4">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/50">Private key — shown only now</p>
-          <code className="mt-3 block break-all font-mono text-sm leading-7 text-amber-200" data-testid="recovery-key">{code}</code>
-          <button type="button" onClick={() => void copy()} className="mt-4 rounded-lg border border-amber-300/30 px-4 py-2.5 text-sm font-semibold text-amber-100">
-            {copied ? 'Copied' : 'Copy recovery key'}
+        <div className="mt-6 rounded-2xl border border-[#d9c5a9] bg-[#f7eee0] p-4 sm:p-5">
+          <p className="text-xs font-bold uppercase tracking-widest text-[#776048]">Private key — shown only now</p>
+          <code className="mt-3 block break-all rounded-xl border border-[#decbb1] bg-white px-3 py-4 font-mono text-sm leading-7 text-[#7b2a30]"
+            data-testid="recovery-key">{code}</code>
+          <button type="button" onClick={() => void copy()}
+            className="mt-4 rounded-xl bg-[#263f32] px-4 py-3 text-sm font-bold text-white">
+            {copied ? '✓ Copied!' : 'Copy recovery key'}
           </button>
         </div>
-        <p className="mt-4 text-xs leading-6 text-rose-200/85">
-          Treat this key like a password. Don't send it to friends, post it on social media, or save it in your public invitation link.
-          We cannot restore your parol if both your browser session and recovery key are lost.
+        <p className="mt-4 rounded-xl bg-[#fae9e5] px-4 py-3 text-xs leading-6 text-[#8e3340]">
+          Keep this key private. Never send it to friends or include it in your invitation.
+          We cannot recover your parol if both your browser session and recovery key are lost.
         </p>
-        <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm leading-6 text-white/75">
+        <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm leading-6 text-[#4e564b]">
           <input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)}
-            className="mt-1 h-4 w-4 accent-amber-300" />
+            className="mt-1 h-4 w-4 accent-[#902632]" />
           I have saved my recovery key somewhere private.
         </label>
-        {error && <p role="alert" className="mt-5 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">{error}</p>}
-        <div className="mt-6 flex gap-3">
+        {error && <p role="alert" className="mt-5 rounded-xl border border-[#e6b2a9] bg-[#fff1ee] px-4 py-3 text-sm text-[#912632]">{error}</p>}
+        <div className="mt-6 flex flex-wrap gap-3">
           {onCancel && <button type="button" disabled={busy} onClick={cancel}
-            className="min-w-0 flex-1 rounded-xl border border-rose-400/50 bg-rose-500/15 px-4 py-3.5 text-sm font-bold text-rose-100 hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:opacity-40">
+            className="min-w-0 flex-1 rounded-xl border border-[#cdb59c] px-4 py-3.5 text-sm font-bold text-[#704841] disabled:opacity-40">
             {busy ? 'Please wait…' : 'Cancel'}
           </button>}
           <button type="button" disabled={!acknowledged || busy} onClick={() => void run(onContinue)}
-            className="min-w-0 flex-1 rounded-xl bg-amber-300 px-4 py-3.5 text-sm font-bold text-slate-900 disabled:cursor-not-allowed disabled:opacity-40">
+            className="min-w-0 flex-[2] rounded-xl bg-[#902632] px-4 py-3.5 text-sm font-bold text-white disabled:opacity-40">
             Continue to my parol →
           </button>
         </div>

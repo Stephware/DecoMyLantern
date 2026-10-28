@@ -2,8 +2,8 @@
 
 :root {
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  color: #f8f3e8;
-  background: #080e20;
+  color: #263b31;
+  background: #f7f2e9;
   font-synthesis: none;
 }
 
@@ -60,6 +60,20 @@ button:focus-visible, input:focus-visible { outline: 2px solid #ffcf75; outline-
   animation: parol-growth-spark 1050ms ease-out both;
   transform-box: fill-box;
   transform-origin: center;
+}
+
+/* Phase 4: reveal the newly cached whole-parol image in three soft,
+   outward waves. The source is one WebP, never procedural SVG in the viewer. */
+.parol-snapshot-wave-reveal {
+  transition: clip-path 520ms cubic-bezier(.15,.85,.25,1);
+}
+@keyframes parol-snapshot-glint {
+  0%   { opacity: 0; stroke-width: 11; }
+  28%  { opacity: .83; stroke-width: 7; }
+  100% { opacity: 0; stroke-width: 1; }
+}
+.parol-snapshot-wave-glint {
+  animation: parol-snapshot-glint 720ms ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {

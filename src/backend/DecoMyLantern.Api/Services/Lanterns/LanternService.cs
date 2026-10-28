@@ -78,12 +78,8 @@ public sealed class LanternService(ILanternRepository repository, TimeProvider t
             ?? throw new LanternOperationException(400, "Invalid or unavailable parol design.");
 
         var lights = await repository.GetAcceptedLightsAsync(lantern.Id, cancellationToken);
-        // Retain grandfathered selections made before milestone rules changed.
-        // Otherwise reject direct API attempts to use a locked design.
-        if (lantern.SelectedDesignId != design.Id &&
-            !GrowthPolicy.DesignUnlocked(design, lights.Count, lantern.NextSlotIndex))
-            throw new LanternOperationException(409,
-                $"{design.Name} unlocks at {design.RequiredFriends} friends.");
+        // All six enabled visual designs are selectable from the beginning.
+        // Friend-count milestones still drive growth, not design access.
 
         lantern.SelectedDesignId = design.Id;
         lantern.SelectedDesign = design;

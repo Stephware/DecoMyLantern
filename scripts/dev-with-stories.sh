@@ -48,15 +48,15 @@ export STORY_RENDERER_SECRET="$(openssl rand -hex 32)"
 export StoryRenderer__SharedSecret="$STORY_RENDERER_SECRET"
 export StoryRenderer__Url="http://127.0.0.1:7070"
 
-echo "Preparing Story renderer dependencies..."
-if [[ ! -x "$RENDERER_DIR/node_modules/.bin/remotion" ]]; then
+echo "Preparing Story and parol image renderer dependencies..."
+if [[ ! -x "$RENDERER_DIR/node_modules/.bin/remotion" || ! -d "$RENDERER_DIR/node_modules/sharp" ]]; then
   (cd "$RENDERER_DIR" && npm install --no-audit --no-fund)
 fi
 
 # Remotion needs a compatible Chrome Headless Shell for video encoding.
 (cd "$RENDERER_DIR" && npx --no-install remotion browser ensure)
 
-echo "Starting the private Story renderer..."
+echo "Starting the private Story and parol image renderer..."
 (cd "$RENDERER_DIR" && exec npm start) > "$RENDERER_LOG" 2>&1 &
 RENDER_PID="$!"
 
