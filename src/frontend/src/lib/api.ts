@@ -100,6 +100,26 @@ export const signOutOwner = () => api<void>('/api/owner/sign-out', { method: 'PO
 export const finishOwnerSetup = () => api<void>('/api/owner/finish-setup', { method: 'POST' })
 export const cancelOwnerCreation = () => api<void>('/api/owner/cancel-creation', { method: 'POST' })
 
+// Story exports are binary, so do not use the JSON-only api<T> helper.
+export async function exportStoryMedia(kind: 'owner' | 'friend', format: 'mp4' | 'png', token?: string): Promise<Blob> {
+  const guest = kind === 'friend'
+  if (guest && !token) throw new Error('Missing invitation for this Story.')
+  const response = await fetch(guest ? '/api/invitations/story' : '/api/my/lantern/story', {
+    method: 'POST',
+    credentials: 'same-origin',
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': await csrfToken(guest ? '/api/invitations/csrf' : '/api/owner/csrf') },
+    body: JSON.stringify(guest ? {format,token} : {format}),
+  })
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null)
+    throw new ApiError(response.status, errorMessage(body,
+      response.status === 429 ? 'Too many exports. Try again later.' : 'Story export is unavailable.'))
+  }
+  return response.blob()
+}
+
 export const getMyLantern = () => api<Lantern>('/api/my/lantern')
 export const createMyLantern = () => api<Lantern>('/api/my/lantern', { method: 'POST' })
 export const updateMyLantern = (designKey: string, patternKey: string) =>
