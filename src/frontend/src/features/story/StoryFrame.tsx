@@ -47,11 +47,11 @@ export function StoryFrame({data, frame}: {data: StoryData; frame: number}) {
         <div style={{fontSize:35,letterSpacing:13,fontWeight:700,color:'#fbd998'}}>✦ B E M Y P A R O L ✦</div>
         <div style={{fontSize:48,marginTop:18,fontWeight:700}}>A light from every friend</div>
       </div>
-      <div style={{position:'absolute',top:358,left:90,width:900,height:950,
+      <div style={{position:'absolute',top:325,left:120,width:840,height:890,
         opacity:parolOpacity,transform:`scale(${zoom})`,transformOrigin:'center'}}>
         <div style={{position:'absolute',inset:120,borderRadius:'50%',background:'rgba(250,189,93,.19)',
           filter:'blur(115px)',opacity:sparkle}}/>
-        <svg viewBox="0 0 600 640" width="900" height="950" role="img"
+        <svg viewBox="0 0 600 640" width="840" height="890" role="img"
           aria-label="Glowing Pampanga-inspired parol" style={{overflow:'visible'}}>
           <g transform={`translate(300 302) scale(${fit}) translate(-300 -302)`}>
             <ProceduralOuterShell theme={theme} growthCount={count} pattern={data.patternKey}/>
@@ -82,7 +82,7 @@ export function StoryFrame({data, frame}: {data: StoryData; frame: number}) {
           </g>
         </svg>
       </div>
-      <div style={{position:'absolute',top:1325,left:110,right:110,
+      <div style={{position:'absolute',top:1225,left:110,right:110,
         textAlign:'center',opacity:overlayOpacity}}>
         <div style={{fontSize:65,fontWeight:800,lineHeight:1.15,
           textShadow:'0 3px 22px #09101f'}}>{title}</div>
