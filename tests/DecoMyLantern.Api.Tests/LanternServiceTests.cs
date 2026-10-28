@@ -33,40 +33,29 @@ public sealed class LanternServiceTests
     }
 
     [Fact]
-    public async Task Each_design_requires_its_friend_milestone_and_retains_valid_selection()
+    public async Task Every_enabled_design_can_be_chosen_at_zero_friends_and_changed_later()
     {
         var repository = new FakeRepository();
         var service = new LanternService(repository, TimeProvider.System);
         var ownerId = Guid.NewGuid();
         await service.CreateAsync(ownerId, CancellationToken.None);
 
-        // A direct API update must not bypass the design gallery's lock.
-        var locked = await Assert.ThrowsAsync<LanternOperationException>(() =>
-            service.UpdateAsync(ownerId,
-                new UpdateLanternRequest { DesignKey = "floral", PatternKey = "rings" },
-                CancellationToken.None));
-        Assert.Equal(409, locked.StatusCode);
-
-        foreach (var (friends, key) in new[] {
-            (0, "classic"), (3, "floral"), (10, "festival"),
-            (23, "celestial"), (40, "fiesta"), (50, "sampaguita")
-        })
+        foreach (var key in new[] { "classic", "floral", "festival", "celestial", "fiesta", "sampaguita" })
         {
-            repository.AcceptedCount = friends;
-            var updated = await service.UpdateAsync(ownerId,
+            var selected = await service.UpdateAsync(ownerId,
                 new UpdateLanternRequest { DesignKey = key, PatternKey = "rings" },
                 CancellationToken.None);
-            Assert.Equal(key, updated.DesignKey);
-            Assert.Equal(friends, updated.AcceptedFriends);
+            Assert.Equal(key, selected.DesignKey);
+            Assert.Equal(0, selected.AcceptedFriends);
         }
 
-        repository.AcceptedCount = 0;
-        // Existing selections are grandfathered, including when old lights are removed.
-        var preserved = await service.UpdateAsync(ownerId,
-            new UpdateLanternRequest { DesignKey = "sampaguita", PatternKey = "rays" },
+        repository.AcceptedCount = 12;
+        var changedAgain = await service.UpdateAsync(ownerId,
+            new UpdateLanternRequest { DesignKey = "floral", PatternKey = "rays" },
             CancellationToken.None);
-        Assert.Equal("sampaguita", preserved.DesignKey);
-        Assert.Equal("rays", preserved.PatternKey);
+        Assert.Equal("floral", changedAgain.DesignKey);
+        Assert.Equal(12, changedAgain.AcceptedFriends);
+        Assert.Equal("rays", changedAgain.PatternKey);
     }
 
     [Fact]
