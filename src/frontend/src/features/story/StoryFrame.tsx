@@ -20,7 +20,6 @@ export type StoryData = {
  */
 export function StoryFrame({data, frame}: {data: StoryData; frame: number}) {
   const theme = THEMES.find(t => t.key === data.designKey) ?? THEMES[0]
-  const progress = Math.max(0, Math.min(1, frame / 239))
   const capped = Math.min(50, Math.max(0, data.friendCount))
   const last = growthForFriends(capped)
   const previous = Math.max(0, last - 3)
