@@ -82,6 +82,8 @@ test('the region renderer draws clipped signatures and the Story shares its geom
   assert.ok(renderer.includes('ornamentScaleAtLayer(end)'))
   assert.ok(story.includes('<ProceduralOuterShell'))
   assert.ok(story.includes('outerFitZoom(count)'))
+  assert.ok(renderer.includes("region.zone === 'corona' ? growthCount"),
+    'the final corona must keep growing after friend 50')
 })
 
 test('reject invalid friend and wave indices', () => {
