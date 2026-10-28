@@ -89,7 +89,7 @@ const server = http.createServer(async(req,res)=>{
     busy = true
     try {
       let cached = false
-      try { await stat(file); cached = true } catch { /* first render */ }
+      try { cached = (await stat(file)).size > 1024 } catch { /* first render */ }
       if (!cached) {
         const composition = await selectComposition({serveUrl,id:'BeMyParolStory',inputProps})
         if (format === 'png') {
