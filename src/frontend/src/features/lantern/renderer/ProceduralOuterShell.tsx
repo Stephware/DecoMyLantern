@@ -101,7 +101,7 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                   Distinct grammar in each decorated zone. */}
               {Array.from({ length: SIGNATURE_SECTORS }, (_, sector) => {
                 const { x, y } = bandMotifPoint(n, sector)
-                const rotation = sector * 360 / SIGNATURE_SECTORS
+                const rotation = (sector + .5) * 360 / SIGNATURE_SECTORS
                 // Small glass inlays grow along the circumference, but their
                 // radial size stays within one of the three narrow waves.
                 const horizontal = .7 * ornamentScaleAtLayer(n)
@@ -194,7 +194,7 @@ function ProceduralOuterShell({ theme, growthCount, pattern, animateGrowth = fal
                 const bandDepth = Math.hypot(outerCenter.x - innerCenter.x,
                   outerCenter.y - innerCenter.y)
                 // Ten large signatures expand tangentially with every friend
-                // and by another 6% when a new region starts. Radial height
+                // and gain additional emphasis when a new region starts. Radial height
                 // remains constrained by the actual region width.
                 const radialScale = Math.max(.02, bandDepth * .40 / 35)
                 const tangentialScale = .7 * ornamentScaleAtLayer(end) *
