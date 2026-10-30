@@ -111,13 +111,9 @@ export default function DesignShowcaseGallery({
                   </div>
                 )}
                 {isSelected && <span className="absolute right-2 top-2 rounded-full bg-[#91222c] px-2.5 py-1 text-[10px] font-bold text-white">Selected ✓</span>}
-                <span className="absolute bottom-2 left-2 rounded-full bg-black/65 px-2.5 py-1 text-[10px] font-medium text-white">
-                  50-friend preview
-                </span>
               </div>
               <div className="p-3">
                 <span className="block truncate font-serif text-base font-semibold text-[#26352c]">{design.name}</span>
-                <span className="mt-1 block text-[11px] text-[#766d5f]">Your parol will grow into this</span>
                 <span className="mt-2 flex gap-1" aria-hidden="true">
                   {palette?.colors.map((color, index) => (
                     <span key={index} className="h-3 w-3 rounded-full border border-black/10"
@@ -134,10 +130,6 @@ export default function DesignShowcaseGallery({
         <button type="button" onClick={() => setRetry(x => x + 1)}
           className="rounded-lg border border-[#c49b67] px-3 py-2 font-bold">Retry previews</button>
       </div>}
-      <p className="mt-3 text-xs leading-5 text-[#746a5d]">
-        Each image shows the approved design at 50 sample friends (150 growth layers).
-        Your actual parol starts with your real friend count and grows naturally.
-      </p>
     </div>
   )
 }
