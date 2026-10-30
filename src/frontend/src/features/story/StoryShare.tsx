@@ -82,7 +82,6 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="font-serif text-2xl font-semibold sm:text-3xl">Your animated Story</h2>
-              <p className="mt-2 text-sm text-white/60">8 seconds · vertical 9:16 · 1080 × 1920 · MP4</p>
             </div>
             <button type="button" onClick={() => setOpen(false)}
               aria-label="Close Story preview" className="rounded-lg border border-white/20 px-3 py-2 text-white">✕</button>
@@ -96,9 +95,6 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
               </div>
             )}
           </div>
-          <p className="mt-3 text-center text-xs text-white/50">
-            {videoUrl ? 'Preview of your generated animation' : 'Still preview — generate the MP4 to see the three-wave animation'}
-          </p>
           {message && <p role="status" className="mt-4 rounded-xl border border-white/15 bg-white/5 p-3 text-sm text-amber-100">{message}</p>}
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             {!video && <button type="button" disabled={busy} onClick={() => void generate('mp4')}
@@ -128,9 +124,8 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
               onFocus={event => event.currentTarget.select()}
               className="mt-2 w-full rounded-lg border border-white/15 bg-[#070d1b] px-3 py-2 text-xs text-white"/>
             <p className="mt-3 text-xs leading-6 text-white/60">
-              Instagram/Facebook may not open directly in Story mode. Share the MP4 from your phone
-              or save and upload it manually, then use the Story editor’s <strong>Link sticker</strong>
-              to paste the invitation URL. The link printed inside a video is not tappable.
+              If needed, download your Story and upload it from your phone.
+              Add your invitation using the Story editor’s <strong>Link sticker</strong>.
             </p>
           </div>
         </section>
