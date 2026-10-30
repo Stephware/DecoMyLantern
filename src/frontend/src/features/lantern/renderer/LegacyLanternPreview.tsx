@@ -44,7 +44,7 @@ export default function LanternScene({
   const preview = Array.from({ length: previewAmount }, (_, index): LanternLight => ({
     id: `preview-${index}`,
     slotIndex: index,
-    displayName: `Test friend ${index + 1}`,
+    displayName: `Sample light ${index + 1}`,
   }))
   const lights = isPreview ? preview : contributions
   const friendCount = lights.length
