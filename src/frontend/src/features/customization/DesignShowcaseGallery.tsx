@@ -56,6 +56,7 @@ export default function DesignShowcaseGallery({
     setPreviews({})
     setFailed([])
     const made: string[] = []
+    const ownedUrls = urls.current
 
     async function loadAll() {
       for (const key of keys.split('|').filter(Boolean)) {
@@ -65,7 +66,7 @@ export default function DesignShowcaseGallery({
           if (!active || controller.signal.aborted) break
           const url = URL.createObjectURL(blob)
           made.push(url)
-          urls.current.add(url)
+          ownedUrls.add(url)
           setPreviews(previous => ({...previous, [key]:url}))
         } catch {
           if (!active || controller.signal.aborted) break
@@ -79,7 +80,7 @@ export default function DesignShowcaseGallery({
       controller.abort()
       for (const url of made) {
         URL.revokeObjectURL(url)
-        urls.current.delete(url)
+        ownedUrls.delete(url)
       }
     }
   }, [keys, enabled, retry])
