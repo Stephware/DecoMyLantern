@@ -34,15 +34,13 @@ export default function RecoveryKeyPage({ code, onContinue, onCancel }: Props) {
     <main className="flex min-h-screen items-center justify-center bg-[#f7f2e9] px-4 py-10 text-[#273a30]">
       <section className="w-full max-w-xl rounded-[28px] border border-[#e5d8c4] bg-[#fffdf8] p-6 shadow-[0_16px_45px_rgba(54,43,27,.08)] sm:p-10">
         <div className="font-serif text-2xl font-semibold text-[#27392d]"><span className="text-[#aa7e45]">✦</span> BeMyParol</div>
-        <p className="mt-7 text-[11px] font-bold uppercase tracking-[.24em] text-[#9c7041]">One important step</p>
         <h1 className="mt-2 font-serif text-3xl font-semibold sm:text-4xl">Save your recovery key.</h1>
         <p className="mt-3 text-sm leading-7 text-[#70685a]">
-          Your parol is protected by a private browser session. This key lets you recover
-          your parol on another device or after clearing browser data. It is valid and
-          reusable for one year.
+          Save this private key to return to your parol on another device.
+          It's valid for one year.
         </p>
         <div className="mt-6 rounded-2xl border border-[#d9c5a9] bg-[#f7eee0] p-4 sm:p-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-[#776048]">Private key — save a personal copy</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-[#776048]">Your private key</p>
           <code className="mt-3 block break-all rounded-xl border border-[#decbb1] bg-white px-3 py-4 font-mono text-sm leading-7 text-[#7b2a30]"
             data-testid="recovery-key">{code}</code>
           <button type="button" onClick={() => void copy()}
@@ -51,8 +49,8 @@ export default function RecoveryKeyPage({ code, onContinue, onCancel }: Props) {
           </button>
         </div>
         <p className="mt-4 rounded-xl bg-[#fae9e5] px-4 py-3 text-xs leading-6 text-[#8e3340]">
-          Keep this key private. Never send it to friends or include it in your invitation.
-          You can view this key again from the signed-in parol, but after signing out you must have saved it. If both your session and key are lost, access cannot be restored.
+          Keep this key private. You can view it while signed in, but you'll need
+          your saved copy after leaving. Without a valid session or key, access cannot be restored.
         </p>
         <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm leading-6 text-[#4e564b]">
           <input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)}
