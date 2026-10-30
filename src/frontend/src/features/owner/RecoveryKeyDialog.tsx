@@ -92,7 +92,13 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
       const result = await replaceOwnerRecoveryKey()
       setRecovery(result)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to replace your recovery key.')
+      // If the response was lost after a write, the previously displayed key
+      // might no longer be current. Re-read the server before allowing leave.
+      setRecovery(null)
+      const unavailable = caught instanceof ApiError && caught.status >= 500
+      setError(unavailable
+        ? 'Unable to confirm your recovery key. Stay signed in and retry loading it before leaving.'
+        : caught instanceof Error ? caught.message : 'Unable to replace your recovery key.')
     } finally {
       setReplacing(false)
     }
