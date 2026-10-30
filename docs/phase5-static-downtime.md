@@ -7,13 +7,25 @@ This phase provides **the page artifact only**. No production routing, maintenan
 ## Page behavior
 
 - Displays a festive BeMyParol design in the project's ivory, burgundy, forest-green and gold palette.
-- Includes a simple inline SVG parol illustration (no image, font, animation, or external network requests).
+- Embeds a faithful static version of the **approved Classic Gold zero-friend parol** directly as inline SVG (no image, font, animation, or external network requests).
+- Preserves the real scalloped perimeter, 20 dyed capiz floral windows, ten siku-siku diamonds, ten fan panels, 20-ray starflower tambor, and canonical Classic Gold theme colors.
+- Shows **“Salamat sa pasensya ✦”** beneath the manual retry action.
 - Explains that BeMyParol is temporarily unavailable without speculating about cause, restoration time or user data.
 - Provides an ordinary **Try again** link pointing at the site root; no automatic requests or polling occur.
 - Works at narrow phone widths, is keyboard accessible, includes descriptive SVG text, and is marked `noindex, nofollow`.
 - Contains **no React, Vite runtime, CSS build step, third-party ads, JavaScript, API call, or database dependency**.
 
-The SVG is a **simple downtime illustration**, not a replacement for the approved procedural parol artwork. No parol geometry, growth logic or animation files were edited.
+### Artwork provenance and maintenance
+
+The page uses the actual **zero-friend, default-pattern Classic Gold** composition from:
+- `src/frontend/src/features/lantern/renderer/ParolArtwork.tsx`
+- `src/frontend/src/features/lantern/renderer/ProceduralOuterShell.tsx`
+- `src/frontend/src/features/lantern/growth/outerGrowth.ts`
+- `src/frontend/src/features/customization/themes.ts`
+
+The static copy includes the real canonical 200-sample scalloped outline, the Classic Gold theme colors, core capiz/diamond/fan motifs and tambor. The same perimeter path is referenced inside the SVG to keep the HTML reasonably small. The illustration is **not** a rendering of a specific owner's saved parol and does not invent guest contributions. It does not require React, the Remotion renderer, ASP.NET, database or an active invitation.
+
+**When approved artwork changes**, recheck the static SVG against the source components and update this copy explicitly; it does not synchronize automatically during an outage. No application parol geometry, growth rules, or animation source files were modified.
 
 ## Preview without the app
 
@@ -27,7 +39,7 @@ Then visit `http://localhost:8088/`. Stop the preview with Ctrl+C. This does not
 
 ## Verification
 
-The frontend's existing `npm test` command includes `src/frontend/tests/phase5-downtime-static.test.mjs`, which checks independence, markup, responsive CSS, accessibility, SVG structure, retry link, lack of automatic requests and absence of private or infrastructure details.
+The frontend's existing `npm test` command includes `src/frontend/tests/phase5-downtime-static.test.mjs`, which checks independence, markup, responsive CSS, accessibility, canonical Classic Gold base-art motifs/colors, the Filipino gratitude text, retry link, internal-only SVG paint definitions, lack of automatic requests and absence of private or infrastructure details.
 
 ```bash
 cd src/frontend
