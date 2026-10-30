@@ -91,3 +91,9 @@ test('owner private recovery key remains separate from public Story and guest ar
   assert.doesNotMatch(poster, /recoveryCode|recoveryKey|displayName|messageBody/)
   assert.doesNotMatch(snapshot, /recoveryCode|recoveryKey|displayName|messageBody/)
 })
+
+test('legacy development preview closes the selected friend caption before the status caption', () => {
+  const preview = read('src/features/lantern/renderer/LegacyLanternPreview.tsx')
+  assert.match(preview, /\{selected && <figcaption[\s\S]*?<\/figcaption>\}/)
+  assert.match(preview, /<figcaption role="status" aria-live="polite"/)
+})
