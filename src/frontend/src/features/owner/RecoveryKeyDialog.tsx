@@ -27,6 +27,7 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
   useEffect(() => { busyRef.current = busy }, [busy])
   const code = recovery?.available ? recovery.recoveryCode : null
   const expired = recovery !== null && new Date(recovery.expiresAtUtc).getTime() <= Date.now()
+  const expiryDate = recovery ? new Date(recovery.expiresAtUtc).toLocaleDateString() : ''
 
   useEffect(() => {
     let active = true
@@ -122,7 +123,7 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
               {copied ? '✓ Recovery key copied' : 'Copy recovery key'}
             </button>
             <p className="mt-3 text-xs leading-5 text-[#756856]">
-              Valid until {new Date(recovery.expiresAtUtc).toLocaleDateString()}.
+              Valid until {expiryDate}.
               Do not share this key with friends or include it in invitation links.
             </p>
           </div>

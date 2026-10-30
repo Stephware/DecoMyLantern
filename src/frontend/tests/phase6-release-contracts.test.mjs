@@ -97,3 +97,18 @@ test('legacy development preview closes the selected friend caption before the s
   assert.match(preview, /\{selected && <figcaption[\s\S]*?<\/figcaption>\}/)
   assert.match(preview, /<figcaption role="status" aria-live="polite"/)
 })
+
+test('Vite build types expose import.meta.env for development-only controls', () => {
+  const declarations = read('src/vite-env.d.ts')
+  const dashboard = read('src/features/dashboard/HostDashboard.tsx')
+  assert.match(declarations, /\/\/\/ <reference types="vite\/client" \/>/)
+  assert.match(dashboard, /import\.meta\.env\.DEV && <section/)
+})
+
+test('recovery expiry display is null-safe without exposing recovery keys', () => {
+  const dialog = read('src/features/owner/RecoveryKeyDialog.tsx')
+  assert.ok(dialog.includes('const expiryDate = recovery ? new Date(recovery.expiresAtUtc).toLocaleDateString()'))
+  assert.ok(dialog.includes('Valid until {expiryDate}.'))
+  assert.doesNotMatch(dialog, /recovery!\.expiresAtUtc/)
+  assert.ok(dialog.includes('const code = recovery?.available ? recovery.recoveryCode : null'))
+})
