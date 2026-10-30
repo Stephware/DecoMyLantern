@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Data.SqlClient;
 
 namespace DecoMyLantern.Api.Controllers;
 
@@ -19,7 +20,8 @@ public sealed class RecoverOwnerRequest
 public sealed class OwnerController(
     IOwnerAccessService access,
     IAntiforgery antiforgery,
-    IHostEnvironment environment) : ControllerBase
+    IHostEnvironment environment,
+    ILogger<OwnerController> logger) : ControllerBase
 {
     [AllowAnonymous]
     [HttpGet("csrf")]
@@ -154,6 +156,12 @@ public sealed class OwnerController(
             return Ok(result);
         }
         catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
+        catch (SqlException ex) when (ex.Number == 207)
+        {
+            logger.LogError(ex, "Recovery-key display database schema is outdated. Apply the pending EF Core migrations.");
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { message = "Recovery keys are temporarily unavailable. Please try again later.", code = "RECOVERY_SCHEMA_OUTDATED" });
+        }
     }
 
     // For keys originally stored only as one-way hashes, issue a replacement
@@ -172,6 +180,12 @@ public sealed class OwnerController(
             return Ok(result);
         }
         catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
+        catch (SqlException ex) when (ex.Number == 207)
+        {
+            logger.LogError(ex, "Recovery-key replacement database schema is outdated. Apply the pending EF Core migrations.");
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { message = "Recovery keys are temporarily unavailable. Please try again later.", code = "RECOVERY_SCHEMA_OUTDATED" });
+        }
     }
 
     [Authorize]
