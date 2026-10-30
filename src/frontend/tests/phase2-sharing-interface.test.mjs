@@ -25,7 +25,8 @@ test('existing owner and friend exports share the same format-aware controls', (
   const component = read('features/story/StoryShare.tsx')
   const invite = read('features/invitations/InvitationManager.tsx')
   const guest = read('features/invitations/GuestInvitationPage.tsx')
-  assert.ok(component.includes('exportStoryMedia(data.kind, selected, token)'))
+  assert.ok(component.includes("exportStoryMedia(data.kind, 'mp4', token)"))
+  assert.ok(component.includes('exportParolImage(data.kind, token)'))
   assert.ok(component.includes("format === 'png' ? png : video"))
   assert.ok(component.includes('navigator.canShare?.({files: [file]})'))
   assert.ok(component.includes('navigator.share({files: [file]'))
@@ -43,7 +44,7 @@ test('existing owner and friend exports share the same format-aware controls', (
 
 test('media is discarded when saved parol changes, with object URL cleanup', () => {
   const component = read('features/story/StoryShare.tsx')
-  assert.ok(component.includes('data.slots.join'))
+  assert.ok(component.includes('sort((a,b) => a-b).join'))
   assert.ok(component.includes('latestDataKey.current !== requestedKey'))
   assert.ok(component.includes('setVideo(null)'))
   assert.ok(component.includes('setPng(null)'))
@@ -68,7 +69,7 @@ test('modal keeps keyboard users safe and provides error fallback', () => {
 
 test('this phase does not introduce new media endpoints or parol geometry', () => {
   const component = read('features/story/StoryShare.tsx')
-  assert.ok(component.includes("Phase 3 can replace the PNG poster"))
+  assert.ok(component.includes('Share the current saved parol as a transparent PNG'))
   assert.ok(!component.includes('/api/'))
   assert.ok(!component.includes('ProceduralOuterShell'))
 })
