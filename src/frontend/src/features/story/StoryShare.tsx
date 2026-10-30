@@ -117,6 +117,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
   useEffect(() => {
     if (!open) return
     const originalOverflow = document.body.style.overflow
+    const opener = triggerRef.current
     document.body.style.overflow = 'hidden'
     closeRef.current?.focus()
     function onKeyDown(event: KeyboardEvent) {
@@ -140,7 +141,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     return () => {
       document.removeEventListener('keydown', onKeyDown)
       document.body.style.overflow = originalOverflow
-      triggerRef.current?.focus()
+      opener?.focus()
     }
   }, [open, closeDialog])
 
