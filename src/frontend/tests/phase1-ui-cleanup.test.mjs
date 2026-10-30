@@ -43,6 +43,12 @@ test('guest and parol canvas hide technical diagnostics but keep usable controls
   assert.ok(viewer.includes('aria-label="Fit the whole lantern"'))
   assert.ok(viewer.includes('onClick={() => setAttempt(n => n + 1)}>Retry</button>'))
   assert.ok(viewer.includes('SNAPSHOT_WAVE_LABEL[activeWave.wave]'))
+  const welcomePreview = read('features/lantern/renderer/LegacyLanternPreview.tsx')
+  assert.ok(!welcomePreview.includes("test' : 'accepted"))
+  assert.ok(!welcomePreview.includes('outer bands'))
+  assert.ok(!welcomePreview.includes('total growth · Drag'))
+  assert.ok(welcomePreview.includes('<ProceduralOuterShell'))
+  assert.ok(welcomePreview.includes('className="sr-only"'))
 })
 
 test('design previews remain explicit samples without repeating labels per card', () => {
