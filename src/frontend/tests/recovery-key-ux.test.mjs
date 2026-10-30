@@ -26,8 +26,9 @@ test('the recovery popup fetches a private code on demand and never stores it lo
   assert.ok(dialog.includes("'Leave anyway'"))
   assert.ok(dialog.includes('replaceOwnerRecoveryKey()'))
   assert.ok(dialog.includes('previous recovery key'))
-  assert.ok(!dialog.includes('localStorage'))
-  assert.ok(!dialog.includes('sessionStorage'))
+  // Comments document the privacy guarantee, so inspect executable source only.
+  const executable = dialog.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')
+  assert.doesNotMatch(executable, /\blocalStorage\b|\bsessionStorage\b/)
   assert.ok(api.includes("'/api/owner/recovery-key', { method: 'POST' }"))
   assert.ok(api.includes("'/api/owner/replace-recovery-key', { method: 'POST' }"))
 })

@@ -1,9 +1,16 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
-import {exportParolImage, fetchParolSnapshot} from '../src/lib/api.ts'
+import {ApiError, exportParolImage, fetchParolSnapshot} from '../src/lib/api.ts'
 
 const read = path => readFileSync(new URL('../src/' + path, import.meta.url), 'utf8')
+
+test('API error keeps HTTP status in Node strip-only mode', () => {
+  const error = new ApiError(503, 'Renderer temporarily busy')
+  assert.equal(error.status, 503)
+  assert.equal(error.name, 'ApiError')
+  assert.match(error.message, /Renderer temporarily busy/)
+})
 
 function stubImageServer(mime = 'image/png') {
   const requests = []
