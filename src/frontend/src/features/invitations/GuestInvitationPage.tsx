@@ -70,16 +70,13 @@ export default function GuestInvitationPage({ token }: Props) {
           <a href="/" className="inline-flex items-center gap-2 font-serif text-2xl font-semibold text-[#293c30]">
             <span className="text-[#aa7c3b]" aria-hidden="true">✦</span> BeMyParol
           </a>
-          <span className="hidden text-xs font-medium text-[#7d6d55] sm:block">A little light from every friend</span>
         </header>
         <div className="pb-5 pt-7 sm:pt-9">
-          <p className="text-[11px] font-bold uppercase tracking-[.23em] text-[#a57b43]">You’re part of something special</p>
           <h1 className="mt-2 max-w-3xl font-serif text-3xl font-semibold leading-tight sm:text-5xl">
             Add your light to a brighter <span className="text-[#902632]">Christmas.</span>
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-[#746b5e]">
-            Your friend's parol grows as people join. Add one light and an optional greeting
-            that stays private until Christmas Day.
+            Add your light and an optional Christmas greeting to your friend's parol.
           </p>
           {!alreadyContributed && <a href="#add-light"
             className="mt-3 inline-flex rounded-full border border-[#d2bda1] px-4 py-2 text-sm font-semibold text-[#832c31] lg:hidden">
@@ -105,9 +102,6 @@ export default function GuestInvitationPage({ token }: Props) {
                     contributions={contributions} friendCount={preview.acceptedFriends}
                     snapshot={{kind:'guest',stateId:token,token}} />
                 </div>
-                <p className="px-2 pb-2 pt-3 text-center text-xs text-[#d8c5a6]">
-                  {preview.growthPoints} real decorative layers · Your light joins the others
-                </p>
               </>
             ) : (
               <div role="status" className="mt-6 flex min-h-72 items-center justify-center rounded-xl bg-[#0d1918] px-5 text-center text-sm text-[#e1d0b8]">
@@ -124,8 +118,7 @@ export default function GuestInvitationPage({ token }: Props) {
                   {submitted ? 'Your light is shining!' : 'Your light is already here!'}
                 </h2>
                 <p className="mt-3 text-sm leading-7 text-[#746b5d]">
-                  Your contribution adds three decorative growth layers and one completed outer band.
-                  One light is allowed per guest browser. Your optional message stays sealed until December 25.
+                  Your light is part of this parol. Your Christmas message stays private until December 25.
                 </p>
                 {preview && <div className="mt-5 rounded-xl bg-[#872632] p-3">
                   <StoryShare invitationUrl={invitationUrl(window.location.origin, token)} token={token}
@@ -139,10 +132,9 @@ export default function GuestInvitationPage({ token }: Props) {
               </div>
             ) : (
               <>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-[#a47a43]">A simple gift of friendship</p>
                 <h2 className="mt-2 font-serif text-3xl font-semibold">Share your light.</h2>
                 <p className="mt-3 text-sm leading-6 text-[#746b5d]">
-                  No account required. Your name helps your friend recognize your light.
+                  No account needed. One light per browser.
                 </p>
                 {error && <p role="alert" className="mt-4 rounded-xl border border-[#e4b3ab] bg-[#fff0ec] p-3 text-sm text-[#922632]">{error}</p>}
                 <form onSubmit={contribute} className="mt-6 space-y-4">
@@ -169,8 +161,7 @@ export default function GuestInvitationPage({ token }: Props) {
                   </button>
                 </form>
                 <p className="mt-4 text-xs leading-5 text-[#887c6e]">
-                  Your note is not public. Only the owner can read it on Christmas Day.
-                  One contribution per guest browser is permitted.
+                  Your message stays private until December 25 and is only visible to the parol owner.
                 </p>
               </>
             )}
