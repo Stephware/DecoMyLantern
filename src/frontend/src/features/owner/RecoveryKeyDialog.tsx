@@ -96,9 +96,6 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#112319]/80 p-4 backdrop-blur-sm">
       <section role="dialog" aria-modal="true" aria-labelledby="owner-recovery-dialog-title"
         className="w-full max-w-lg rounded-[26px] border border-[#e7d7c1] bg-[#fffaf3] p-6 text-[#283d31] shadow-2xl sm:p-8">
-        <p className="text-[11px] font-bold uppercase tracking-[.22em] text-[#9e753e]">
-          Your private recovery key
-        </p>
         <h2 ref={heading} tabIndex={-1} id="owner-recovery-dialog-title"
           className="mt-2 font-serif text-2xl font-semibold outline-none sm:text-3xl">
           {mode === 'leave' ? 'Save your key before leaving.' : 'Your recovery key.'}
@@ -158,7 +155,7 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <button type="button" disabled={busy} onClick={onClose}
-            className="rounded-xl border border-[#d8c5aa] bg-white px-4 py-3 text-sm font-semibold text-[#534e41] disabled:opacity-50">
+            className={`rounded-xl border border-[#d8c5aa] bg-white px-4 py-3 text-sm font-semibold text-[#534e41] disabled:opacity-50 ${mode === 'view' ? 'col-span-2' : ''}`}>
             {mode === 'leave' ? 'Stay here' : 'Close'}
           </button>
           {mode === 'leave' && <button type="button" disabled={busy || loading}
@@ -166,9 +163,6 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
             className="rounded-xl bg-[#263e31] px-4 py-3 text-sm font-bold text-white disabled:opacity-50">
             {leaving ? 'Leaving…' : code ? 'Leave parol' : 'Leave anyway'}
           </button>}
-          {mode === 'view' && <p className="self-center text-center text-xs text-[#756b5c]">
-            Keep this key private.
-          </p>}
         </div>
       </section>
     </div>

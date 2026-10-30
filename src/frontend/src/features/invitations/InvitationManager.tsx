@@ -44,10 +44,9 @@ export default function InvitationManager({lantern}: {lantern: Lantern | null}) 
       <div className="flex items-start gap-3">
         <span aria-hidden="true" className="rounded-xl bg-white/10 p-3 text-xl">✉</span>
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[.2em] text-[#f3c7a1]">Share the light</p>
           <h2 className="mt-1 font-serif text-2xl font-semibold">Invite your friends</h2>
           <p className="mt-2 text-sm leading-6 text-white/80">
-            Send your link and let friends add a light and a private Christmas greeting without signing in.
+            Share this link to grow your parol together.
           </p>
         </div>
       </div>
@@ -70,17 +69,12 @@ export default function InvitationManager({lantern}: {lantern: Lantern | null}) 
         </div>
       )}
       <p className="mt-4 text-xs leading-5 text-[#f5d4c7]">
-        One invitation for the season, valid until December 31 (Philippine time).
-        Your recovery key is never included.
+        Link expires December 31. Your recovery key stays private.
       </p>
     </section>
     {lantern && url && <section aria-label="Share your parol Story"
       className="rounded-[24px] border border-[#e3d7c5] bg-[#fffdf8] p-5 shadow-[0_10px_30px_rgba(57,43,27,.05)] sm:p-6">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-[#a27a45]">Share your Christmas story</p>
-      <h2 className="mt-2 font-serif text-2xl text-[#283b2f]">Show how your parol shines.</h2>
-      <p className="mb-4 mt-2 text-sm leading-6 text-[#766e60]">
-        Export your animated parol Story to share with friends.
-      </p>
+      <h2 className="mb-4 font-serif text-2xl text-[#283b2f]">Share your parol</h2>
       <StoryShare invitationUrl={url} data={{
         kind:'owner', designKey:lantern.designKey, patternKey:lantern.patternKey,
         friendCount:lantern.acceptedFriends,
