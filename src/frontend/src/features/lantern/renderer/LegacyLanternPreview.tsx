@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { nextGrowthStep, retargetGrowth, settledGrowth, STEP_DURATIONS_MS,
   visibleGrowth, visibleFriends } from '../growth/reveal'
 import type { Theme } from '../../customization/themes'
-import { MAX_TEST_FRIENDS, stageForFriends } from '../growth/stages'
-import { growthForFriends, outerFitZoom } from '../growth/outerGrowth'
+import { MAX_TEST_FRIENDS } from '../growth/stages'
+import { outerFitZoom } from '../growth/outerGrowth'
 import ParolArtwork from './ParolArtwork'
 import ProceduralOuterShell from './ProceduralOuterShell'
 import { lightPosition } from './lightPositions'
@@ -44,11 +44,10 @@ export default function LanternScene({
   const preview = Array.from({ length: previewAmount }, (_, index): LanternLight => ({
     id: `preview-${index}`,
     slotIndex: index,
-    displayName: `Test friend ${index + 1}`,
+    displayName: `Sample light ${index + 1}`,
   }))
   const lights = isPreview ? preview : contributions
   const friendCount = lights.length
-  const designTier = stageForFriends(friendCount)
   const [reveal, setReveal] = useState(() => settledGrowth(friendCount))
   const priorFriendCount = useRef(friendCount)
   const priorPreview = useRef(isPreview)
@@ -158,7 +157,7 @@ export default function LanternScene({
       <div className="relative overflow-hidden rounded-[26px] border border-white/5 bg-[radial-gradient(ellipse_at_50%_42%,rgba(249,177,82,0.10),rgba(8,14,32,0)_65%)]">
         <svg
           role="img"
-          aria-label={`${theme.label} San Fernando-inspired festival lantern with ${growthCount} geometric growth layers, ${drawnFriends} completed friend bands and ${designTier.name} design milestone`}
+          aria-label={`${theme.label} parol with ${friendCount} friends`}
           viewBox="0 0 600 640"
           preserveAspectRatio="xMidYMid meet"
           className="block h-auto w-full cursor-grab select-none active:cursor-grabbing"
@@ -207,18 +206,12 @@ export default function LanternScene({
           <button type="button" className="min-w-16 rounded-full px-2 py-3 text-xs font-semibold text-amber-100 transition hover:bg-white/15" aria-label="Fit the whole lantern" title="Fit lantern" onClick={() => setCamera({ zoom: fitZoom, x: 0, y: 0 })}>Fit</button>
           <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-white transition hover:bg-white/15 disabled:opacity-30" aria-label="Zoom in" title="Zoom in" disabled={camera.zoom >= MAX_ZOOM} onClick={() => zoomBy(0.2)}>+</button>
         </div>
-        <div className="pointer-events-none absolute left-3 top-3 rounded-full border border-white/10 bg-[#101b33]/80 px-3 py-2 text-[11px] text-amber-100/80 backdrop-blur">
-          {drawnFriends} {isPreview ? 'test' : 'accepted'} friends · {growthCount} growth layers · {drawnFriends} outer bands
-        </div>
       </div>
       {selected && <figcaption className="mt-2 text-center text-xs text-amber-200">
-        Selected: {selected.displayName} · Light #{selected.slotIndex + 1}
+        {selected.displayName}
       </figcaption>}
-      <figcaption role="status" aria-live="polite" className="mt-2 text-center text-xs text-white/50">
-        {reveal.step === 1 ? '✦ First wave — new festival glass blooms outward' :
-          reveal.step === 2 ? '✦ Second wave — intricate ornaments unfold' :
-          reveal.step === 3 ? '✦ Third wave — the full new band illuminates' :
-          `Every friend adds three true growth layers · ${growthForFriends(friendCount)} total growth · Drag, pinch or fit to explore`}
+      <figcaption role="status" aria-live="polite" className="sr-only">
+        {reveal.step > 0 ? 'Parol growing' : 'Parol ready'}
       </figcaption>
     </figure>
   )

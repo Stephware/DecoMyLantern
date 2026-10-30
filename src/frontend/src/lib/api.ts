@@ -1,5 +1,6 @@
 export type Owner = { id: string }
 export type OwnerIssue = { owner: Owner; recoveryCode: string }
+export type OwnerRecoveryKey = { available: boolean; recoveryCode: string | null; expiresAtUtc: string }
 
 export type CreatedInvitation = { id: string; token: string; expiresAtUtc: string }
 export type PublicLight = { id: string; slotIndex: number }
@@ -44,9 +45,12 @@ export type Design = {
 }
 
 export class ApiError extends Error {
-  constructor(public readonly status: number, message: string) {
+  readonly status: number
+
+  constructor(status: number, message: string) {
     super(message)
     this.name = 'ApiError'
+    this.status = status
   }
 }
 
@@ -96,20 +100,26 @@ export const recoverOwner = (recoveryCode: string) =>
 export const getLegacyOwner = () => api<{ available: boolean }>('/api/owner/legacy-available')
 export const upgradeLegacyOwner = () =>
   api<OwnerIssue>('/api/owner/upgrade-legacy', { method: 'POST' }, '/api/owner/legacy-csrf')
+// Both use authenticated owner cookies and CSRF; the plaintext is never stored locally.
+export const getOwnerRecoveryKey = () =>
+  api<OwnerRecoveryKey>('/api/owner/recovery-key', { method: 'POST' })
+export const replaceOwnerRecoveryKey = () =>
+  api<OwnerRecoveryKey>('/api/owner/replace-recovery-key', { method: 'POST' })
 export const signOutOwner = () => api<void>('/api/owner/sign-out', { method: 'POST' })
 export const finishOwnerSetup = () => api<void>('/api/owner/finish-setup', { method: 'POST' })
 export const cancelOwnerCreation = () => api<void>('/api/owner/cancel-creation', { method: 'POST' })
 
 // Story exports are binary, so do not use the JSON-only api<T> helper.
-export async function exportStoryMedia(kind: 'owner' | 'friend', format: 'mp4' | 'png', token?: string): Promise<Blob> {
+export async function exportStoryMedia(kind: 'owner' | 'friend', format: 'mp4' | 'png', token?: string, signal?: AbortSignal): Promise<Blob> {
   const guest = kind === 'friend'
   if (guest && !token) throw new Error('Missing invitation for this Story.')
   const response = await fetch(guest ? '/api/invitations/story' : '/api/my/lantern/story', {
     method: 'POST',
     credentials: 'same-origin',
     cache: 'no-store',
+    signal,
     headers: { 'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': await csrfToken(guest ? '/api/invitations/csrf' : '/api/owner/csrf') },
+      'X-CSRF-TOKEN': await csrfToken(guest ? '/api/invitations/csrf' : '/api/owner/csrf', signal) },
     body: JSON.stringify(guest ? {format,token} : {format}),
   })
   if (!response.ok) {
@@ -129,6 +139,7 @@ export async function fetchParolSnapshot(
   kind: 'owner' | 'guest',
   token?: string,
   signal?: AbortSignal,
+  format: 'webp' | 'png' = 'webp',
 ): Promise<Blob> {
   if (kind === 'guest' && !token) throw new Error('Missing invitation token.')
   const guest = kind === 'guest'
@@ -138,7 +149,7 @@ export async function fetchParolSnapshot(
   const response = await fetch(path, {
     method: 'POST', credentials: 'same-origin', cache: 'no-store', signal,
     headers: {'Content-Type':'application/json', 'X-CSRF-TOKEN':csrf},
-    body: JSON.stringify(guest ? {token, format:'webp'} : {format:'webp'}),
+    body: JSON.stringify(guest ? {token, format} : {format}),
   })
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null)
@@ -147,9 +158,15 @@ export async function fetchParolSnapshot(
       response.status === 429 ? 'Too many image requests. Please try later.' :
       'Unable to load your parol image.'))
   }
-  if (response.headers.get('content-type')?.split(';')[0] !== 'image/webp')
+  const expectedMime = format === 'png' ? 'image/png' : 'image/webp'
+  if (response.headers.get('content-type')?.split(';')[0]?.trim() !== expectedMime)
     throw new Error('The server returned an unexpected parol image format.')
   return response.blob()
+}
+
+/** Share the actual saved parol art, not the separate vertical Story poster. */
+export function exportParolImage(kind: 'owner' | 'friend', token?: string, signal?: AbortSignal): Promise<Blob> {
+  return fetchParolSnapshot(kind === 'friend' ? 'guest' : 'owner', token, signal, 'png')
 }
 
 export const getMyLantern = () => api<Lantern>('/api/my/lantern')

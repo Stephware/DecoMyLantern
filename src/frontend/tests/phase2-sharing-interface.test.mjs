@@ -1,0 +1,77 @@
+import {test} from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+
+const read = path => readFileSync(new URL('../src/' + path, import.meta.url), 'utf8')
+
+test('one responsive sharing dialog offers both media formats', () => {
+  const component = read('features/story/StoryShare.tsx')
+  assert.ok(component.includes('aria-labelledby="share-parol-title"'))
+  assert.ok(component.includes('aria-modal="true"'))
+  assert.ok(component.includes('Choose sharing format'))
+  assert.ok(component.includes("setFormat('png')"))
+  assert.ok(component.includes("setFormat('mp4')"))
+  assert.ok(component.includes("aria-pressed={format === 'png'}"))
+  assert.ok(component.includes("aria-pressed={format === 'mp4'}"))
+  assert.ok(component.includes('Static image'))
+  assert.ok(component.includes('Animated Story'))
+  assert.ok(component.includes('aspect-[9/16]'))
+  assert.ok(component.includes('sm:max-w-[270px]'))
+  assert.ok(component.includes('ResizeObserver'))
+  assert.ok(component.includes('<StoryFrame data={data} frame={200}/>'))
+})
+
+test('existing owner and friend exports share the same format-aware controls', () => {
+  const component = read('features/story/StoryShare.tsx')
+  const invite = read('features/invitations/InvitationManager.tsx')
+  const guest = read('features/invitations/GuestInvitationPage.tsx')
+  assert.ok(component.includes("exportStoryMedia(data.kind, 'mp4', token, controller.signal)"))
+  assert.ok(component.includes('exportParolImage(data.kind, token, controller.signal)'))
+  assert.ok(component.includes("const blob = selected === 'png' ? png : video"))
+  assert.ok(component.includes('mediaKey !== dataKey'))
+  assert.ok(component.includes('navigator.canShare?.({files: [file]})'))
+  assert.ok(component.includes('navigator.share({files: [file]'))
+  assert.ok(component.includes('Share image'))
+  assert.ok(component.includes('Share video'))
+  assert.ok(component.includes('Download PNG'))
+  assert.ok(component.includes('Download MP4'))
+  assert.ok(component.includes('Copy invitation link'))
+  assert.ok(component.includes('For Stories, add your invitation'))
+  assert.ok(invite.includes('<StoryShare'))
+  assert.ok(guest.includes('<StoryShare'))
+  assert.ok(!component.includes('instagramAccessToken'))
+  assert.ok(!component.includes('facebookAccessToken'))
+})
+
+test('media is discarded when saved parol changes, with object URL cleanup', () => {
+  const component = read('features/story/StoryShare.tsx')
+  assert.ok(component.includes('sort((a,b) => a-b).join'))
+  assert.ok(component.includes('latestDataKey.current !== requestedKey'))
+  assert.ok(component.includes('setVideo(null)'))
+  assert.ok(component.includes('setPng(null)'))
+  assert.ok(component.includes('URL.createObjectURL(video)'))
+  assert.ok(component.includes('URL.createObjectURL(png)'))
+  assert.ok(component.includes('URL.revokeObjectURL(url)'))
+  assert.ok(component.includes('setBusy(null)'))
+})
+
+test('modal keeps keyboard users safe and provides error fallback', () => {
+  const component = read('features/story/StoryShare.tsx')
+  assert.ok(component.includes("event.key === 'Escape'"))
+  assert.ok(component.includes("event.key !== 'Tab'"))
+  assert.ok(component.includes('const opener = triggerRef.current'))
+  assert.ok(component.includes('opener?.focus()'))
+  assert.ok(component.includes('closeRef.current?.focus()'))
+  assert.ok(component.includes("document.body.style.overflow = 'hidden'"))
+  assert.ok(component.includes('role="alert"'))
+  assert.ok(component.includes('role="status"'))
+  assert.ok(component.includes('Download the file and upload it'))
+  assert.ok(component.includes('readOnly value={invitationUrl}'))
+})
+
+test('this phase does not introduce new media endpoints or parol geometry', () => {
+  const component = read('features/story/StoryShare.tsx')
+  assert.ok(component.includes('Share the current saved parol as a transparent PNG'))
+  assert.ok(!component.includes('/api/'))
+  assert.ok(!component.includes('ProceduralOuterShell'))
+})

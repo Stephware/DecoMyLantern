@@ -52,10 +52,12 @@ test('saved image request uses secure private API with CSRF and WebP', () => {
   assert.ok(api.includes("export async function fetchParolSnapshot("))
   assert.ok(api.includes("'/api/my/lantern/image'"))
   assert.ok(api.includes("'/api/invitations/image'"))
-  assert.ok(api.includes("format:'webp'"))
+  assert.ok(api.includes("format: 'webp' | 'png' = 'webp'"))
+  assert.ok(api.includes('body: JSON.stringify(guest ? {token, format} : {format})'))
   assert.ok(api.includes("'X-CSRF-TOKEN':csrf"))
   assert.ok(api.includes("credentials: 'same-origin'"))
   assert.ok(api.includes("'image/webp'"))
+  assert.ok(api.includes("'image/png'"))
   assert.ok(!api.includes('URL.createObjectURL(await response.blob())'))
 })
 

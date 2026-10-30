@@ -2,12 +2,6 @@ import { useEffect, useRef, type TouchEvent } from 'react'
 import type { Design } from '../../lib/api'
 import DesignShowcaseGallery from './DesignShowcaseGallery'
 
-export const PATTERNS = [
-  { key:'default', label:'Traditional' },
-  { key:'rings', label:'Filigree trim' },
-  { key:'rays', label:'Radiant rays' },
-] as const
-
 type Picker = {
   firstTime: boolean
   designs: readonly Design[]
@@ -40,13 +34,11 @@ export function FirstTimeDesignPicker({
       <section role="dialog" aria-modal="true" aria-labelledby="first-design-title"
         className="flex max-h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] bg-[#f9f5ed] text-[#24362e] shadow-2xl">
         <header className="border-b border-[#e5d9c7] px-5 py-4 sm:px-8 sm:py-6">
-          <p className="text-[11px] font-bold uppercase tracking-[0.23em] text-[#9a5c30]">Welcome to your Christmas parol</p>
           <h2 ref={heading} tabIndex={-1} id="first-design-title" className="mt-2 font-serif text-2xl font-semibold outline-none sm:text-4xl">
             {firstTime ? 'Choose the parol you’ll grow together.' : 'Find your next favorite parol.'}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#756b5f]">
-            Explore all six designs in their most festive 50-friend form. Your real parol grows only
-            when friends join, and you can change styles anytime.
+            See each design at 50 friends. Your parol grows as your real friends join.
           </p>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-8">
@@ -56,7 +48,6 @@ export function FirstTimeDesignPicker({
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e5d9c7] bg-[#fffaf2] px-5 py-4 sm:px-8">
           <div className="min-w-0">
             <p className="text-sm font-bold text-[#273d32]">Selected: {designs.find(d => d.designKey === selected)?.name ?? 'Classic Gold'}</p>
-            <p className="text-xs text-[#7c7164]">You can change designs later—no friend progress is lost.</p>
           </div>
           <div className="flex w-full gap-2 sm:w-auto">
             <button type="button" disabled={busy} onClick={onLater}
@@ -81,8 +72,6 @@ type SheetProps = {
   designs: readonly Design[]
   selected: string
   onSelect: (key: string) => void
-  pattern: string
-  onPattern: (key: string) => void
   changed: boolean
   busy: boolean
   error: string
@@ -90,7 +79,7 @@ type SheetProps = {
 }
 
 export function MobileDesignDrawer({
-  open, onOpenChange, designs, selected, onSelect, pattern, onPattern,
+  open, onOpenChange, designs, selected, onSelect,
   changed, busy, error, onSave,
 }: SheetProps) {
   const startY = useRef<number | null>(null)
@@ -147,20 +136,10 @@ export function MobileDesignDrawer({
         </button>
         {open && <div id="mobile-design-choices" className="px-4 pb-5">
           <p className="mb-3 text-xs text-[#756a5c]">
-            Swipe the handle down to close. Choose how your parol could look with 50 friends.
+            See each design at 50 friends. Your own parol grows with your friends.
           </p>
           <DesignShowcaseGallery designs={designs} selected={selected} onChoose={onSelect}
             enabled={open} disabled={busy} />
-          <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-widest text-[#6f5d49]">Decorative pattern</p>
-          <div className="flex flex-wrap gap-2">
-            {PATTERNS.map(option => <button key={option.key} type="button" disabled={busy}
-              aria-pressed={pattern === option.key} onClick={() => onPattern(option.key)}
-              className={`rounded-full border px-4 py-2 text-xs font-semibold ${pattern === option.key
-                ? 'border-[#8c262e] bg-[#8c262e] text-white'
-                : 'border-[#d7c6ae] bg-white text-[#4b493c]'}`}>
-              {option.label}
-            </button>)}
-          </div>
           {error && <p role="alert" className="mt-3 text-sm text-[#9c2630]">{error}</p>}
           <button type="button" disabled={!changed || busy || designs.length === 0} onClick={onSave}
             className="mt-5 w-full rounded-xl bg-[#922632] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-45">

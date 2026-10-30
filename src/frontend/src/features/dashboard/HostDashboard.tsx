@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import LanternScene from '../lantern/renderer/LanternScene'
-import { MAX_TEST_FRIENDS, stageForFriends } from '../lantern/growth/stages'
+import { MAX_TEST_FRIENDS } from '../lantern/growth/stages'
 import { growthForFriends } from '../lantern/growth/outerGrowth'
 import { THEMES } from '../customization/themes'
-import { FirstTimeDesignPicker, MobileDesignDrawer, PATTERNS } from '../customization/DesignSelectionPanels'
+import { FirstTimeDesignPicker, MobileDesignDrawer } from '../customization/DesignSelectionPanels'
+import RecoveryKeyDialog from '../owner/RecoveryKeyDialog'
 import InvitationManager from '../invitations/InvitationManager'
 import type { Design, Lantern } from '../../lib/api'
 
@@ -21,9 +22,10 @@ const ONBOARDING_PREFIX = 'bemyparol:visual-choice:v1:'
 
 export default function HostDashboard({ lantern, designs, onCreate, onSave, onLogout }: Props) {
   const [draftDesign, setDraftDesign] = useState(lantern?.designKey ?? 'classic')
-  const [draftPattern, setDraftPattern] = useState(lantern?.patternKey ?? 'default')
   const [busy, setBusy] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+  const [recoveryDialog, setRecoveryDialog] = useState<'view' | 'leave' | null>(null)
+  const closeRecoveryDialog = useCallback(() => setRecoveryDialog(null), [])
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -34,8 +36,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
 
   useEffect(() => {
     setDraftDesign(lantern?.designKey ?? 'classic')
-    setDraftPattern(lantern?.patternKey ?? 'default')
-  }, [lantern?.id, lantern?.designKey, lantern?.patternKey])
+  }, [lantern?.id, lantern?.designKey])
 
   useEffect(() => {
     if (!lantern?.id || !designs.length) return
@@ -60,7 +61,6 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
     setFirstPicker(false)
     if (lantern) {
       setDraftDesign(lantern.designKey)
-      setDraftPattern(lantern.patternKey)
     }
   }, [lantern, markChoice])
 
@@ -68,7 +68,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
   const progress = Math.min(100, Math.round(accepted / 50 * 100))
   const savedTheme = THEMES.find(t => t.key === lantern?.designKey) ?? THEMES[0]
   const theme = THEMES.find(t => t.key === draftDesign) ?? THEMES[0]
-  const changed = !!lantern && (draftDesign !== lantern.designKey || draftPattern !== lantern.patternKey)
+  const changed = !!lantern && draftDesign !== lantern.designKey
   const knownDesign = designs.some(d => d.designKey === draftDesign)
 
   async function saveDesign(fromPicker = false) {
@@ -77,8 +77,8 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
     setError('')
     setNotice('')
     try {
-      if (changed) await onSave(draftDesign, draftPattern)
-      setNotice('Your parol design is saved. You can change it anytime.')
+      if (changed) await onSave(draftDesign, lantern.patternKey)
+      setNotice('Design saved.')
       if (fromPicker) {
         markChoice()
         setPickerOpen(false)
@@ -93,12 +93,11 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
   }
 
   async function signOut() {
-    if (!window.confirm('Have you saved your recovery key? You will need it to return to this parol.')) return
     setSigningOut(true)
     try { await onLogout() }
     catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to leave your parol.')
       setSigningOut(false)
+      throw caught
     }
   }
 
@@ -113,16 +112,19 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
   return (
     <div className="min-h-screen bg-[#f7f2e9] pb-28 text-[#283a30] lg:pb-10">
       <header className="relative border-b border-[#e5dac8] bg-[#fffaf2]/95">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4 px-4 py-4 sm:px-8 lg:py-5">
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:flex-nowrap sm:gap-4 sm:px-8 lg:py-5">
           <div className="flex items-center gap-2.5">
             <span className="text-2xl text-[#a77a3d]" aria-hidden="true">✦</span>
             <span className="font-serif text-2xl font-semibold tracking-tight text-[#283b2f]">BeMyParol</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-xs text-[#806e56] md:inline">A brighter Pasko, together.</span>
-            <button type="button" disabled={busy || signingOut} onClick={() => void signOut()}
-              className="rounded-full border border-[#dfd2c0] px-4 py-2.5 text-xs font-semibold text-[#554c3d] hover:border-[#902632] hover:text-[#902632] disabled:opacity-50">
-              {signingOut ? 'Leaving…' : 'Leave parol'}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button type="button" disabled={busy || signingOut} onClick={() => setRecoveryDialog('view')}
+              className="rounded-full border border-[#d8c1a3] bg-white px-3 py-2.5 text-xs font-semibold text-[#832c31] hover:border-[#902632] disabled:opacity-50 sm:px-4">
+              Recovery key
+            </button>
+            <button type="button" disabled={busy || signingOut} onClick={() => setRecoveryDialog('leave')}
+              className="rounded-full border border-[#dfd2c0] px-3 py-2.5 text-xs font-semibold text-[#554c3d] hover:border-[#902632] hover:text-[#902632] disabled:opacity-50 sm:px-4">
+              Leave parol
             </button>
           </div>
         </div>
@@ -135,14 +137,11 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
             <h1 className="mt-2 font-serif text-3xl font-semibold leading-tight text-[#24392d] sm:text-5xl">
               Your parol, <em className="font-normal text-[#982b33]">made together.</em>
             </h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-[#706858]">
-              Every friend adds their own light. Watch something beautiful grow.
-            </p>
           </div>
           {lantern && <button type="button" onClick={() => {
             setFirstPicker(false); setPickerOpen(true); setDrawerOpen(false)
           }} className="hidden rounded-full border border-[#d3c0a3] bg-[#fffdf8] px-5 py-3 text-sm font-semibold text-[#6c4034] hover:border-[#922632] lg:inline-flex">
-            ✦ Explore all six designs
+            Change design
           </button>}
         </div>
 
@@ -189,38 +188,32 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
                       contributions={lantern.lights} friendCount={lantern.acceptedFriends}
                       snapshot={{kind:'owner',stateId:lantern.id}} />
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-3 px-2 pb-2 pt-3 sm:px-3">
-                    <p className="text-xs text-[#c8ba9f]">Drag to explore · Pinch to zoom · Fit to see the whole parol</p>
+                  <div className="flex justify-end px-2 pb-2 pt-2 sm:px-3 lg:hidden">
                     <button type="button" onClick={() => setDrawerOpen(true)}
-                      className="rounded-full border border-[#dfb680]/40 px-4 py-2 text-xs font-bold text-[#f9d8a0] hover:bg-white/10 lg:hidden">
+                      className="rounded-full border border-[#dfb680]/40 px-4 py-2 text-xs font-bold text-[#f9d8a0] hover:bg-white/10">
                       ↑ Change design
                     </button>
-                    <span className="hidden text-xs text-[#e8bf81] lg:inline">Each friend adds three growth layers.</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  <div className={`${card} p-4 sm:p-5`}>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className={`${card} flex flex-col justify-center p-4 sm:p-5`}>
                     <div className="text-[11px] font-bold uppercase tracking-widest text-[#8b7761]">Friends joined</div>
                     <div className="mt-1 font-serif text-3xl font-semibold text-[#286046]">{accepted}</div>
-                    <p className="mt-1 text-xs text-[#827869]">Real contributions</p>
                   </div>
-                  <div className={`${card} p-4 sm:p-5`}>
-                    <div className="text-[11px] font-bold uppercase tracking-widest text-[#8b7761]">Growth layers</div>
-                    <div className="mt-1 font-serif text-3xl font-semibold text-[#902632]">{lantern.growthPoints}</div>
-                    <p className="mt-1 text-xs text-[#827869]">Three per friend</p>
-                  </div>
-                  <div className={`${card} col-span-2 p-4 sm:col-span-1 sm:p-5`}>
+                  <div className={`${card} flex flex-col justify-center p-4 sm:p-5`}>
                     <div className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-widest text-[#8b7761]">
                       <span>Grand parol</span><span>{progress}%</span>
                     </div>
-                    <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#e7dcc9]">
+                    <div role="progressbar" aria-label="Progress toward 50 friends" aria-valuemin={0}
+                      aria-valuemax={50} aria-valuenow={Math.min(accepted, 50)}
+                      className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#e7dcc9]">
                       <div className="h-full rounded-full bg-[#9b783d] transition-[width] duration-500"
                         style={{width:`${progress}%`}} />
                     </div>
-                    <p className="mt-2 text-xs text-[#827869]">{accepted >= 50
-                      ? '50-friend milestone reached · growth continues'
-                      : `${50 - accepted} friends until the 50-friend showcase`}</p>
+                    <p className="mt-2 text-xs text-[#827869]">
+                      {accepted >= 50 ? '50-friend milestone reached' : `${Math.min(accepted, 50)} of 50 friends`}
+                    </p>
                   </div>
                 </div>
 
@@ -229,7 +222,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
                   <div>
                     <h3 className="font-serif text-xl">Christmas letters</h3>
                     <p className="mt-1 text-sm leading-6 text-[#786f63]">
-                      Your friends' optional messages stay private and sealed until December 25, Philippine time.
+                      Messages from friends stay private until Christmas Day.
                     </p>
                   </div>
                 </div>
@@ -238,13 +231,11 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
               <aside className="min-w-0 space-y-4">
                 <InvitationManager lantern={lantern} />
                 <section className={`${card} hidden p-5 lg:block`}>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-[#a27a45]">Customize your parol</p>
                   <h2 className="mt-2 font-serif text-2xl">Choose your style</h2>
                   <div className="mt-3 flex items-center gap-3 rounded-2xl bg-[#f4ebde] p-3">
                     <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#1d3a30] text-3xl text-[#f4d9a4]" aria-hidden="true">✺</div>
                     <div>
                       <p className="font-semibold text-[#293b2f]">{theme.label}</p>
-                      <p className="text-xs text-[#766d60]">Six styles, all available from the start</p>
                       <div className="mt-1.5 flex gap-1" aria-hidden="true">
                         {theme.colors.map((c, i) => <i key={i} className="h-2.5 w-2.5 rounded-full border border-black/10"
                           style={{backgroundColor:c}} />)}
@@ -253,42 +244,18 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
                   </div>
                   <button type="button" onClick={() => {setFirstPicker(false); setPickerOpen(true)}}
                     className="mt-3 w-full rounded-xl border border-[#cfb998] bg-white px-4 py-3 text-sm font-bold text-[#85343c] hover:bg-[#fbf1e4]">
-                    View six full-bloom designs
+                    Browse designs
                   </button>
-                  <p className="mb-2 mt-5 text-xs font-bold uppercase tracking-widest text-[#87745d]">Decorative pattern</p>
-                  <div className="flex flex-wrap gap-2">
-                    {PATTERNS.map(option => <button type="button" key={option.key}
-                      onClick={() => {setDraftPattern(option.key);setNotice('')}}
-                      disabled={busy} aria-pressed={draftPattern === option.key}
-                      className={`rounded-full border px-3 py-2 text-xs font-semibold ${draftPattern === option.key
-                        ? 'border-[#8b2932] bg-[#8b2932] text-white'
-                        : 'border-[#d7c8b1] bg-[#fffaf3] text-[#544b3d]'}`}>
-                      {option.label}
-                    </button>)}
-                  </div>
                   <button type="button" className={`${button} mt-5 w-full`}
                     disabled={!changed || busy || !knownDesign} onClick={() => void saveDesign()}>
                     {busy ? 'Saving…' : changed ? 'Save customization' : 'All changes saved'}
                   </button>
-                  {changed && <p className="mt-2 text-xs text-[#766d60]">
-                    Your saved image updates after saving. Your friend progress is preserved.
-                  </p>}
                 </section>
 
-                <section className={`${card} p-5`}>
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#a17849]">Your journey</p>
-                  <h3 className="mt-2 font-serif text-xl">Growing brighter</h3>
-                  <p className="mt-2 text-sm text-[#71685c]">
-                    {stageForFriends(accepted).name} growth milestone · {Math.min(accepted, 50)} of 50 showcase friends.
-                  </p>
-                  <p className="mt-2 text-xs text-[#867868]">
-                    Your chosen design stays yours; decorative layers continue growing past 50 friends.
-                  </p>
-                </section>
               </aside>
             </div>
 
-            <section className="mt-8 rounded-2xl border border-dashed border-[#d8c7ae] bg-[#fffaf3] p-4 sm:p-5">
+            {import.meta.env.DEV && <section className="mt-8 rounded-2xl border border-dashed border-[#d8c7ae] bg-[#fffaf3] p-4 sm:p-5">
               <button type="button" aria-expanded={showTestingLab}
                 onClick={() => setShowTestingLab(value => !value)}
                 className="flex w-full items-center justify-between gap-3 text-left text-sm font-semibold text-[#74614e]">
@@ -308,13 +275,13 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
                       : 'border-[#d7c7b4]'}`}>{n} friends</button>)}
                 </div>
                 {previewCount !== null && <div className="mx-auto max-w-xl rounded-2xl bg-[#101e1d] p-3 text-white">
-                  <LanternScene theme={theme} pattern={draftPattern} previewCount={previewCount} />
+                  <LanternScene theme={theme} pattern={lantern.patternKey} previewCount={previewCount} />
                   <p className="mt-2 text-center text-xs text-[#e4c99f]">
                     {previewCount} simulated friends · {growthForFriends(previewCount)} growth layers · Not saved
                   </p>
                 </div>}
               </div>}
-            </section>
+            </section>}
           </>
         )}
       </main>
@@ -322,7 +289,6 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
       {lantern && !pickerOpen && <MobileDesignDrawer
         open={drawerOpen} onOpenChange={setDrawerOpen}
         designs={designs} selected={draftDesign} onSelect={setDraftDesign}
-        pattern={draftPattern} onPattern={setDraftPattern}
         changed={changed} busy={busy} error={error}
         onSave={() => void saveDesign()} />}
 
@@ -330,8 +296,10 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
         firstTime={firstPicker} designs={designs} selected={draftDesign} onSelect={setDraftDesign}
         busy={busy} error={error} onSave={() => void saveDesign(true)}
         onLater={dismissPicker} />}
+      {recoveryDialog && <RecoveryKeyDialog mode={recoveryDialog}
+        onClose={closeRecoveryDialog} onLeave={signOut} />}
       <footer className="mx-auto max-w-[1440px] px-4 pb-5 text-center text-xs text-[#9b8e7a] sm:px-8">
-        BeMyParol · One parol per Christmas season · Keep your recovery key private.
+        BeMyParol · Made brighter together.
       </footer>
     </div>
   )

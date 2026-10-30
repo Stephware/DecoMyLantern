@@ -129,7 +129,7 @@ export default function App() {
 
   if (screen === 'loading') return (
     <div className="flex min-h-screen items-center justify-center bg-[#f7f2e9] px-5 text-center text-[#263d32]">
-      <div><div className="mb-4 text-5xl text-[#ac804a]" aria-hidden="true">✦</div><p className="font-serif text-2xl">Lighting your parol…</p><p className="mt-3 text-sm text-[#766d5d]">Please wait a moment.</p></div>
+      <div role="status"><div className="mb-4 text-5xl text-[#ac804a]" aria-hidden="true">✦</div><p className="font-serif text-2xl">Lighting your parol…</p></div>
     </div>
   )
 

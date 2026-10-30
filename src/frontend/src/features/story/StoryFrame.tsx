@@ -87,7 +87,7 @@ export function StoryFrame({data, frame}: {data: StoryData; frame: number}) {
         <div style={{fontSize:65,fontWeight:800,lineHeight:1.15,
           textShadow:'0 3px 22px #09101f'}}>{title}</div>
         <div style={{fontSize:43,marginTop:29,color:'#f5d28c'}}>
-          {data.friendCount} {data.friendCount === 1 ? 'friend' : 'friends'} · {Math.min(data.friendCount, 50) * 3} Story layers
+          {data.friendCount} {data.friendCount === 1 ? 'friend' : 'friends'}
         </div>
         <div style={{fontSize:37,marginTop:39,lineHeight:1.35}}>{subtitle}</div>
       </div>

@@ -10,7 +10,8 @@ public static class OwnerRecoveryPolicy
 {
     public static bool CanRecover(OwnerCredential credential, DateTime nowUtc)
     {
-        var firstYearDeadline = credential.CreatedAtUtc.Add(OwnerSession.RecoveryLifetime);
+        var issuedAt = credential.RecoveryIssuedAtUtc ?? credential.CreatedAtUtc;
+        var firstYearDeadline = issuedAt.Add(OwnerSession.RecoveryLifetime);
         return nowUtc < firstYearDeadline && nowUtc < credential.RecoveryExpiresAtUtc;
     }
 
