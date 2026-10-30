@@ -14,7 +14,12 @@ test('downtime page is a single standalone HTML file, not the React entrypoint',
 
 test('downtime experience never depends on remote or app resources', () => {
   assert.doesNotMatch(page, /<(?:script|link|img|iframe|object|video|audio)\b/i)
-  assert.doesNotMatch(page, /@import|@font-face|url\s*\(|fetch\s*\(|XMLHttpRequest/i)
+  // Internal SVG gradients use url(#id); these are self-contained, not external.
+  const externalCSS = page.replace(/url\(#[-a-z0-9]+\)/gi, '')
+  assert.doesNotMatch(externalCSS, /@import|@font-face|url\s*\(|fetch\s*\(|XMLHttpRequest/i)
+  for (const [, id] of page.matchAll(/url\(#([-a-z0-9]+)\)/gi)) {
+    assert.ok(page.includes(`id="${id}"`), `missing inline SVG paint server: ${id}`)
+  }
   assert.doesNotMatch(page.replace('xmlns="http://www.w3.org/2000/svg"', ''), /https?:\/\//i)
 })
 
@@ -30,16 +35,39 @@ test('page has responsive mobile layout, accessible messaging, and meaningful re
   assert.doesNotMatch(page, /refresh" content=|setTimeout|setInterval|auto-refresh/i)
 })
 
-test('parol is self-contained accessible SVG without animation or a dangling tail', () => {
-  assert.match(page, /<svg[^>]*viewBox="0 0 440 440" role="img"/)
-  assert.match(page, /<title id="parol-title">A glowing Christmas parol<\/title>/)
-  assert.match(page, /<desc id="parol-description">/)
-  const petals = page.match(/<g transform="rotate\(/g) ?? []
-  const closedGroups = page.match(/<\/g>/g) ?? []
-  assert.equal(petals.length, 12)
-  assert.equal(closedGroups.length, petals.length)
+test('downtime art uses actual approved Classic Gold parol instead of an invented petal icon', () => {
+  const core = readFileSync(
+    new URL('../src/features/lantern/renderer/ParolArtwork.tsx', import.meta.url), 'utf8')
+  const shell = readFileSync(
+    new URL('../src/features/lantern/renderer/ProceduralOuterShell.tsx', import.meta.url), 'utf8')
+  const growth = readFileSync(
+    new URL('../src/features/lantern/growth/outerGrowth.ts', import.meta.url), 'utf8')
+  const themes = readFileSync(
+    new URL('../src/features/customization/themes.ts', import.meta.url), 'utf8')
+  assert.match(page, /<svg[^>]*viewBox="0 0 600 640" role="img"/)
+  assert.match(page, /<title id="parol-title">BeMyParol Classic Gold parol<\/title>/)
+  assert.match(page, /data-design="classic" data-friends="0"/)
+  assert.match(page, /data-part="living-outer-shell"/)
+  assert.match(page, /data-part="festival-mini-parol"/)
+  assert.match(core, /length: 20 \}, \(_, sector\)/)
+  assert.match(shell, /festivalOutlinePath\(growthCount\)/)
+  assert.match(growth, /BASE_FESTIVAL_RADIUS = 164/)
+  assert.match(themes, /key: 'classic', label: 'Classic Gold', colors: \['#f8cc6f', '#ffefc5', '#bb404d', '#397867'\]/)
+  for (const color of ['#f8cc6f', '#ffefc5', '#bb404d', '#397867']) {
+    assert.ok(page.includes(color), `missing canonical theme color ${color}`)
+  }
+  assert.match(page, /d="M 289 164 L 300 146 L 311 164/)
+  assert.match(page, /d="M 300 196 L 319 216 L 300 247/)
+  assert.match(page, /d="M 284 248 Q 276 229 300 208/)
+  assert.equal((page.match(/<g transform="rotate\(\d+ 300 302\)"/g) ?? []).length, 50)
+  assert.equal((page.match(/<\/g>/g) ?? []).length, 52)
   assert.match(page, /<polygon points="/)
   assert.doesNotMatch(page, /<animate\b|<animateTransform\b|<foreignObject\b|<script\b/i)
+})
+
+test('Filipino gratitude is shown as requested', () => {
+  assert.match(page, /Salamat sa pasensya ✦/)
+  assert.doesNotMatch(page, /Salamat for your patience/)
 })
 
 test('no infrastructure, ads, customer information, or error details are embedded', () => {
