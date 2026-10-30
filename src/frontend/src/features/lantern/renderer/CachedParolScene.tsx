@@ -340,18 +340,14 @@ export default function CachedParolScene({
             className="rounded-full px-3 py-3 text-xs font-semibold text-amber-100 hover:bg-white/15"
             onClick={selectNextLight} aria-label="Highlight next friend's light">Lights</button>}
         </div>
-        <div className="pointer-events-none absolute left-3 bottom-3 rounded-full border border-white/10 bg-[#101b33]/80 px-3 py-2 text-[11px] text-amber-100/80">
-          {friendCount} friends · {growthForFriends(friendCount)} growth layers
-        </div>
       </div>
       {selected && <figcaption className="mt-2 text-center text-xs text-amber-200">
-        Selected: {selected.displayName} · Light #{selected.slotIndex + 1}
+        {selected.displayName}
       </figcaption>}
-      <figcaption role="status" aria-live="polite" className="mt-2 text-center text-xs text-white/50">
+      <figcaption role="status" aria-live="polite" className="sr-only">
         {activeWave ? SNAPSHOT_WAVE_LABEL[activeWave.wave] :
-          loading ? 'Loading the completed parol snapshot…' :
-          ready ? 'Saved parol image · Drag, pinch or Fit to explore' :
-          'A newer parol image is not yet available · Retry to refresh'}
+          loading ? 'Loading parol…' :
+          ready ? 'Parol ready' : 'Parol unavailable. Retry to refresh.'}
       </figcaption>
     </figure>
   )
