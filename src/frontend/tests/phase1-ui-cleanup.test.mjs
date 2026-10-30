@@ -46,6 +46,7 @@ test('guest and parol canvas hide technical diagnostics but keep usable controls
   const welcomePreview = read('features/lantern/renderer/LegacyLanternPreview.tsx')
   assert.ok(!welcomePreview.includes("test' : 'accepted"))
   assert.ok(!welcomePreview.includes('outer bands'))
+  assert.ok(!welcomePreview.includes('Test friend'))
   assert.ok(!welcomePreview.includes('total growth · Drag'))
   assert.ok(welcomePreview.includes('<ProceduralOuterShell'))
   assert.ok(welcomePreview.includes('className="sr-only"'))
