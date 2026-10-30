@@ -107,15 +107,16 @@ export const finishOwnerSetup = () => api<void>('/api/owner/finish-setup', { met
 export const cancelOwnerCreation = () => api<void>('/api/owner/cancel-creation', { method: 'POST' })
 
 // Story exports are binary, so do not use the JSON-only api<T> helper.
-export async function exportStoryMedia(kind: 'owner' | 'friend', format: 'mp4' | 'png', token?: string): Promise<Blob> {
+export async function exportStoryMedia(kind: 'owner' | 'friend', format: 'mp4' | 'png', token?: string, signal?: AbortSignal): Promise<Blob> {
   const guest = kind === 'friend'
   if (guest && !token) throw new Error('Missing invitation for this Story.')
   const response = await fetch(guest ? '/api/invitations/story' : '/api/my/lantern/story', {
     method: 'POST',
     credentials: 'same-origin',
     cache: 'no-store',
+    signal,
     headers: { 'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': await csrfToken(guest ? '/api/invitations/csrf' : '/api/owner/csrf') },
+      'X-CSRF-TOKEN': await csrfToken(guest ? '/api/invitations/csrf' : '/api/owner/csrf', signal) },
     body: JSON.stringify(guest ? {format,token} : {format}),
   })
   if (!response.ok) {
@@ -161,8 +162,8 @@ export async function fetchParolSnapshot(
 }
 
 /** Share the actual saved parol art, not the separate vertical Story poster. */
-export function exportParolImage(kind: 'owner' | 'friend', token?: string): Promise<Blob> {
-  return fetchParolSnapshot(kind === 'friend' ? 'guest' : 'owner', token, undefined, 'png')
+export function exportParolImage(kind: 'owner' | 'friend', token?: string, signal?: AbortSignal): Promise<Blob> {
+  return fetchParolSnapshot(kind === 'friend' ? 'guest' : 'owner', token, signal, 'png')
 }
 
 export const getMyLantern = () => api<Lantern>('/api/my/lantern')
