@@ -209,7 +209,7 @@ export default function LanternScene({
       </div>
       {selected && <figcaption className="mt-2 text-center text-xs text-amber-200">
         {selected.displayName}
-      </figcaption>
+      </figcaption>}
       <figcaption role="status" aria-live="polite" className="sr-only">
         {reveal.step > 0 ? 'Parol growing' : 'Parol ready'}
       </figcaption>
