@@ -39,7 +39,7 @@ if [[ "${DOTNET_VERSION%%.*}" -lt 10 ]]; then
 fi
 
 for path in "$ROOT/DecoMyLantern.slnx" "$FRONTEND/package-lock.json" \
-  "$RENDERER/package-lock.json" "$ROOT/downtime/index.html"; do
+  "$RENDERER/package.json" "$ROOT/downtime/index.html"; do
   if [[ ! -f "$path" ]]; then
     echo "FAIL: missing file $path. Pull the latest dev branch first." >&2
     exit 1
@@ -66,7 +66,12 @@ echo "Node: $(node --version) | npm: $(npm --version) | dotnet: $DOTNET_VERSION"
 
 if ! $SKIP_INSTALL; then
   run_step "Install locked frontend dependencies" npm --prefix "$FRONTEND" ci --no-audit --no-fund
-  run_step "Install locked renderer dependencies" npm --prefix "$RENDERER" ci --no-audit --no-fund
+  if [[ -f "$RENDERER/package-lock.json" ]]; then
+    run_step "Install locked renderer dependencies" npm --prefix "$RENDERER" ci --no-audit --no-fund
+  else
+    echo "NOTICE: Renderer has no committed lockfile; its dependency tree is not fully reproducible."
+    run_step "Install renderer dependencies (no lockfile)" npm --prefix "$RENDERER" install --package-lock=false --no-audit --no-fund
+  fi
 else
   echo "NOTICE: Using existing dependencies (--skip-install); this is not a clean-install verification."
 fi
