@@ -94,6 +94,8 @@ test('recovery failure stays private, retryable, and never enables blind leave',
   assert.ok(dialog.includes('setRetryAttempt(attempt => attempt + 1)'))
   assert.ok(dialog.includes('disabled={busy || loading || recovery === null}'))
   assert.ok(dialog.includes('if (busy || loading || recovery === null) return'))
+  assert.ok(dialog.includes('Unable to confirm your recovery key. Stay signed in'))
+  assert.ok(dialog.includes('setRecovery(null)'))
   assert.ok(controller.includes('code = "RECOVERY_SCHEMA_OUTDATED"'))
   assert.ok(controller.includes('ex.Number == 207'))
   assert.ok(!dialog.includes('Microsoft.Data.SqlClient.SqlException'))
