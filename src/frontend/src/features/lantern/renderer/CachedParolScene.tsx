@@ -323,10 +323,6 @@ export default function CachedParolScene({
           <button type="button" className="rounded-lg border border-rose-200/40 px-3 py-2 font-semibold"
             onClick={() => setAttempt(n => n + 1)}>Retry</button>
         </div>}
-        {activeWave && <div role="status" aria-live="polite"
-          className="pointer-events-none absolute left-3 top-3 rounded-full border border-amber-300/30 bg-[#101b33]/90 px-3 py-2 text-xs font-semibold text-amber-100">
-          ✦ {SNAPSHOT_WAVE_LABEL[activeWave.wave]}
-        </div>}
         <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full border border-white/15 bg-[#101b33]/90 p-1.5 text-sm shadow-xl backdrop-blur">
           <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-white hover:bg-white/15 disabled:opacity-30"
             aria-label="Zoom out" disabled={camera.zoom <= MIN_ZOOM}
