@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react'
+import {useCallback, useEffect, useRef, useState} from 'react'
 import {exportParolImage, exportStoryMedia} from '../../lib/api'
 import {prepareMediaWithRetry} from './mediaExportTask'
 import {StoryFrame, type StoryData, type StoryFormat} from './StoryFrame'
@@ -52,6 +52,21 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     format: StoryFormat
     controller: AbortController
   } | null>(null)
+
+  const cancelGeneration = useCallback(() => {
+    const current = activeRequest.current
+    if (!current) return
+    current.controller.abort()
+    activeRequest.current = null
+    setBusy(null)
+    setRetrying(0)
+    setNotice('Preparation cancelled. Previously generated media stays available.')
+  }, [])
+
+  const closeDialog = useCallback(() => {
+    cancelGeneration()
+    setOpen(false)
+  }, [cancelGeneration])
 
   // Props are recreated during owner polling, so track the actual saved parol,
   // not the identity of the data object. Never share a previous parol's export.
@@ -127,7 +142,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
       document.body.style.overflow = originalOverflow
       triggerRef.current?.focus()
     }
-  }, [open])
+  }, [open, closeDialog])
 
   // Scale the original 1080 x 1920 Story artwork to any phone width.
   useEffect(() => {
@@ -140,21 +155,6 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     observer.observe(element)
     return () => observer.disconnect()
   }, [open, format])
-
-  function cancelGeneration() {
-    const current = activeRequest.current
-    if (!current) return
-    current.controller.abort()
-    activeRequest.current = null
-    setBusy(null)
-    setRetrying(0)
-    setNotice('Preparation cancelled. Previously generated media stays available.')
-  }
-
-  function closeDialog() {
-    cancelGeneration()
-    setOpen(false)
-  }
 
   async function generate(selected: StoryFormat) {
     // Reuse this component's prepared media until its saved parol changes.
