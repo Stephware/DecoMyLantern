@@ -82,8 +82,8 @@ test('incorrect response MIME does not expose a mislabeled PNG', async () => {
 test('static-image preview and downloads are separate from the 9:16 video Story', () => {
   const component = read('features/story/StoryShare.tsx')
   assert.ok(component.includes("format === 'png' ? 'aspect-[15/16]' : 'aspect-[9/16]'"))
-  assert.ok(component.includes('exportParolImage(data.kind, token)'))
-  assert.ok(component.includes("exportStoryMedia(data.kind, 'mp4', token)"))
+  assert.ok(component.includes('exportParolImage(data.kind, token, controller.signal)'))
+  assert.ok(component.includes("exportStoryMedia(data.kind, 'mp4', token, controller.signal)"))
   assert.ok(component.includes('BeMyParol-Parol.png'))
   assert.ok(component.includes('BeMyParol-Story.mp4'))
   assert.ok(component.includes('image/png'))

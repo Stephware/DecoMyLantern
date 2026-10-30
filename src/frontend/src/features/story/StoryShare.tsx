@@ -1,5 +1,6 @@
-import {useEffect, useRef, useState} from 'react'
+import {useCallback, useEffect, useRef, useState} from 'react'
 import {exportParolImage, exportStoryMedia} from '../../lib/api'
+import {prepareMediaWithRetry} from './mediaExportTask'
 import {StoryFrame, type StoryData, type StoryFormat} from './StoryFrame'
 
 type Props = {
@@ -30,6 +31,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
   const [open, setOpen] = useState(false)
   const [format, setFormat] = useState<StoryFormat>('png')
   const [busy, setBusy] = useState<StoryFormat | null>(null)
+  const [retrying, setRetrying] = useState(0)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [video, setVideo] = useState<Blob | null>(null)
@@ -43,6 +45,28 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLElement>(null)
   const previewRef = useRef<HTMLDivElement>(null)
+  // One request at a time, including rapid double taps. Generated blobs stay
+  // in component memory across modal close/reopen and format switching.
+  const activeRequest = useRef<{
+    key: string
+    format: StoryFormat
+    controller: AbortController
+  } | null>(null)
+
+  const cancelGeneration = useCallback(() => {
+    const current = activeRequest.current
+    if (!current) return
+    current.controller.abort()
+    activeRequest.current = null
+    setBusy(null)
+    setRetrying(0)
+    setNotice('Preparation cancelled. Previously generated media stays available.')
+  }, [])
+
+  const closeDialog = useCallback(() => {
+    cancelGeneration()
+    setOpen(false)
+  }, [cancelGeneration])
 
   // Props are recreated during owner polling, so track the actual saved parol,
   // not the identity of the data object. Never share a previous parol's export.
@@ -53,14 +77,26 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
   latestDataKey.current = dataKey
 
   useEffect(() => {
+    const current = activeRequest.current
+    if (current && current.key !== dataKey) {
+      current.controller.abort()
+      activeRequest.current = null
+    }
     setVideo(null)
     setPng(null)
     setVideoKey('')
     setPngKey('')
     setBusy(null)
+    setRetrying(0)
     setNotice('')
     setError('')
   }, [dataKey])
+
+  // Navigating away must not leave requests, retries or state updates running.
+  useEffect(() => () => {
+    activeRequest.current?.controller.abort()
+    activeRequest.current = null
+  }, [])
 
   useEffect(() => {
     if (!video) { setVideoUrl(''); return }
@@ -84,7 +120,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     document.body.style.overflow = 'hidden'
     closeRef.current?.focus()
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') { event.preventDefault(); setOpen(false); return }
+      if (event.key === 'Escape') { event.preventDefault(); closeDialog(); return }
       if (event.key !== 'Tab') return
       const elements = dialogRef.current?.querySelectorAll<HTMLElement>(
         'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
@@ -106,7 +142,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
       document.body.style.overflow = originalOverflow
       triggerRef.current?.focus()
     }
-  }, [open])
+  }, [open, closeDialog])
 
   // Scale the original 1080 x 1920 Story artwork to any phone width.
   useEffect(() => {
@@ -121,16 +157,32 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
   }, [open, format])
 
   async function generate(selected: StoryFormat) {
-    if (busy) return
+    // Reuse this component's prepared media until its saved parol changes.
+    if (activeRequest.current) return
+    if (selected === 'png' && pngKey === dataKey && png) return
+    if (selected === 'mp4' && videoKey === dataKey && video) return
+
     const requestedKey = dataKey
+    const controller = new AbortController()
+    const request = {key: requestedKey, format: selected, controller}
+    activeRequest.current = request
     setBusy(selected)
+    setRetrying(0)
     setNotice('')
     setError('')
+
     try {
-      const blob = selected === 'mp4'
-        ? await exportStoryMedia(data.kind, 'mp4', token)
-        : await exportParolImage(data.kind, token)
-      if (latestDataKey.current !== requestedKey) return
+      const blob = await prepareMediaWithRetry(
+        () => selected === 'mp4'
+          ? exportStoryMedia(data.kind, 'mp4', token, controller.signal)
+          : exportParolImage(data.kind, token, controller.signal),
+        controller.signal,
+        retryNumber => {
+          if (activeRequest.current === request) setRetrying(retryNumber)
+        },
+      )
+      if (controller.signal.aborted || latestDataKey.current !== requestedKey ||
+          activeRequest.current !== request) return
       if (selected === 'mp4') {
         setVideo(blob)
         setVideoKey(requestedKey)
@@ -140,10 +192,16 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
       }
       setNotice(selected === 'mp4' ? 'Your animated Story is ready.' : 'Your parol image is ready.')
     } catch (caught) {
-      if (latestDataKey.current === requestedKey)
+      if (!controller.signal.aborted && latestDataKey.current === requestedKey &&
+          activeRequest.current === request) {
         setError(caught instanceof Error ? caught.message : 'Unable to prepare your media. Try again.')
+      }
     } finally {
-      if (latestDataKey.current === requestedKey) setBusy(null)
+      if (activeRequest.current === request) {
+        activeRequest.current = null
+        setBusy(null)
+        setRetrying(0)
+      }
     }
   }
 
@@ -193,7 +251,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     </button>
     {open && (
       <div role="presentation" onMouseDown={event => {
-        if (event.target === event.currentTarget) setOpen(false)
+        if (event.target === event.currentTarget) closeDialog()
       }} className="fixed inset-0 z-[90] flex items-center justify-center bg-[#0b1c17]/85 p-2 backdrop-blur-sm sm:p-5">
         <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="share-parol-title"
           className="max-h-[calc(100dvh-1rem)] w-full max-w-5xl overflow-y-auto rounded-[24px] border border-[#dcc8a6] bg-[#fbf7ef] text-[#283e31] shadow-2xl sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-[30px]">
@@ -204,7 +262,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
               <p className="mt-1 text-sm text-[#756c5e]">Choose an image or an animated Story to share.</p>
             </div>
             <button ref={closeRef} type="button" aria-label="Close sharing dialog"
-              onClick={() => setOpen(false)}
+              onClick={closeDialog}
               className="shrink-0 rounded-full border border-[#ddcbb4] bg-white px-3 py-2 text-[#7d2c35] hover:bg-[#f2e6d6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b68c49]">✕</button>
           </header>
 
@@ -268,15 +326,19 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
 
               {error && <p role="alert" className="rounded-xl border border-[#e2b1aa] bg-[#fff0ec] p-3 text-sm text-[#8a2b35]">{error}</p>}
               {notice && <p role="status" className="rounded-xl border border-[#c5d2bb] bg-[#edf3e9] p-3 text-sm text-[#2b593d]">{notice}</p>}
-              {busy && <p role="status" className="text-sm text-[#665d4e]">
-                Preparing your {busy === 'png' ? 'image' : 'animation'}…
-              </p>}
+              {busy && <div role="status" aria-live="polite"
+                className="rounded-xl border border-[#e5d6be] bg-[#f8f1e5] p-3 text-sm text-[#665d4e]">
+                <p>{retrying > 0
+                  ? 'Renderer is busy. Retrying your media…'
+                  : `Preparing your ${busy === 'png' ? 'image' : 'animation'}…`}</p>
+                <p className="mt-1 text-xs">This can take a moment. You may cancel the request.</p>
+              </div>}
 
               <div className="space-y-2">
                 {!ready ? (
                   <button type="button" disabled={busy !== null} onClick={() => void generate(format)}
                     className={primary}>
-                    {busy === format ? 'Preparing…' : format === 'png' ? 'Prepare parol PNG' : 'Generate animated MP4'}
+                    {busy === format ? 'Preparing…' : error ? 'Try again' : format === 'png' ? 'Prepare parol PNG' : 'Generate animated MP4'}
                   </button>
                 ) : (
                   <>
@@ -288,6 +350,9 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
                     </button>
                   </>
                 )}
+                {busy && <button type="button" onClick={cancelGeneration} className={secondary}>
+                  Cancel preparation
+                </button>}
                 <button type="button" onClick={() => void copyLink()} className={secondary}>
                   Copy invitation link
                 </button>
