@@ -55,20 +55,16 @@ export default function WelcomePage({
           <div className="overflow-hidden rounded-[26px] border border-[#263e34] bg-[#15251e] p-3 shadow-[0_20px_55px_rgba(34,48,34,.18)] sm:p-5">
             <LanternScene previewCount={5} theme={THEMES[0]} />
           </div>
-          <p className="mt-3 text-center text-xs text-[#897f6f]">
-            A small glimpse of the tradition. Choose among six designs after creating yours.
-          </p>
         </section>
 
         <section className="mx-auto w-full max-w-md rounded-[28px] border border-[#e6d8c4] bg-[#fffdf8] p-6 shadow-[0_20px_45px_rgba(64,52,34,.08)] sm:p-9">
-          <p className="text-xs font-bold uppercase tracking-[.2em] text-[#a07843]">Start something meaningful</p>
           <h2 className="mt-3 font-serif text-3xl font-semibold">
             {showRecovery ? 'Welcome back.' : 'Your parol starts here.'}
           </h2>
           <p className="mt-3 text-sm leading-6 text-[#73695b]">
             {showRecovery
-              ? 'Enter your private recovery key to return to your existing parol.'
-              : 'No sign-up, email, or password. Your parol is remembered securely in this browser.'}
+              ? 'Enter your private recovery key to return to your parol.'
+              : 'No account required. Keep your recovery key to come back.'}
           </p>
           {error && <p role="alert" className="mt-5 rounded-xl border border-[#e8b0ac] bg-[#fff0ee] px-4 py-3 text-sm text-[#922632]">{error}</p>}
 
@@ -87,7 +83,7 @@ export default function WelcomePage({
                 {busy ? 'Restoring…' : 'Restore my parol'}
               </button>
               <p className="text-xs leading-5 text-[#8b7d6c]">
-                Your original key can be reused for one year. Recovering access ends the previous browser session.
+                Your key is valid for one year. Recovering access ends your previous session.
               </p>
             </form>
           ) : (
@@ -112,8 +108,7 @@ export default function WelcomePage({
           <div className="mt-7 rounded-2xl bg-[#f4ebdc] p-4">
             <p className="text-sm font-semibold text-[#294334]">Your parol stays yours.</p>
             <p className="mt-1 text-xs leading-5 text-[#7c705f]">
-              After creating your parol, save the private recovery key we show you.
-              It's valid for one year and never goes in your shared invitation.
+              Save your private recovery key. Never share it with friends.
             </p>
           </div>
         </section>
