@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  getOwnerRecoveryKey, replaceOwnerRecoveryKey, type OwnerRecoveryKey,
+  ApiError, getOwnerRecoveryKey, replaceOwnerRecoveryKey, type OwnerRecoveryKey,
 } from '../../lib/api'
 
 type Props = {
@@ -20,6 +20,7 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
   const [leaving, setLeaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState('')
+  const [retryAttempt, setRetryAttempt] = useState(0)
   const codeInput = useRef<HTMLInputElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const busy = replacing || leaving
@@ -34,10 +35,26 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
     void getOwnerRecoveryKey()
       .then(value => { if (active) setRecovery(value) })
       .catch(caught => {
-        if (active) setError(caught instanceof Error ? caught.message : 'Unable to load your recovery key.')
+        if (!active) return
+        // Never show raw SQL/provider exception titles returned by a development API.
+        const unavailable = caught instanceof ApiError && caught.status >= 500
+        setError(unavailable
+          ? 'Unable to load your recovery key right now. Stay signed in and try again.'
+          : caught instanceof Error ? caught.message : 'Unable to load your recovery key.')
       })
       .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [retryAttempt])
 
+  function retryLoading() {
+    if (loading || busy) return
+    setRecovery(null)
+    setError('')
+    setLoading(true)
+    setRetryAttempt(attempt => attempt + 1)
+  }
+
+  useEffect(() => {
     heading.current?.focus()
     const oldOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -46,7 +63,6 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
     }
     document.addEventListener('keydown', onKeyDown)
     return () => {
-      active = false
       document.body.style.overflow = oldOverflow
       document.removeEventListener('keydown', onKeyDown)
     }
@@ -83,7 +99,7 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
   }
 
   async function leaveParol() {
-    if (busy || loading) return
+    if (busy || loading || recovery === null) return
     setLeaving(true)
     setError('')
     try { await onLeave() }
@@ -150,16 +166,20 @@ export default function RecoveryKeyDialog({mode, onClose, onLeave}: Props) {
           The recovery key could not be retrieved. Your session has not been changed.
         </p>}
 
-        {error && <p role="alert" className="mt-4 rounded-xl border border-[#e5aba4] bg-[#fbe9e6] p-3 text-sm text-[#922632]">
-          {error}
-        </p>}
+        {error && <div role="alert" className="mt-4 rounded-xl border border-[#e5aba4] bg-[#fbe9e6] p-3 text-sm text-[#922632]">
+          <p>{error}</p>
+          {!recovery && !loading && <button type="button" onClick={retryLoading}
+            className="mt-3 rounded-lg border border-[#b56c6b] px-4 py-2 font-semibold hover:bg-white/60">
+            Retry loading key
+          </button>}
+        </div>}
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <button type="button" disabled={busy} onClick={onClose}
             className={`rounded-xl border border-[#d8c5aa] bg-white px-4 py-3 text-sm font-semibold text-[#534e41] disabled:opacity-50 ${mode === 'view' ? 'col-span-2' : ''}`}>
             {mode === 'leave' ? 'Stay here' : 'Close'}
           </button>
-          {mode === 'leave' && <button type="button" disabled={busy || loading}
+          {mode === 'leave' && <button type="button" disabled={busy || loading || recovery === null}
             onClick={() => void leaveParol()}
             className="rounded-xl bg-[#263e31] px-4 py-3 text-sm font-bold text-white disabled:opacity-50">
             {leaving ? 'Leaving…' : code ? 'Leave parol' : 'Leave anyway'}
