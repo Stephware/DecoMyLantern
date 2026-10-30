@@ -60,7 +60,12 @@ test('downtime art uses actual approved Classic Gold parol instead of an invente
   assert.match(page, /d="M 300 196 L 319 216 L 300 247/)
   assert.match(page, /d="M 284 248 Q 276 229 300 208/)
   assert.equal((page.match(/<g transform="rotate\(\d+ 300 302\)"/g) ?? []).length, 50)
-  assert.equal((page.match(/<\/g>/g) ?? []).length, 52)
+  const openedGroups = (page.match(/<g\b/g) ?? []).length
+  const closedGroups = (page.match(/<\/g>/g) ?? []).length
+  assert.equal(closedGroups, openedGroups)
+  assert.equal(openedGroups, 92)
+  assert.match(page, /<path id="downtime-perimeter" d="M 300\.000 140\.000 L /)
+  assert.equal((page.match(/<use href="#downtime-perimeter"/g) ?? []).length, 5)
   assert.match(page, /<polygon points="/)
   assert.doesNotMatch(page, /<animate\b|<animateTransform\b|<foreignObject\b|<script\b/i)
 })
