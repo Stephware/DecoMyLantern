@@ -135,6 +135,7 @@ export async function fetchParolSnapshot(
   kind: 'owner' | 'guest',
   token?: string,
   signal?: AbortSignal,
+  format: 'webp' | 'png' = 'webp',
 ): Promise<Blob> {
   if (kind === 'guest' && !token) throw new Error('Missing invitation token.')
   const guest = kind === 'guest'
@@ -144,7 +145,7 @@ export async function fetchParolSnapshot(
   const response = await fetch(path, {
     method: 'POST', credentials: 'same-origin', cache: 'no-store', signal,
     headers: {'Content-Type':'application/json', 'X-CSRF-TOKEN':csrf},
-    body: JSON.stringify(guest ? {token, format:'webp'} : {format:'webp'}),
+    body: JSON.stringify(guest ? {token, format} : {format}),
   })
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null)
@@ -153,9 +154,15 @@ export async function fetchParolSnapshot(
       response.status === 429 ? 'Too many image requests. Please try later.' :
       'Unable to load your parol image.'))
   }
-  if (response.headers.get('content-type')?.split(';')[0] !== 'image/webp')
+  const expectedMime = format === 'png' ? 'image/png' : 'image/webp'
+  if (response.headers.get('content-type')?.split(';')[0]?.trim() !== expectedMime)
     throw new Error('The server returned an unexpected parol image format.')
   return response.blob()
+}
+
+/** Share the actual saved parol art, not the separate vertical Story poster. */
+export function exportParolImage(kind: 'owner' | 'friend', token?: string): Promise<Blob> {
+  return fetchParolSnapshot(kind === 'friend' ? 'guest' : 'owner', token, undefined, 'png')
 }
 
 export const getMyLantern = () => api<Lantern>('/api/my/lantern')
