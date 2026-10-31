@@ -1,47 +1,45 @@
-# Static parol presentation and native scrolling
+# Welcome page static parol and natural scrolling
 
-## Reason
-On touch phones, swiping across a draggable SVG parol captured the gesture and
-moved the parol rather than scrolling the page. Desktop visitors could also drag
-the scene unintentionally.
+## Scope
 
-## Implementation
+**Only the public welcome/landing page is changed.** The real saved parol
+used by signed-in owners and invitation guests must keep its original
+interaction, artwork, growth animation, and rendering behavior.
 
-- **Public welcome/landing page:** replaces the old interactive `previewCount={5}`
-  procedural SVG with a fixed `/parol-classic-preview.svg` image. It is the
-  exact approved **zero-friend Classic Gold** parol SVG already shipped in
-  `downtime/index.html` (so it is not a new/invented artwork), extracted as
-  a local `src/frontend/public` asset. The browser can cache it. No API call
-  or SVG renderer is needed merely to display the landing art.
-- **Owner and invitation guest parol:** keeps the real saved-state protected
-  flattened WebP and the three-wave arrival/reveal animation, but displays
-  it as a non-draggable `<img>`. The incoming image is another non-draggable
-  overlay with the same circular mask/glint, not a separate rendered parol.
-- Removes drag, pan, pinch-capture and zoom/Fit controls from the normal
-  owner/guest view. Native vertical scrolling and browser gestures are
-  available over the image on phones and on desktop.
-- The owner/guest image still refreshes when actual saved friend count,
-  contribution slots, design or pattern changes; stale images, abort/retry,
-  image URL cleanup and permission checks remain intact.
-- The **admin-only Design Lab** is unchanged and still offers its interactive
-  synthetic preview. PNG/MP4 sharing is unchanged.
+## Welcome page change
 
-## Manual verification
+- Replaces the former interactive `previewCount={5}` sample with a
+  non-draggable, local `/parol-classic-preview.svg` image.
+- Reuses the approved Classic Gold **zero-friend** parol illustration from
+  `downtime/index.html` as a standalone static file, rather than introducing
+  a new design.
+- The image is non-interactive (`pointer-events-none` and
+  `draggable={false}`), so swiping over it doesn't intercept normal page
+  scrolling on a phone. No remote API request or procedural renderer is
+  required for this welcome preview.
 
-1. On a phone-sized window (320px/375px) and a real phone, open the public
-   welcome page. Swipe vertically **on top of the parol**: the entire page
-   should scroll, and the parol must not move within its card.
-2. Sign in as an owner and visit a guest invitation: repeat the swipe on both
-   saved-parol images. On desktop, mouse dragging should not pan the art.
-3. Verify no floating zoom buttons appear on the owner/guest parol.
-4. Add a light as a guest while the owner dashboard is open. The saved parol
-   should refresh and reveal new decoration in three waves, **without**
-   changing the image position or preventing scroll.
-5. Open the admin-only Design Lab and confirm its synthetic preview is still
-   available. Test sharing PNG/MP4, recovery and invitation link separately.
-6. Run `bash scripts/verify-phase6.sh --skip-install` from the repo root
-   after pulling the branch to validate all frontend, renderer and .NET checks.
+## Deliberately unchanged
 
-This change is frontend-only and requires no backend, schema, Cloudflare,
-HostHatch or production infrastructure changes. Browser/mobile behavior still
-needs real-device QA before release.
+- `CachedParolScene.tsx` restored **exactly** from the pre-PR-#57
+  implementation, preserving the actual owner and guest parol with original
+  drag/pan/pinch/zoom/Fit controls, clickable friend lights, secured WebP
+  rendering, saved-state refresh and three-wave animation.
+- Original owner/guest snapshot tests restored to match the real viewer.
+- The admin Design Lab, approved procedural parol artwork, growth rules,
+  image/video sharing, recovery flow, API, database and server infrastructure
+  remain unchanged.
+
+## Verify
+
+1. Open the **public welcome page** on a phone. Swipe vertically starting
+   directly over the parol: the **page** should scroll, and the preview image
+   should not drag or pan inside its card.
+2. Open an existing **owner** parol and a **guest** invitation. Their original
+   interactive viewer (zoom/Fit, touch gestures and saved-state growth
+   reveal) should behave as it did before PR #57.
+3. On desktop, confirm the welcome illustration is not draggable.
+4. Run `bash scripts/verify-phase6.sh --skip-install` from the repository
+   root after pulling the updated branch.
+
+Real-device and full build verification must be completed locally; source
+checks alone do not prove mobile browser behavior.
