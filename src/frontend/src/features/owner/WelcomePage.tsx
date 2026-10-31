@@ -1,6 +1,4 @@
 import { useState, type FormEvent } from 'react'
-import LanternScene from '../lantern/renderer/LanternScene'
-import { THEMES } from '../customization/themes'
 import { BannerAd, DesktopSideAds, NativeAd } from '../ads/AdPlacements'
 
 type Props = {
@@ -55,7 +53,10 @@ export default function WelcomePage({
             </p>
           </div>
           <div className="overflow-hidden rounded-[26px] border border-[#263e34] bg-[#15251e] p-3 shadow-[0_20px_55px_rgba(34,48,34,.18)] sm:p-5">
-            <LanternScene previewCount={5} theme={THEMES[0]} />
+            <img src="/parol-classic-preview.svg" width={600} height={640}
+              alt="BeMyParol Classic Gold Filipino festival parol"
+              draggable={false} decoding="async"
+              className="pointer-events-none mx-auto block h-auto w-full max-w-[710px] select-none" />
           </div>
         </section>
 
