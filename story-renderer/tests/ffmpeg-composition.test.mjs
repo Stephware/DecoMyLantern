@@ -13,10 +13,10 @@ const design = {kind:'owner', designKey:'classic', patternKey:'default',
 test('composition contains engine-neutral timing, layers and silent output contract', () => {
   const spec = compositionFor(design)
   assert.deepEqual(spec.design.slots, [5,1,2])
-  assert.deepEqual(spec.timing.growthStages, [0,30,60,90])
-  assert.deepEqual(spec.timing.flashes, [30,60,90])
-  assert.equal(spec.output.width, 1080)
-  assert.equal(spec.output.frames, 240)
+  assert.deepEqual(spec.timing.growthStages, [0,1,2,3])
+  assert.deepEqual(spec.timing.flashes, [1,2,3])
+  assert.equal(spec.output.width, 720)
+  assert.equal(spec.output.frames, 192)
   assert.equal(spec.audio, null)
   assert.equal(OUTPUT.pixelFormat, 'yuv420p')
 })
@@ -44,6 +44,8 @@ test('FFmpeg uses argument arrays and browser-compatible bounded encoding', () =
   assert.ok(args.includes('-an'))
   assert.equal(args.filter(x => x === '-i').length, 9)
   assert.ok(args.includes('-filter_complex_threads'))
+  assert.ok(!args.join(' ').includes('crop=840:890'))
+  assert.ok(args.includes('192'))
 })
 
 test('FFmpeg launch failures are structured; no shell interprets paths', async () => {
@@ -63,10 +65,12 @@ test('a disconnected render aborts its child process', async () => {
 })
 
 test('only complete matching H.264 Stories pass media validation', () => {
-  const metadata = {streams:[{codec_type:'video',codec_name:'h264',width:1080,
-    height:1920,pix_fmt:'yuv420p',r_frame_rate:'30/1'}],format:{duration:'8.000000'}}
+  const metadata = {streams:[{codec_type:'video',codec_name:'h264',width:720,
+    height:1280,pix_fmt:'yuv420p',r_frame_rate:'24/1'}],format:{duration:'8.000000'}}
   assert.equal(compatibleVideo(metadata), true)
   assert.equal(compatibleVideo({...metadata, streams:[...metadata.streams,{codec_type:'audio'}]}), false)
   assert.equal(compatibleVideo({...metadata, format:{duration:'4.000000'}}), false)
-  assert.equal(compatibleVideo({...metadata, streams:[{...metadata.streams[0],width:720}]}), false)
+  assert.equal(compatibleVideo({...metadata, streams:[{...metadata.streams[0],width:1080}]}), false)
+  const high = {...metadata,streams:[{...metadata.streams[0],width:1080,height:1920,r_frame_rate:'30/1'}]}
+  assert.equal(compatibleVideo(high,'high'),true)
 })

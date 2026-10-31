@@ -1,50 +1,54 @@
 import {spawn} from 'node:child_process'
 import {mkdir, stat} from 'node:fs/promises'
 import path from 'node:path'
-import {compositionFor, OUTPUT, STAGES, FLASHES} from './composition.mjs'
+import sharp from 'sharp'
+import {compositionFor, OUTPUT, PRESETS, STAGES, FLASHES, TIMING, frameAt} from './composition.mjs'
+
+sharp.concurrency(2)
+sharp.cache(false)
 
 export class RenderError extends Error {
   constructor(code, message, cause) { super(message, {cause}); this.name = 'RenderError'; this.code = code }
 }
 
-export function ffmpegArgs({background, stages, flashes, text, output}) {
+export function ffmpegArgs({background, stages, flashes, text, output, preset = 'standard'}) {
+  const spec = PRESETS[preset]
+  if (!spec) throw new RangeError('Unknown Story preset')
   const inputs = ['-i', background]
   for (const file of [...stages, ...flashes, text])
-    inputs.push('-loop', '1', '-framerate', String(OUTPUT.fps), '-i', file)
+    inputs.push('-loop', '1', '-framerate', String(spec.fps), '-i', file)
   const filters = []
-  // Chromium rasterizes each distinct design stage once. FFmpeg applies the
-  // original camera curve to the transparent crops on every output frame.
-  const zoom = '1.12-0.12*min(1,max(0,(n-96)/55))'
-  const scale = `scale=w='trunc(840*(${zoom})/2)*2':h='trunc(890*(${zoom})/2)*2':eval=frame`
+  const zoom = `${TIMING.zoom.from}+(${TIMING.zoom.to-TIMING.zoom.from})*min(1,max(0,(n/${spec.fps}-${TIMING.zoom.start})/${TIMING.zoom.end-TIMING.zoom.start}))`
+  const scale = `scale=w='trunc(iw*(${zoom})/2)*2':h='trunc(ih*(${zoom})/2)*2':eval=frame`
   for (let i = 0; i < stages.length; i++) {
-    filters.push(`[${i + 1}:v]crop=840:890:120:325,format=rgba,${scale},` +
-      `fade=t=in:st=${4 / 30}:d=${22 / 30}:alpha=1[p${i}]`)
+    filters.push(`[${i + 1}:v]format=rgba,${scale},` +
+      `fade=t=in:st=${TIMING.parolFade[0]}:d=${TIMING.parolFade[1]-TIMING.parolFade[0]}:alpha=1[p${i}]`)
   }
   for (let i = 0; i < flashes.length; i++) {
     const start = FLASHES[i]
-    filters.push(`[${i + 5}:v]crop=840:890:120:325,format=rgba,${scale},` +
-      `fade=t=out:st=${start / 30}:d=${25 / 30}:alpha=1[f${i}]`)
+    filters.push(`[${i + 5}:v]format=rgba,${scale},` +
+      `fade=t=out:st=${start}:d=${TIMING.flashDuration}:alpha=1[f${i}]`)
   }
-  filters.push(`[8:v]format=rgba,fade=t=in:st=${155 / 30}:d=${26 / 30}:alpha=1[text]`)
+  filters.push(`[8:v]format=rgba,fade=t=in:st=${TIMING.textFade[0]}:d=${TIMING.textFade[1]-TIMING.textFade[0]}:alpha=1[text]`)
   let current = '0:v'
   let next = 0
   const overlay = (layer, enable) => {
     const dest = `v${next++}`
-    filters.push(`[${current}][${layer}]overlay=x=(W-w)/2:y=770-h/2:` +
+    filters.push(`[${current}][${layer}]overlay=x=(W-w)/2:y=${TIMING.parolCenterY}*H-h/2:` +
       `enable='${enable}':eof_action=repeat:shortest=1[${dest}]`)
     current = dest
   }
   for (let i = 0; i < STAGES.length; i++)
-    overlay(`p${i}`, `between(n,${STAGES[i]},${(STAGES[i + 1] ?? OUTPUT.frames) - 1})`)
+    overlay(`p${i}`, `between(n,${frameAt(STAGES[i],spec)},${frameAt(STAGES[i + 1] ?? spec.duration,spec) - 1})`)
   for (let i = 0; i < FLASHES.length; i++)
-    overlay(`f${i}`, `between(n,${FLASHES[i]},${Math.min(FLASHES[i] + 24, (FLASHES[i + 1] ?? OUTPUT.frames) - 1)})`)
+    overlay(`f${i}`, `between(n,${frameAt(FLASHES[i],spec)},${Math.min(frameAt(FLASHES[i]+TIMING.flashDuration,spec)-1, frameAt(FLASHES[i + 1] ?? spec.duration,spec)-1)})`)
   const dest = `v${next++}`
   filters.push(`[${current}][text]overlay=x=0:y=0:eof_action=repeat:shortest=1[${dest}]`)
   return ['-hide_banner', '-loglevel', 'error', '-y', '-filter_complex_threads', '2',
     ...inputs, '-filter_complex', filters.join(';'), '-map', `[${dest}]`,
-    '-an', '-frames:v', String(OUTPUT.frames), '-r', String(OUTPUT.fps),
-    '-c:v', OUTPUT.codec, '-preset', OUTPUT.preset, '-crf', String(OUTPUT.crf),
-    '-threads', '2', '-pix_fmt', OUTPUT.pixelFormat, '-movflags', '+faststart', output]
+    '-an', '-frames:v', String(spec.frames), '-r', String(spec.fps),
+    '-c:v', spec.codec, '-preset', spec.preset, '-crf', String(spec.crf),
+    '-threads', '2', '-pix_fmt', spec.pixelFormat, '-movflags', '+faststart', output]
 }
 
 export function runFfmpeg(binary, args, {signal, timeoutMs = 180_000} = {}) {
@@ -65,13 +69,15 @@ export function runFfmpeg(binary, args, {signal, timeoutMs = 180_000} = {}) {
   })
 }
 
-export function compatibleVideo(metadata) {
+export function compatibleVideo(metadata, preset = 'standard') {
+  const spec = PRESETS[preset]
+  if (!spec) return false
   const video = metadata.streams?.find(stream => stream.codec_type === 'video')
-  return video?.codec_name === 'h264' && video.width === OUTPUT.width &&
-    video.height === OUTPUT.height && video.pix_fmt === OUTPUT.pixelFormat &&
-    video.r_frame_rate === `${OUTPUT.fps}/1` &&
+  return video?.codec_name === 'h264' && video.width === spec.width &&
+    video.height === spec.height && video.pix_fmt === spec.pixelFormat &&
+    video.r_frame_rate === `${spec.fps}/1` &&
     !metadata.streams?.some(stream => stream.codec_type === 'audio') &&
-    Math.abs(Number(metadata.format?.duration) - OUTPUT.frames / OUTPUT.fps) < 0.05
+    Math.abs(Number(metadata.format?.duration) - spec.duration) < 0.05
 }
 
 export function probeVideo(binary, file, {signal} = {}) {
@@ -93,30 +99,59 @@ export function probeVideo(binary, file, {signal} = {}) {
   })
 }
 
-export async function renderFfmpeg({serveUrl, renderStill, selectComposition, inputProps,
-  background, workDir, output, signal, cancelSignal, binary = 'ffmpeg', timeoutMs}) {
+export async function renderFfmpeg({serveUrl, renderStill, selectComposition, openBrowser, inputProps,
+  background, workDir, output, signal, cancelSignal, vectorSvg,
+  preset = 'standard', binary = 'ffmpeg', timeoutMs, onProgress = () => {},
+  onMetrics = () => {}}) {
   if (signal?.aborted) throw new RenderError('CANCELLED', 'Render cancelled')
+  const started = performance.now()
   await mkdir(workDir, {recursive: true})
-  const specification = compositionFor(inputProps)
-  const still = async (layer, sourceFrame, name) => {
+  const spec = PRESETS[preset]
+  if (!spec) throw new RenderError('PRESET','Unknown Story preset')
+  const specification = compositionFor(inputProps,preset)
+  const still = async (sourceFrame, name, browser) => {
     if (signal?.aborted) throw new RenderError('CANCELLED', 'Render cancelled')
     const file = path.join(workDir, `${name}.png`)
-    const props = {...inputProps, layer, sourceFrame}
-    const composition = await selectComposition({serveUrl, id: 'BeMyParolStoryLayer', inputProps: props})
+    const props = {...inputProps, layer:'text', sourceFrame}
+    const composition = await selectComposition({serveUrl, id: 'BeMyParolStoryLayer',
+      inputProps: props,puppeteerInstance:browser})
     await renderStill({composition, serveUrl, output: file, inputProps: props,
-      frame: sourceFrame, imageFormat: 'png', cancelSignal})
+      frame: sourceFrame, imageFormat: 'png', cancelSignal,puppeteerInstance:browser})
     if ((await stat(file)).size < 100) throw new RenderError('EMPTY_LAYER', `Empty ${name} layer`)
     return file
   }
+  const vector = async (layer, second, name) => {
+    if (signal?.aborted) throw new RenderError('CANCELLED','Render cancelled')
+    const file = path.join(workDir, `${name}.png`)
+    const svg = vectorSvg(inputProps, frameAt(second,spec), layer, preset)
+    await sharp(Buffer.from(svg), {density:96}).resize({width:Math.round(840*spec.width/1080),
+      height:Math.round(890*spec.height/1920),fit:'fill'}).png().toFile(file)
+    if ((await stat(file)).size < 100) throw new RenderError('EMPTY_LAYER',`Empty ${name} layer`)
+    return file
+  }
   const stages = []
-  for (const frame of STAGES) stages.push(await still('parol', frame, `parol-${frame}`))
+  for (const second of STAGES) { stages.push(await vector('parol',second,`parol-${second}`)); onProgress(.1+.08*stages.length) }
   const flashes = []
-  for (const frame of FLASHES) flashes.push(await still('flash', frame, `flash-${frame}`))
-  const text = await still('text', 200, 'text')
+  for (const second of FLASHES) flashes.push(await vector('flash',second,`flash-${second}`))
+  const vectorsDone = performance.now()
+  const browser = await openBrowser('chrome',{})
+  const browserReady = performance.now()
+  let text
+  try { text = await still(frameAt(200/30,spec), 'text',browser) }
+  finally { await browser.close({silent:true}) }
+  const textDone = performance.now()
+  onProgress(.5)
   if (signal?.aborted) throw new RenderError('CANCELLED', 'Render cancelled')
-  await runFfmpeg(binary, ffmpegArgs({background, stages, flashes, text, output}), {signal, timeoutMs})
+  await runFfmpeg(binary, ffmpegArgs({background, stages, flashes, text, output, preset}), {signal, timeoutMs})
+  const encoded = performance.now()
+  onProgress(.95)
   if ((await stat(output)).size < 1024) throw new RenderError('EMPTY_OUTPUT', 'FFmpeg produced an empty video')
   const metadata = await probeVideo(binary.replace(/ffmpeg$/, 'ffprobe'), output, {signal})
-  if (!compatibleVideo(metadata)) throw new RenderError('INVALID_OUTPUT', 'FFmpeg output failed media validation')
+  if (!compatibleVideo(metadata,preset)) throw new RenderError('INVALID_OUTPUT', 'FFmpeg output failed media validation')
+  onMetrics({vectorMs:Math.round(vectorsDone-started),
+    chromiumInitMs:Math.round(browserReady-vectorsDone),
+    chromiumCaptureMs:Math.round(textDone-browserReady),ffmpegMs:Math.round(encoded-textDone),
+    totalMs:Math.round(performance.now()-started),chromiumCaptures:1,
+    vectorRasters:STAGES.length+FLASHES.length})
   return specification
 }

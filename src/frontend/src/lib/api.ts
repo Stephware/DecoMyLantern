@@ -142,7 +142,65 @@ export async function exportStoryMedia(kind: 'owner' | 'friend', format: 'mp4' |
     throw new ApiError(response.status, errorMessage(body,
       response.status === 429 ? 'Too many exports. Try again later.' : 'Story export is unavailable.'))
   }
+  const expectedMime = format === 'png' ? 'image/png' : 'video/mp4'
+  if (response.headers.get('content-type')?.split(';')[0]?.trim() !== expectedMime)
+    throw new Error('The server returned an unexpected Story media format.')
   return response.blob()
+}
+
+export type AuthorizedStoryComposition = {
+  kind:'owner'|'friend'; designKey:string; patternKey:string; friendCount:number;
+  slots:number[]; highlightSlot:number|null; format:'mp4'
+}
+export type StoryJobStatus = {
+  id:string; status:'queued'|'rendering'|'completed'|'failed'|'cancelled';
+  progress:number; position:number; error:string|null
+}
+
+async function storyAction(kind:'owner'|'friend', action:string, token:string|undefined,
+  id:string|undefined, signal?:AbortSignal):Promise<Response> {
+  if (kind==='friend' && !token) throw new Error('Missing invitation for this Story.')
+  const guest=kind==='friend'
+  const route=guest?'/api/invitations/story':'/api/my/lantern/story'
+  const response=await fetch(`${route}/${action}`,{
+    method:'POST',credentials:'same-origin',cache:'no-store',signal,
+    headers:{'Content-Type':'application/json',
+      'X-CSRF-TOKEN':await csrfToken(guest?'/api/invitations/csrf':'/api/owner/csrf',signal)},
+    body:JSON.stringify(guest?{token,id,format:'mp4'}:{id,format:'mp4'}),
+  })
+  if (!response.ok) {
+    const body:unknown=await response.json().catch(()=>null)
+    throw new ApiError(response.status,errorMessage(body,'Story export is unavailable.'))
+  }
+  return response
+}
+
+export async function fetchStoryComposition(kind:'owner'|'friend', token?:string,
+  signal?:AbortSignal):Promise<AuthorizedStoryComposition> {
+  const response=await storyAction(kind,'composition',token,undefined,signal)
+  const data:AuthorizedStoryComposition=await response.json()
+  if ((data.kind!==kind) || !Array.isArray(data.slots) ||
+      !['classic','floral','festival','celestial','fiesta','sampaguita'].includes(data.designKey) ||
+      !['default','rings','rays'].includes(data.patternKey) ||
+      !Number.isSafeInteger(data.friendCount) || data.friendCount<0 || data.friendCount>10000 ||
+      data.slots.length>500 || !data.slots.every(slot=>Number.isSafeInteger(slot)&&slot>=0&&slot<=100000) ||
+      (data.highlightSlot!==null && !data.slots.includes(data.highlightSlot)))
+    throw new Error('The server returned invalid Story composition data.')
+  return data
+}
+
+export const startStoryJob=async(kind:'owner'|'friend',token?:string,signal?:AbortSignal):Promise<StoryJobStatus> =>
+  (await storyAction(kind,'jobs/start',token,undefined,signal)).json()
+export const storyJobStatus=async(kind:'owner'|'friend',id:string,token?:string,signal?:AbortSignal):Promise<StoryJobStatus> =>
+  (await storyAction(kind,'jobs/status',token,id,signal)).json()
+export async function storyJobFile(kind:'owner'|'friend',id:string,token?:string,signal?:AbortSignal):Promise<Blob> {
+  const response=await storyAction(kind,'jobs/file',token,id,signal)
+  if (response.headers.get('content-type')?.split(';')[0]?.trim()!=='video/mp4')
+    throw new Error('The server returned an unexpected Story video format.')
+  return response.blob()
+}
+export const cancelStoryJob=async(kind:'owner'|'friend',id:string,token?:string):Promise<void> => {
+  await storyAction(kind,'jobs/cancel',token,id)
 }
 
 /**

@@ -35,3 +35,4 @@ Thumbs.db
 # Keep the renderer's machine-specific Chromium install out of Git.
 **/.dev-renderer.log
 /story-renderer/assets/generated/
+story-renderer/.generated/

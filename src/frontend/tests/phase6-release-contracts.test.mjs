@@ -22,8 +22,8 @@ test('Phases 2–3: owner and invited guest share the saved parol through the sa
   assert.ok(owner.includes('<StoryShare'))
   assert.ok(guest.includes('<StoryShare'))
   assert.ok(guest.includes('alreadyContributed ? ('))
-  assert.ok(share.includes("exportParolImage(data.kind, token, controller.signal)"))
-  assert.ok(share.includes("exportStoryMedia(data.kind, 'mp4', token, controller.signal)"))
+  assert.ok(share.includes("exportStoryMedia(data.kind,'png',token,controller.signal)"))
+  assert.ok(share.includes('fetchStoryComposition(data.kind,token,controller.signal)'))
   assert.ok(share.includes('navigator.canShare'))
   assert.ok(share.includes('navigator.share'))
   assert.ok(share.includes('Download PNG'))
@@ -35,13 +35,14 @@ test('Phases 2–3: owner and invited guest share the saved parol through the sa
   assert.doesNotMatch(share, /instagramAccessToken|facebookAccessToken/)
 })
 
-test('Phase 3: parol PNG and animated Story are different media files', () => {
+test('Story PNG and animated MP4 use the same portrait composition', () => {
   const share = read('src/features/story/StoryShare.tsx')
   const poster = read('src/features/story/StoryFrame.tsx')
   const snapshot = read('src/features/lantern/renderer/ParolSnapshot.tsx')
-  assert.ok(share.includes('BeMyParol-Parol.png'))
+  assert.ok(share.includes('BeMyParol-Story.png'))
   assert.ok(share.includes('BeMyParol-Story.mp4'))
-  assert.ok(share.includes("'aspect-[15/16]' : 'aspect-[9/16]'"))
+  assert.ok(share.includes('aspect-[9/16]'))
+  assert.ok(share.includes('<StoryFrame data={data} frame={160}/>'))
   assert.ok(poster.includes('<ProceduralOuterShell'))
   assert.ok(snapshot.includes('<ProceduralOuterShell'))
   assert.ok(snapshot.includes('<ParolArtwork'))
@@ -54,7 +55,7 @@ test('Phase 1/6: shared Story text stays friendly, not technical', () => {
   assert.doesNotMatch(poster, /Story layers|Growth layers|debug|simulation/i)
   assert.ok(poster.includes('I added my light!'))
   assert.ok(poster.includes('Help my parol shine!'))
-  assert.ok(poster.includes('storyGrowthAtFrame(data.friendCount, frame)'))
+  assert.ok(poster.includes('storyGrowthAtFrame(data.friendCount, frame, output.fps)'))
 })
 
 test('Phase 4: exports cannot leak obsolete media or loop forever on failure', () => {

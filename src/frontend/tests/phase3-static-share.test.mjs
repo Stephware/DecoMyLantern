@@ -1,7 +1,7 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
-import {ApiError, exportParolImage, fetchParolSnapshot} from '../src/lib/api.ts'
+import {ApiError, exportParolImage, exportStoryMedia, fetchParolSnapshot} from '../src/lib/api.ts'
 
 const read = path => readFileSync(new URL('../src/' + path, import.meta.url), 'utf8')
 
@@ -86,19 +86,44 @@ test('incorrect response MIME does not expose a mislabeled PNG', async () => {
   } finally { fake.restore() }
 })
 
-test('static-image preview and downloads are separate from the 9:16 video Story', () => {
+test('static-image preview and download match the 9:16 video Story', () => {
   const component = read('features/story/StoryShare.tsx')
-  assert.ok(component.includes("format === 'png' ? 'aspect-[15/16]' : 'aspect-[9/16]'"))
-  assert.ok(component.includes('exportParolImage(data.kind, token, controller.signal)'))
-  assert.ok(component.includes("exportStoryMedia(data.kind, 'mp4', token, controller.signal)"))
-  assert.ok(component.includes('BeMyParol-Parol.png'))
+  assert.ok(component.includes('aspect-[9/16]'))
+  assert.ok(component.includes("exportStoryMedia(data.kind,'png',token,controller.signal)"))
+  assert.ok(component.includes('BeMyParol-Story.png'))
   assert.ok(component.includes('BeMyParol-Story.mp4'))
   assert.ok(component.includes('image/png'))
   assert.ok(component.includes('video/mp4'))
-  assert.ok(component.includes('Your actual saved parol as a PNG image'))
-  assert.ok(component.includes('transparent background'))
-  assert.ok(!component.includes('A parol-only photo is coming in Phase 3'))
-  assert.ok(component.includes('<StoryFrame data={data} frame={200}/>'))
+  assert.ok(component.includes('Your finished BeMyParol Story image'))
+  assert.ok(component.includes('This sample shows your parol in the finished Story layout.'))
+  assert.ok(component.includes('<StoryFrame data={data} frame={160}/>'))
+})
+
+test('Story PNG requests the same protected Story endpoint as MP4', async () => {
+  const fake = stubImageServer()
+  try {
+    const blob = await exportStoryMedia('owner', 'png')
+    assert.equal(blob.type, 'image/png')
+    assert.equal(fake.requests[0].path, '/api/owner/csrf')
+    assert.equal(fake.requests[1].path, '/api/my/lantern/story')
+    assert.deepEqual(JSON.parse(fake.requests[1].options.body), {format:'png'})
+  } finally { fake.restore() }
+})
+
+test('Story PNG guest request keeps its invitation in the POST body', async () => {
+  const fake = stubImageServer()
+  try {
+    const token = 'abcdefghijklmnop'
+    await exportStoryMedia('friend', 'png', token)
+    assert.equal(fake.requests[1].path, '/api/invitations/story')
+    assert.deepEqual(JSON.parse(fake.requests[1].options.body), {format:'png', token})
+  } finally { fake.restore() }
+})
+
+test('Story export rejects a mislabeled image response', async () => {
+  const fake = stubImageServer('text/html')
+  try { await assert.rejects(exportStoryMedia('owner', 'png'), /unexpected Story media format/) }
+  finally { fake.restore() }
 })
 
 test('a different owner/link/guest or contribution cannot share previously generated media', () => {

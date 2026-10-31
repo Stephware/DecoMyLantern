@@ -1,5 +1,10 @@
 # Phase 3 — Actual parol PNG + animated Story MP4 sharing
 
+> Historical implementation note: the current sharing dialog exports a full
+> 9:16 Story PNG through `/api/my/lantern/story` or `/api/invitations/story`.
+> The parol-only image endpoints described below remain available for the
+> dashboard image. See [Story sharing](story-sharing.md).
+
 This phase finishes the unified Share your parol interface established in Phase 2. **Frontend-only.** No ASP.NET, private renderer, SQL/database, Cloudflare, HostHatch, ads or deployment changes.
 
 ## User-visible results

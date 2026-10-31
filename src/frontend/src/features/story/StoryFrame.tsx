@@ -1,6 +1,6 @@
 import {THEMES} from '../customization/themes'
 import {festivalOutlinePath, festivalPointAt, outerFitZoom} from '../lantern/growth/outerGrowth'
-import {storyGrowthAtFrame} from './storySpec'
+import {STORY_PRESETS, STORY_TIMING, storyGrowthAtFrame, storySecondsAt, type StoryPreset} from './storySpec'
 import ParolArtwork from '../lantern/renderer/ParolArtwork'
 import ProceduralOuterShell from '../lantern/renderer/ProceduralOuterShell'
 import {lightPosition} from '../lantern/renderer/lightPositions'
@@ -21,31 +21,49 @@ export type StoryData = {
  */
 export type StoryLayer = 'all' | 'background' | 'parol' | 'flash' | 'text'
 
-export function StoryFrame({data, frame, layer = 'all'}: {data: StoryData; frame: number; layer?: StoryLayer}) {
+export function StoryFrame({data, frame, layer = 'all', preset = 'standard', backgroundAssetUrl}: {data: StoryData; frame: number; layer?: StoryLayer; preset?: StoryPreset; backgroundAssetUrl?: string}) {
+  const output = STORY_PRESETS[preset]
+  const seconds = storySecondsAt(frame, output.fps)
+  const scaled = output.width / STORY_PRESETS.high.width
+  const fade = (start: number, end: number) => Math.min(1, Math.max(0, (seconds - start) / (end - start)))
   const theme = THEMES.find(t => t.key === data.designKey) ?? THEMES[0]
-  const count = storyGrowthAtFrame(data.friendCount, frame)
-  const wave = frame < 30 ? 0 : frame < 60 ? 1 : frame < 90 ? 2 : 3
+  const count = storyGrowthAtFrame(data.friendCount, frame, output.fps)
+  const wave = seconds < 1 ? 0 : seconds < 2 ? 1 : seconds < 3 ? 2 : 3
   const fit = outerFitZoom(count)
-  const zoom = 1.12 - 0.12 * Math.min(1, Math.max(0, (frame - 96) / 55))
-  const parolOpacity = Math.min(1, Math.max(0, (frame - 4) / 22))
-  const overlayOpacity = Math.min(1, Math.max(0, (frame - 155) / 26))
-  const headOpacity = Math.min(1, frame / 24)
+  const zoom = STORY_TIMING.zoom.from + (STORY_TIMING.zoom.to - STORY_TIMING.zoom.from) *
+    fade(STORY_TIMING.zoom.start, STORY_TIMING.zoom.end)
+  const parolOpacity = fade(...STORY_TIMING.parolFade)
+  const overlayOpacity = fade(...STORY_TIMING.textFade)
+  const headOpacity = fade(0, STORY_TIMING.headerFadeEnd)
   const lights = data.slots.filter(slot => slot >= 0 && slot <= 100000)
   const title = data.kind === 'friend' ? 'I added my light!' : 'Help my parol shine!'
   const subtitle = data.kind === 'friend'
     ? 'Add your own light to our Christmas parol'
     : 'Add your light to my Christmas parol'
-  const sparkle = 0.65 + 0.35 * Math.cos(frame * 0.12)
-  const waveAge = frame < 30 ? 50 : frame < 60 ? frame-30 : frame < 90 ? frame-60 : frame-90
-  const waveFlash = frame < 30 || frame >= 122 ? 0 : Math.max(0, 1-waveAge/25)
+  const sparkle = 0.65 + 0.35 * Math.cos(seconds * 3.6)
+  const waveAge = seconds - wave
+  const waveFlash = wave === 0 || seconds >= 122 / 30 ? 0 : Math.max(0, 1-waveAge/STORY_TIMING.flashDuration)
   return (
+    <div style={{width:output.width,height:output.height,position:'relative',overflow:'hidden'}}>
     <div style={{
       position: 'relative', width:1080, height:1920, overflow:'hidden',
-      background: layer === 'all' || layer === 'background'
-        ? 'radial-gradient(ellipse at 50% 41%,#28405d 0%,#101c32 52%,#080e20 100%)'
-        : 'transparent',
+      transform:`scale(${scaled})`,transformOrigin:'top left',
+      background:'transparent',
       color:'#fff3d7', fontFamily:'Arial, Helvetica, sans-serif'
     }}>
+      {(layer === 'all' || layer === 'background') && (backgroundAssetUrl ?
+        <img alt="" src={backgroundAssetUrl} width="1080" height="1920"
+          style={{position:'absolute',inset:0}}/> : <svg aria-hidden="true" width="1080" height="1920"
+        style={{position:'absolute',inset:0}} viewBox="0 0 1080 1920">
+        <defs><radialGradient id="story-night-v2" gradientUnits="userSpaceOnUse"
+          cx="540" cy="787" r="1602"
+          gradientTransform="translate(540 787) scale(.477 1) translate(-540 -787)">
+          <stop offset="0%" stopColor="#28405d"/>
+          <stop offset="52%" stopColor="#101c32"/>
+          <stop offset="100%" stopColor="#080e20"/>
+        </radialGradient></defs>
+        <rect width="1080" height="1920" fill="url(#story-night-v2)"/>
+      </svg>)}
       {(layer === 'all' || layer === 'background') && <div style={{position:'absolute',inset:55,border:'2px solid rgba(246,202,111,.23)',borderRadius:55}}/>}
       {(layer === 'all' || layer === 'background') && <div style={{position:'absolute',top:145,width:'100%',textAlign:'center',opacity:headOpacity}}>
         <div style={{fontSize:35,letterSpacing:13,fontWeight:700,color:'#fbd998'}}>✦ B E M Y P A R O L ✦</div>
@@ -55,8 +73,15 @@ export function StoryFrame({data, frame, layer = 'all'}: {data: StoryData; frame
         opacity:layer === 'all' || layer === 'background' ? parolOpacity : 1,
         transform:layer === 'all' || layer === 'background' ? `scale(${zoom})` : undefined,
         transformOrigin:'center'}}>
-        {(layer === 'all' || layer === 'background') && <div style={{position:'absolute',inset:120,borderRadius:'50%',background:'rgba(250,189,93,.19)',
-          filter:'blur(115px)',opacity:sparkle}}/>}
+        {(layer === 'all' || layer === 'background') && <svg aria-hidden="true" width="840" height="890"
+          viewBox="0 0 840 890" style={{position:'absolute',inset:0,opacity:sparkle}}>
+          <defs><radialGradient id="story-glow-v2">
+            <stop offset="0%" stopColor="#fabd5d" stopOpacity=".21"/>
+            <stop offset="55%" stopColor="#fabd5d" stopOpacity=".13"/>
+            <stop offset="100%" stopColor="#fabd5d" stopOpacity="0"/>
+          </radialGradient></defs>
+          <ellipse cx="420" cy="445" rx="420" ry="445" fill="url(#story-glow-v2)"/>
+        </svg>}
         {layer !== 'background' && <>
         <svg viewBox="0 0 600 640" width="840" height="890" role="img"
           aria-label="Glowing Pampanga-inspired parol" style={{overflow:'visible'}}>
@@ -109,6 +134,7 @@ export function StoryFrame({data, frame, layer = 'all'}: {data: StoryData; frame
       </div>}
       {(layer === 'all' || layer === 'background') && <div style={{position:'absolute',inset:0,pointerEvents:'none',
         background:'linear-gradient(transparent 74%,rgba(5,10,21,.26))'}}/>}
+    </div>
     </div>
   )
 }

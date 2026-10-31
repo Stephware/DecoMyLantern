@@ -133,6 +133,20 @@ def measure(image, mode, output_dir, check_concurrency=False, concurrency_only=F
                     or cached_headers.get('x-story-cache') != 'HIT'):
                 raise RuntimeError(f'Unexpected concurrent request behavior: {results["concurrency"]}')
         results['peak_memory_bytes'] = int(cgroup(name, 'memory.peak'))
+        logs = subprocess.check_output(['docker', 'logs', name], text=True,
+            stderr=subprocess.STDOUT)
+        metrics = [json.loads(line.split('Story render metrics ', 1)[1])
+            for line in logs.splitlines() if 'Story render metrics ' in line]
+        if metrics:
+            results['profile'] = dict(zip(('simple', 'complex'), metrics))
+        asset_load = [json.loads(line.split('Story asset load ', 1)[1])
+            for line in logs.splitlines() if 'Story asset load ' in line]
+        if asset_load:
+            results['asset_load'] = asset_load[-1]
+        bundle = [json.loads(line.split('Story Chromium bundle ', 1)[1])
+            for line in logs.splitlines() if 'Story Chromium bundle ' in line]
+        if bundle:
+            results['startup_bundle'] = bundle[-1]
         return results
     finally:
         subprocess.run(['docker', 'stop', name], check=False,

@@ -18,15 +18,16 @@ test('one responsive sharing dialog offers both media formats', () => {
   assert.ok(component.includes('aspect-[9/16]'))
   assert.ok(component.includes('sm:max-w-[270px]'))
   assert.ok(component.includes('ResizeObserver'))
-  assert.ok(component.includes('<StoryFrame data={data} frame={200}/>'))
+  assert.ok(component.includes('<StoryFrame data={data} frame={160}/>'))
 })
 
 test('existing owner and friend exports share the same format-aware controls', () => {
   const component = read('features/story/StoryShare.tsx')
   const invite = read('features/invitations/InvitationManager.tsx')
   const guest = read('features/invitations/GuestInvitationPage.tsx')
-  assert.ok(component.includes("exportStoryMedia(data.kind, 'mp4', token, controller.signal)"))
-  assert.ok(component.includes('exportParolImage(data.kind, token, controller.signal)'))
+  assert.ok(component.includes("exportStoryMedia(data.kind,'png',token,controller.signal)"))
+  assert.ok(component.includes("renderStoryInBrowser(composition,controller.signal"))
+  assert.ok(component.includes('startStoryJob(data.kind,token,controller.signal)'))
   assert.ok(component.includes("const blob = selected === 'png' ? png : video"))
   assert.ok(component.includes('mediaKey !== dataKey'))
   assert.ok(component.includes('navigator.canShare?.({files: [file]})'))
@@ -71,7 +72,7 @@ test('modal keeps keyboard users safe and provides error fallback', () => {
 
 test('this phase does not introduce new media endpoints or parol geometry', () => {
   const component = read('features/story/StoryShare.tsx')
-  assert.ok(component.includes('Share the current saved parol as a transparent PNG'))
+  assert.ok(component.includes('Share the saved parol in the same 9:16 Story layout'))
   assert.ok(!component.includes('/api/'))
   assert.ok(!component.includes('ProceduralOuterShell'))
 })
