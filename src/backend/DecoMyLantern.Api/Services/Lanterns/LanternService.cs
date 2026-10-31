@@ -116,5 +116,6 @@ public sealed class LanternService(ILanternRepository repository, TimeProvider t
         GrowthPolicy.StageFor(lights.Count),
         lantern.UnlockAtUtc,
         lantern.CreatedAtUtc,
+        lantern.IsAdmin,
         lights);
 }

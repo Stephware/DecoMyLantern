@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import LanternScene from '../lantern/renderer/LanternScene'
 import { THEMES } from '../customization/themes'
+import { BannerAd, DesktopSideAds, NativeAd } from '../ads/AdPlacements'
 
 type Props = {
   legacyAvailable: boolean
@@ -31,8 +32,9 @@ export default function WelcomePage({
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f2e9] text-[#27392e]">
-      <header className="mx-auto flex max-w-[1300px] items-center justify-between gap-3 px-5 py-5 sm:px-9">
+    <div className="relative min-h-screen bg-[#f7f2e9] text-[#27392e]">
+      <DesktopSideAds />
+      <header className="mx-auto flex max-w-[1300px] items-center justify-between gap-3 px-5 py-5 sm:px-9 min-[1700px]:max-w-[1200px]">
         <div className="flex items-center gap-2 font-serif text-2xl font-semibold">
           <span className="text-[#aa7d41]" aria-hidden="true">✦</span> BeMyParol
         </div>
@@ -41,7 +43,7 @@ export default function WelcomePage({
         </span>
       </header>
 
-      <main className="mx-auto grid max-w-[1300px] items-center gap-7 px-5 pb-14 pt-5 sm:px-9 lg:min-h-[calc(100dvh-90px)] lg:grid-cols-[1.2fr_.8fr] lg:gap-12">
+      <main className="mx-auto grid max-w-[1300px] items-center gap-7 px-5 pb-14 pt-5 sm:px-9 lg:min-h-[calc(100dvh-90px)] lg:grid-cols-[1.2fr_.8fr] lg:gap-12 min-[1700px]:max-w-[1200px]">
         <section className="min-w-0">
           <div className="mb-5 max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[.23em] text-[#a87b42]">Bawat ilaw, may kwento</p>
@@ -113,6 +115,8 @@ export default function WelcomePage({
           </div>
         </section>
       </main>
+      <NativeAd />
+      <div className="mt-10"><BannerAd /></div>
     </div>
   )
 }

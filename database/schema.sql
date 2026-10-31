@@ -478,7 +478,6 @@ END;
 COMMIT;
 GO
 
-
 -- Data-only BeMyParol progressive-growth migration (idempotent, matching EF Core migration).
 -- EF migration remains the source of truth; regenerate this SQL with database/bootstrap.sh
 -- after verifying the migration using the local .NET SDK.
@@ -625,6 +624,20 @@ BEGIN
     ALTER TABLE [OwnerCredentials] ADD [RecoveryIssuedAtUtc] datetime2 NULL;
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
     VALUES (N'20261029080000_EncryptedOwnerRecoveryKeys', N'10.0.4');
+END;
+COMMIT;
+GO
+
+-- Admin access is opt-in per parol. Existing rows remain regular.
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT 1 FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261031100000_AdminParols'
+)
+BEGIN
+    ALTER TABLE [Lanterns] ADD [IsAdmin] bit NOT NULL DEFAULT CAST(0 AS bit);
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261031100000_AdminParols', N'10.0.4');
 END;
 COMMIT;
 GO

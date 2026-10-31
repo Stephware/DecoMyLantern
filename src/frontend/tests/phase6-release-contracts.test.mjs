@@ -4,11 +4,11 @@ import {readFileSync} from 'node:fs'
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
 
-test('Phase 1: diagnostic testing controls remain development-only', () => {
+test('Phase 1: diagnostic testing controls remain admin-only', () => {
   const dashboard = read('src/features/dashboard/HostDashboard.tsx')
-  const marker = dashboard.indexOf('{import.meta.env.DEV && <section')
-  assert.ok(marker >= 0, 'development lab must remain guarded')
-  assert.ok(dashboard.indexOf('Development testing lab') > marker)
+  const marker = dashboard.indexOf('{lantern.isAdmin && <section')
+  assert.ok(marker >= 0, 'admin lab must remain guarded')
+  assert.ok(dashboard.indexOf('Admin testing lab') > marker)
   const publicPortion = dashboard.slice(0, marker)
   assert.doesNotMatch(publicPortion, /Growth layers<\/div>|Three per friend/)
   assert.match(publicPortion, /Friends joined/)
@@ -98,11 +98,11 @@ test('legacy development preview closes the selected friend caption before the s
   assert.match(preview, /<figcaption role="status" aria-live="polite"/)
 })
 
-test('Vite build types expose import.meta.env for development-only controls', () => {
+test('dashboard testing controls use the admin parol flag', () => {
   const declarations = read('src/vite-env.d.ts')
   const dashboard = read('src/features/dashboard/HostDashboard.tsx')
   assert.match(declarations, /\/\/\/ <reference types="vite\/client" \/>/)
-  assert.match(dashboard, /import\.meta\.env\.DEV && <section/)
+  assert.match(dashboard, /lantern\.isAdmin && <section/)
 })
 
 test('recovery expiry display is null-safe without exposing recovery keys', () => {
