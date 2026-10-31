@@ -13,3 +13,4 @@
 **/*.log
 **/coverage
 **/TestResults
+/story-renderer/assets/generated

@@ -19,7 +19,7 @@ The film-like 8-second composition reveals the three most recent growth layers, 
 
 - **React web UI**: `StoryFrame.tsx` is a reusable deterministic SVG composition; `StoryShare.tsx` provides the preview, video generation button, native Web Share file hand-off, downloads, and link copying.
 - **ASP.NET API**: `StoryExportController` supports `POST /api/my/lantern/story` (owner cookie required) and `POST /api/invitations/story` (valid invitation **and** existing guest contribution required). Both require CSRF, are rate-limited, and collect only public parol fields from SQL. Owner/design data is never trusted from frontend export arguments.
-- **Private Node/Remotion renderer**: `story-renderer` receives sanitized Story props over the private Docker network and renders H.264 MP4 or PNG. It caches identical exports for 24 hours (up to 32 files) and runs one render job at a time. No public ingress or social API credentials.
+- **Private Node renderer**: `story-renderer` receives sanitized Story props over the private Docker network and renders H.264 MP4 or PNG. MP4s can use the FFmpeg composition path with a pre-rendered background or the original Remotion path. It caches identical exports for 24 hours (up to 32 files) and runs one render job at a time. No public ingress or social API credentials. See [Story rendering optimization](story-rendering-optimization.md) for the mode switch, assets and benchmarks.
 - **No database migration** for Stories. The existing backend stores all required light and pattern data.
 
 ## Local development: single command (recommended)

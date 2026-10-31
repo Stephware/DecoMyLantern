@@ -22,7 +22,12 @@ services:
     restart: unless-stopped
     environment:
       STORY_RENDERER_SECRET: ${STORY_RENDERER_SECRET:?Set STORY_RENDERER_SECRET in .env}
+      STORY_RENDERER_MODE: ${STORY_RENDERER_MODE:-ffmpeg}
+      STORY_RENDERER_TIMEOUT_MS: ${STORY_RENDERER_TIMEOUT_MS:-240000}
       PORT: "7070"
+    cpus: 2
+    mem_limit: 2g
+    pids_limit: 256
     # Not published: only the backend can reach the private render service.
 
   frontend:
