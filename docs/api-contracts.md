@@ -88,7 +88,7 @@ Lantern responses include `id`, `seasonYear`, `designKey`, `paletteKey`, `patter
 - GET `/api/health` — liveness
 - GET `/api/designs` — enabled catalogue (`designKey`, `name`, `assetKey`, `requiredFriends`); `requiredFriends` is legacy growth milestone metadata, not a selection gate.
 - GET `/api/growth-stages` — visual growth milestones (0, 3, 10, 23, 40, 50 friends); parol growth is unchanged.
-- GET `/api/my/lanterns/{lanternId}/messages` — owner-authenticated Christmas inbox with server-side pre-unlock body redaction; full frontend inbox planned for Phase 4.
+- GET `/api/my/lanterns/{lanternId}/messages` — owner-authenticated Christmas inbox. Message bodies remain redacted before Christmas for regular parols; an admin-marked parol can read its own messages early for debugging.
 
 ## Responsive design selection and full-bloom showcases
 

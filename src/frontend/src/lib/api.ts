@@ -34,7 +34,22 @@ export type Lantern = {
   growthStage: string
   unlockAtUtc: string
   createdAtUtc: string
+  isAdmin: boolean
   lights: ContributionLight[]
+}
+
+export type ChristmasLetter = {
+  id: string
+  displayName: string
+  createdAtUtc: string
+  isLocked: boolean
+  body: string | null
+}
+
+export type ChristmasInbox = {
+  unlocked: boolean
+  unlockAtUtc: string
+  messages: ChristmasLetter[]
 }
 
 export type Design = {
@@ -170,6 +185,8 @@ export function exportParolImage(kind: 'owner' | 'friend', token?: string, signa
 }
 
 export const getMyLantern = () => api<Lantern>('/api/my/lantern')
+export const getLanternMessages = (lanternId: string) =>
+  api<ChristmasInbox>(`/api/my/lanterns/${encodeURIComponent(lanternId)}/messages`)
 export const createMyLantern = () => api<Lantern>('/api/my/lantern', { method: 'POST' })
 export const updateMyLantern = (designKey: string, patternKey: string) =>
   api<Lantern>('/api/my/lantern', { method: 'PUT', body: JSON.stringify({ designKey, patternKey }) })

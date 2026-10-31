@@ -4,6 +4,7 @@ import LanternScene from '../lantern/renderer/LanternScene'
 import { THEMES } from '../customization/themes'
 import { isValidInvitationToken, invitationUrl } from './invitationLinks'
 import StoryShare from '../story/StoryShare'
+import { BannerAd, ContributionPopunder, DesktopSideAds } from '../ads/AdPlacements'
 
 type Props = { token: string }
 
@@ -64,8 +65,9 @@ export default function GuestInvitationPage({ token }: Props) {
   const alreadyContributed = submitted || preview?.alreadyContributed === true
 
   return (
-    <main className="min-h-screen bg-[#f7f2e9] px-4 pb-14 text-[#273a30] sm:px-7">
-      <div className="mx-auto max-w-[1250px]">
+    <main className="relative min-h-screen bg-[#f7f2e9] px-4 pb-14 text-[#273a30] sm:px-7">
+      <DesktopSideAds />
+      <div className="mx-auto max-w-[1250px] min-[1700px]:max-w-[1200px]">
         <header className="flex items-center justify-between gap-3 border-b border-[#e2d8c8] py-5">
           <a href="/" className="inline-flex items-center gap-2 font-serif text-2xl font-semibold text-[#293c30]">
             <span className="text-[#aa7c3b]" aria-hidden="true">✦</span> BeMyParol
@@ -113,6 +115,7 @@ export default function GuestInvitationPage({ token }: Props) {
           <aside id="add-light" className="scroll-mt-6 rounded-[26px] border border-[#e6d8c5] bg-[#fffdf8] p-6 shadow-[0_12px_35px_rgba(59,45,30,.07)] sm:p-8">
             {alreadyContributed ? (
               <div role="status">
+                <ContributionPopunder />
                 <span className="text-4xl text-[#ab7d3f]" aria-hidden="true">✦</span>
                 <h2 className="mt-3 font-serif text-3xl font-semibold">
                   {submitted ? 'Your light is shining!' : 'Your light is already here!'}
@@ -167,6 +170,7 @@ export default function GuestInvitationPage({ token }: Props) {
             )}
           </aside>
         </div>
+        <BannerAd />
       </div>
     </main>
   )

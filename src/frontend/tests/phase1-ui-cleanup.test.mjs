@@ -4,10 +4,11 @@ import { readFileSync } from 'node:fs'
 
 const read = file => readFileSync(new URL('../src/' + file, import.meta.url), 'utf8')
 
-test('production owner dashboard does not expose the development testing lab', () => {
+test('only an admin parol sees the testing lab and early message inbox', () => {
   const owner = read('features/dashboard/HostDashboard.tsx')
-  assert.ok(owner.includes('{import.meta.env.DEV && <section'))
-  assert.ok(owner.indexOf('{import.meta.env.DEV && <section') < owner.indexOf('Development testing lab'))
+  assert.ok(owner.includes('{lantern.isAdmin && <section'))
+  assert.ok(owner.indexOf('{lantern.isAdmin && <section') < owner.indexOf('Admin testing lab'))
+  assert.ok(owner.includes('{lantern.isAdmin && <AdminMessages'))
   assert.ok(owner.includes('showTestingLab'))
   assert.ok(owner.includes('previewCount={previewCount}'))
   assert.ok(owner.includes('snapshot={{kind:\'owner\',stateId:lantern.id}}'))
@@ -15,7 +16,7 @@ test('production owner dashboard does not expose the development testing lab', (
 
 test('owner summary focuses on friends and milestone, not technical growth counters', () => {
   const owner = read('features/dashboard/HostDashboard.tsx')
-  const publicScreen = owner.split('{import.meta.env.DEV && <section')[0]
+  const publicScreen = owner.split('{lantern.isAdmin && <section')[0]
   assert.ok(publicScreen.includes('Friends joined'))
   assert.ok(publicScreen.includes('Grand parol'))
   assert.ok(publicScreen.includes('aria-label="Progress toward 50 friends"'))

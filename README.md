@@ -211,6 +211,8 @@ docker compose -f compose.yaml ps
 
 Check `http://localhost:5173` for the frontend and `http://localhost:5173/api/health` for the API through Nginx. Use `docker compose -f compose.yaml down` to stop the stack. `FRONTEND_PORT` and `BACKEND_PORT` in `.env` can change the local host ports.
 
+Set `ADS_ENABLED=false` in the root `.env` to disable all frontend ad scripts and placements; set it to `true` to enable them. This is a frontend build setting, so apply changes with `docker compose -f compose.yaml up -d --build --no-deps frontend`. Restarting the existing container alone will not change it.
+
 ### Public domains through Cloudflare Tunnel
 
 The request path is `Cloudflare HTTPS → cloudflared → Caddy → frontend or backend`. Caddy serves HTTP only within the Docker network and on host loopback port 80. It routes `bemyparol.site` to the frontend and `api.bemyparol.site` to the backend. The backend's `/api/...` routes remain available; on `api.bemyparol.site`, `/health` is the public health URL and `/api/health` redirects to it. The direct frontend and backend ports are bound to localhost only.
