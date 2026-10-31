@@ -199,10 +199,11 @@ export default function CachedParolScene({
               className="parol-snapshot-wave-reveal pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
               style={{clipPath: `circle(${SNAPSHOT_WAVE_RADIUS[activeWave.wave]}% at 50% 47.2%)`}} />
             <svg viewBox="0 0 600 640" aria-hidden="true"
-              className="parol-snapshot-wave-glint pointer-events-none absolute inset-0 h-full w-full">
+              className="pointer-events-none absolute inset-0 h-full w-full">
               <circle key={activeWave.wave} cx="300" cy="302"
                 r={activeWave.wave === 1 ? 135 : activeWave.wave === 2 ? 240 : 295}
-                stroke="#ffe9a0" strokeWidth="7" fill="none" />
+                stroke="#ffe9a0" strokeWidth="7" fill="none"
+                className="parol-snapshot-wave-glint" />
             </svg>
           </>}
         </div>
