@@ -85,8 +85,15 @@ export function createStoryVideoJobs({
     const found = await status(payload)
     if (found.status === 'ready' || found.status === 'queued' || found.status === 'rendering')
       return found
+    // Concurrent start requests can interleave at the asynchronous file stat.
+    const existing = jobs.get(found.id)
+    if (existing && (existing.status === 'queued' || existing.status === 'rendering'))
+      return {status:existing.status, id:found.id}
+    for (const [key, job] of jobs)
+      if ((job.status === 'ready' || job.status === 'failed') &&
+          Date.now() - job.createdAt > ttlMs) jobs.delete(key)
     if (queue.length >= maxQueued) return {status:'busy', id:found.id}
-    const job = {payload, status:'queued'}
+    const job = {payload, status:'queued', createdAt:Date.now()}
     jobs.set(found.id, job)
     queue.push(job)
     schedule()
