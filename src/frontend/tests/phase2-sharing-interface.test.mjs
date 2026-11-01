@@ -21,7 +21,7 @@ test('one responsive sharing dialog offers both media formats', () => {
   assert.ok(component.includes('<StoryFrame data={data} frame={200}/>'))
 })
 
-test('existing owner and friend exports share the same format-aware controls', () => {
+test('owner exports keep format-aware controls without a post-contribution guest sharing button', () => {
   const component = read('features/story/StoryShare.tsx')
   const invite = read('features/invitations/InvitationManager.tsx')
   const guest = read('features/invitations/GuestInvitationPage.tsx')
@@ -38,7 +38,8 @@ test('existing owner and friend exports share the same format-aware controls', (
   assert.ok(component.includes('Copy invitation link'))
   assert.ok(component.includes('For Stories, add your invitation'))
   assert.ok(invite.includes('<StoryShare'))
-  assert.ok(guest.includes('<StoryShare'))
+  assert.ok(!guest.includes('<StoryShare'))
+  assert.ok(guest.includes('Create my own parol →'))
   assert.ok(!component.includes('instagramAccessToken'))
   assert.ok(!component.includes('facebookAccessToken'))
 })
