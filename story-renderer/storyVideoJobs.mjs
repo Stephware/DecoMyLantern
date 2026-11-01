@@ -74,6 +74,10 @@ export function createStoryVideoJobs({
     const id = storyVideoDigest(payload)
     if (await completed(payload)) return {status:'ready', id}
     const job = jobs.get(id)
+    if (job?.status === 'ready') {
+      jobs.delete(id) // Output expired or was cleaned up.
+      return {status:'not_found', id}
+    }
     return {status: job?.status ?? 'not_found', id}
   }
 
