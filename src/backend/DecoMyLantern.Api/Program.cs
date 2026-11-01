@@ -148,6 +148,22 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = 10, Window = TimeSpan.FromHours(1),
             QueueLimit = 0, AutoReplenishment = true
         }));
+    // Polling and downloading completed owner videos require a valid owner
+    // session; separate limits prevent status checks from spending render quota.
+    options.AddPolicy("story-video-status", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 100, Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("story-video-download", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 30, Window = TimeSpan.FromHours(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
     options.AddPolicy("story-guest", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
