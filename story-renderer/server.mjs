@@ -4,6 +4,7 @@ import {createReadStream} from 'node:fs'
 import {mkdir, readdir, stat, unlink, rename} from 'node:fs/promises'
 import sharp from 'sharp'
 import {validParolImage, parolImageDigest, PAROL_IMAGE_COMPOSITION} from './parolImage.mjs'
+import {createStoryVideoJobs} from './storyVideoJobs.mjs'
 import {tmpdir} from 'node:os'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
@@ -34,6 +35,19 @@ const serveUrl = await bundle({
   }),
 })
 let busy = false
+const videoJobs = createStoryVideoJobs({
+  renderDir,
+  isBusy: () => busy,
+  setBusy: value => { busy = value },
+  cleanup,
+  renderVideo: async (payload, output) => {
+    const {kind, designKey, patternKey, friendCount, slots, highlightSlot} = payload
+    const inputProps = {kind, designKey, patternKey, friendCount, slots, highlightSlot}
+    const composition = await selectComposition({serveUrl, id:'BeMyParolStory', inputProps})
+    await renderMedia({composition, serveUrl, codec:'h264', outputLocation:output, inputProps,
+      concurrency:2, crf:24, logLevel:'error', chromiumOptions:{enableMultiProcessOnLinux:true}})
+  },
+})
 
 const values = ['classic','floral','festival','celestial','fiesta','sampaguita']
 const patterns = ['default','rings','rays']
@@ -170,6 +184,39 @@ function respond(res, status, message) {
 }
 const server = http.createServer(async(req,res)=>{
   if (req.url === '/health' && req.method === 'GET') return respond(res,200,'ready')
+  // Private video jobs receive server-verified parol state, never a public file path.
+  if (['/story-video/start', '/story-video/status', '/story-video/file'].includes(req.url)) {
+    if (req.method !== 'POST') return respond(res,405,'Method not allowed')
+    if (!authorized(req)) return respond(res,403,'Forbidden')
+    const payload = await readPayload(req,res)
+    if (payload === null) return
+    if (!valid(payload) || payload.format !== 'mp4') return respond(res,400,'Invalid video state')
+    try {
+      if (req.url === '/story-video/start') {
+        const job = await videoJobs.start(payload)
+        res.writeHead(job.status === 'busy' ? 503 : 202, {
+          'content-type':'application/json', 'cache-control':'no-store',
+        })
+        return res.end(JSON.stringify({status:job.status}))
+      }
+      if (req.url === '/story-video/status') {
+        const job = await videoJobs.status(payload)
+        res.writeHead(200, {'content-type':'application/json', 'cache-control':'no-store'})
+        return res.end(JSON.stringify({status:job.status}))
+      }
+      if (!await videoJobs.completed(payload)) return respond(res,404,'Video not ready')
+      const file = videoJobs.filename(payload)
+      const info = await stat(file)
+      res.writeHead(200, {
+        'content-type':'video/mp4', 'content-length':info.size,
+        'cache-control':'private, no-store',
+      })
+      return createReadStream(file).pipe(res)
+    } catch (error) {
+      console.error('Story video job request failed:',error)
+      return respond(res,500,'Video job unavailable')
+    }
+  }
   if (!['/render', '/render-parol'].includes(req.url) || req.method !== 'POST')
     return respond(res,404,'Not found')
   if (!authorized(req)) return respond(res,403,'Forbidden')
