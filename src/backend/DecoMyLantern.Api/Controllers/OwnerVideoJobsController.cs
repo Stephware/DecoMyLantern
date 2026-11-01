@@ -97,7 +97,7 @@ public sealed class OwnerVideoJobsController(
                     path, (int)response.StatusCode);
                 if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
                 {
-                    Response.Headers.RetryAfter = "3";
+                    Response.Headers["Retry-After"] = "3";
                     return StatusCode(503, new {message = "Video renderer is busy. Try again shortly."});
                 }
                 return StatusCode(503, new {message = "Unable to check video rendering. Try again."});
@@ -110,7 +110,7 @@ public sealed class OwnerVideoJobsController(
             }
 
             Response.ContentType = "video/mp4";
-            Response.Headers.ContentDisposition = "attachment; filename=\"BeMyParol-Story.mp4\"";
+            Response.Headers["Content-Disposition"] = "attachment; filename=\"BeMyParol-Story.mp4\"";
             if (response.Content.Headers.ContentLength is long length)
                 Response.ContentLength = length;
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
