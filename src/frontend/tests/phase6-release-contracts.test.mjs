@@ -14,13 +14,14 @@ test('Phase 1: diagnostic testing controls remain admin-only', () => {
   assert.match(publicPortion, /Friends joined/)
 })
 
-test('Phases 2–3: owner and invited guest share the saved parol through the same UI', () => {
+test('Phases 2–3: owner sharing remains available but post-contribution guests only create a parol', () => {
   const share = read('src/features/story/StoryShare.tsx')
   const owner = read('src/features/invitations/InvitationManager.tsx')
   const guest = read('src/features/invitations/GuestInvitationPage.tsx')
   const api = read('src/lib/api.ts')
   assert.ok(owner.includes('<StoryShare'))
-  assert.ok(guest.includes('<StoryShare'))
+  assert.ok(!guest.includes('<StoryShare'))
+  assert.ok(guest.includes('Create my own parol →'))
   assert.ok(guest.includes('alreadyContributed ? ('))
   assert.ok(share.includes("exportParolImage(data.kind, token, controller.signal)"))
   assert.ok(share.includes("exportStoryMedia(data.kind, 'mp4', token, controller.signal)"))
