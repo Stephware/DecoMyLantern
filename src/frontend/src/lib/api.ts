@@ -124,6 +124,28 @@ export const signOutOwner = () => api<void>('/api/owner/sign-out', { method: 'PO
 export const finishOwnerSetup = () => api<void>('/api/owner/finish-setup', { method: 'POST' })
 export const cancelOwnerCreation = () => api<void>('/api/owner/cancel-creation', { method: 'POST' })
 
+export type OwnerVideoJobState = 'not_found' | 'queued' | 'rendering' | 'ready' | 'failed' | 'busy'
+
+/** Background MP4 jobs are bound server-side to the signed-in owner's saved parol. */
+export const startOwnerVideoJob = (signal?: AbortSignal) =>
+  api<{status: OwnerVideoJobState}>('/api/my/lantern/story/video/job', {method:'POST', signal})
+
+export const getOwnerVideoJobStatus = (signal?: AbortSignal) =>
+  api<{status: OwnerVideoJobState}>('/api/my/lantern/story/video/job', {signal})
+
+export async function getOwnerVideoJobFile(signal?: AbortSignal): Promise<Blob> {
+  const response = await fetch('/api/my/lantern/story/video/job/file', {
+    method:'GET', credentials:'same-origin', cache:'no-store', signal,
+  })
+  if (!response.ok) {
+    const payload: unknown = await response.json().catch(() => null)
+    throw new ApiError(response.status, errorMessage(payload, 'Your video is not ready yet.'))
+  }
+  if (response.headers.get('content-type')?.split(';')[0]?.trim() !== 'video/mp4')
+    throw new Error('Unexpected video format.')
+  return response.blob()
+}
+
 // Story exports are binary, so do not use the JSON-only api<T> helper.
 export async function exportStoryMedia(kind: 'owner' | 'friend', format: 'mp4' | 'png', token?: string, signal?: AbortSignal): Promise<Blob> {
   const guest = kind === 'friend'
