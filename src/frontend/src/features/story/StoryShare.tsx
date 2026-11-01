@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
-import {exportParolImage, exportStoryMedia} from '../../lib/api'
+import {exportParolImage, exportStoryMedia, startOwnerVideoJob,
+  getOwnerVideoJobStatus, getOwnerVideoJobFile, type OwnerVideoJobState} from '../../lib/api'
 import {prepareMediaWithRetry} from './mediaExportTask'
 import {StoryFrame, type StoryData, type StoryFormat} from './StoryFrame'
 
@@ -41,6 +42,8 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
   const [videoUrl, setVideoUrl] = useState('')
   const [pngUrl, setPngUrl] = useState('')
   const [previewScale, setPreviewScale] = useState(.25)
+  const [videoJobStatus, setVideoJobStatus] = useState<OwnerVideoJobState | 'checking'>('not_found')
+  const [videoJobRefresh, setVideoJobRefresh] = useState(0)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLElement>(null)
@@ -60,7 +63,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     activeRequest.current = null
     setBusy(null)
     setRetrying(0)
-    setNotice('Preparation cancelled. Previously generated media stays available.')
+    setNotice('The browser request stopped. Any accepted video job continues in the background.')
   }, [])
 
   const closeDialog = useCallback(() => {
@@ -90,6 +93,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     setRetrying(0)
     setNotice('')
     setError('')
+    setVideoJobStatus('not_found')
   }, [dataKey])
 
   // Navigating away must not leave requests, retries or state updates running.
@@ -111,6 +115,44 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     setPngUrl(url)
     return () => URL.revokeObjectURL(url)
   }, [png])
+
+  // A queued video runs on the private renderer even after the modal or tab
+  // closes. On reopening, re-check the saved owner parol and load its MP4.
+  useEffect(() => {
+    if (!open || format !== 'mp4' || data.kind !== 'owner' ||
+        (videoKey === dataKey && video)) return
+    const controller = new AbortController()
+    let timer: number | undefined
+    let active = true
+    setVideoJobStatus('checking')
+
+    async function check() {
+      try {
+        const result = await getOwnerVideoJobStatus(controller.signal)
+        if (!active || latestDataKey.current !== dataKey) return
+        setVideoJobStatus(result.status)
+        if (result.status === 'ready') {
+          const blob = await getOwnerVideoJobFile(controller.signal)
+          if (!active || latestDataKey.current !== dataKey) return
+          setVideo(blob)
+          setVideoKey(dataKey)
+          setNotice('Your animated Story is ready.')
+        } else if (result.status === 'queued' || result.status === 'rendering') {
+          timer = window.setTimeout(() => void check(), 3000)
+        }
+      } catch (caught) {
+        if (!active || controller.signal.aborted || latestDataKey.current !== dataKey) return
+        setVideoJobStatus('failed')
+        setError(caught instanceof Error ? caught.message : 'Unable to check your video. Try again.')
+      }
+    }
+    void check()
+    return () => {
+      active = false
+      controller.abort()
+      if (timer !== undefined) window.clearTimeout(timer)
+    }
+  }, [open, format, data.kind, dataKey, videoJobRefresh, videoKey, video])
 
   // Keep keyboard focus in the dialog, restore it to the opener on close,
   // and stop the underlying page scrolling on mobile.
@@ -173,6 +215,19 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     setError('')
 
     try {
+      if (selected === 'mp4' && data.kind === 'owner') {
+        // The API accepts the job promptly; no MP4 bytes are waited for here.
+        // Closing this dialog cancels only this request, not the queued render.
+        const job = await startOwnerVideoJob(controller.signal)
+        if (controller.signal.aborted || latestDataKey.current !== requestedKey ||
+            activeRequest.current !== request) return
+        if (job.status === 'busy') throw new Error('The video queue is full. Try again shortly.')
+        setVideoJobStatus(job.status)
+        setNotice(job.status === 'ready' ? 'Video is ready to load.' :
+          'Video queued. You can leave this page and come back later.')
+        setVideoJobRefresh(n => n + 1)
+        return
+      }
       const blob = await prepareMediaWithRetry(
         () => selected === 'mp4'
           ? exportStoryMedia(data.kind, 'mp4', token, controller.signal)
@@ -244,6 +299,8 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     ? (pngKey === dataKey ? png : null)
     : (videoKey === dataKey ? video : null)
   const fileName = format === 'png' ? 'BeMyParol-Parol.png' : 'BeMyParol-Story.mp4'
+  const awaitingVideo = data.kind === 'owner' && format === 'mp4' && !ready &&
+    ['checking', 'queued', 'rendering', 'ready'].includes(videoJobStatus)
 
   return <>
     <button ref={triggerRef} type="button" onClick={() => setOpen(true)}
@@ -335,11 +392,21 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
                 <p className="mt-1 text-xs">This can take a moment. You may cancel the request.</p>
               </div>}
 
+              {data.kind === 'owner' && format === 'mp4' && !ready &&
+                (videoJobStatus === 'queued' || videoJobStatus === 'rendering' ||
+                 videoJobStatus === 'ready') && <div role="status" aria-live="polite"
+                  className="rounded-xl border border-[#d7c19a] bg-[#faf0dc] p-3 text-sm text-[#5a4b34]">
+                  {videoJobStatus === 'ready'
+                    ? 'Your video is ready. Loading it for sharing…'
+                    : 'Your video is rendering in the background. You can close this page and return to Share your parol to retrieve it.'}
+                </div>}
               <div className="space-y-2">
                 {!ready ? (
-                  <button type="button" disabled={busy !== null} onClick={() => void generate(format)}
+                  <button type="button" disabled={busy !== null || awaitingVideo} onClick={() => void generate(format)}
                     className={primary}>
-                    {busy === format ? 'Preparing…' : error ? 'Try again' : format === 'png' ? 'Prepare parol PNG' : 'Generate animated MP4'}
+                    {awaitingVideo ? 'Rendering in background…' :
+                      busy === format ? 'Preparing…' : error ? 'Try again' :
+                      format === 'png' ? 'Prepare parol PNG' : 'Generate animated MP4'}
                   </button>
                 ) : (
                   <>
