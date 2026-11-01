@@ -42,8 +42,8 @@ This is an **application-level asynchronous implementation**, not a durable
 distributed rendering service:
 
 - Pending/active jobs live in the **renderer process memory**. Browser logout
-  or closing the tab does not cancel accepted work, but **restarting/crashing
-  the renderer interrupts pending work**. The owner can requeue if needed.
+  or closing the tab does not cancel accepted work, but a **service restart or crash
+  interrupts pending work**. The owner can requeue if needed.
 - Finished MP4 files are retained on the **same renderer's temporary disk**
   for **up to 24 hours**, subject to its existing 32-file cache cap; files
   may disappear sooner under heavy traffic or if temporary storage is erased.
