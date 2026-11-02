@@ -40,18 +40,25 @@ test('identical saved parol snapshots share one reusable image', () => {
   assert.ok(PAROL_IMAGE_VERSION.includes('snapshot'))
 })
 
-test('2x zoom cache is distinct, validated, and standard image cache stays compatible', () => {
-  assert.equal(validParolImage({...base, scale:1}), true)
-  assert.equal(validParolImage({...base, scale:2}), true)
-  assert.equal(validParolImage({...base, format:'png', scale:2}), false)
-  for (const scale of [0, -1, 1.5, 3, null, '2']) {
+test('1x/2x cache compatibility and distinct validated 3x variant', () => {
+  for (const scale of [1, 2, 3]) assert.equal(validParolImage({...base, scale}), true)
+  for (const scale of [2, 3])
+    assert.equal(validParolImage({...base, format:'png', scale}), false)
+  for (const scale of [0, -1, 1.5, 4, null, '2', '3', NaN]) {
     assert.equal(validParolImage({...base, scale}), false)
   }
-  assert.equal(parolImageDigest(base), parolImageDigest({...base, scale:1}),
+  const one = parolImageDigest(base)
+  const two = parolImageDigest({...base, scale:2})
+  const three = parolImageDigest({...base, scale:3})
+  assert.equal(one, parolImageDigest({...base, scale:1}),
     'existing standard cache must not be invalidated')
-  assert.notEqual(parolImageDigest(base), parolImageDigest({...base, scale:2}))
-  assert.equal(parolImageDigest({...base, scale:2}),
-    parolImageDigest({...base, slots:[2, 0, 1], scale:2}))
+  assert.notEqual(one, two)
+  assert.notEqual(one, three)
+  assert.notEqual(two, three)
+  for (const scale of [2, 3]) {
+    assert.equal(parolImageDigest({...base, scale}),
+      parolImageDigest({...base, slots:[2, 0, 1], scale}))
+  }
 })
 
 test('parol snapshot uses exactly the current approved artwork, not Story framing', () => {
