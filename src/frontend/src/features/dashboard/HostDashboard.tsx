@@ -6,6 +6,8 @@ import { THEMES } from '../customization/themes'
 import { FirstTimeDesignPicker, MobileDesignDrawer } from '../customization/DesignSelectionPanels'
 import RecoveryKeyDialog from '../owner/RecoveryKeyDialog'
 import InvitationManager from '../invitations/InvitationManager'
+import AdminMessages from './AdminMessages'
+import { BannerAd, DesktopSideAds, RectangleAd } from '../ads/AdPlacements'
 import type { Design, Lantern } from '../../lib/api'
 
 type Props = {
@@ -110,9 +112,10 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f2e9] pb-28 text-[#283a30] lg:pb-10">
+    <div className="relative min-h-screen bg-[#f7f2e9] pb-28 text-[#283a30] lg:pb-10">
+      <DesktopSideAds />
       <header className="relative border-b border-[#e5dac8] bg-[#fffaf2]/95">
-        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:flex-nowrap sm:gap-4 sm:px-8 lg:py-5">
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:flex-nowrap sm:gap-4 sm:px-8 lg:py-5 min-[1700px]:max-w-[1200px]">
           <div className="flex items-center gap-2.5">
             <span className="text-2xl text-[#a77a3d]" aria-hidden="true">✦</span>
             <span className="font-serif text-2xl font-semibold tracking-tight text-[#283b2f]">BeMyParol</span>
@@ -130,7 +133,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1440px] px-4 pb-10 pt-6 sm:px-8 sm:pt-9">
+      <main className="mx-auto max-w-[1440px] px-4 pb-10 pt-6 sm:px-8 sm:pt-9 min-[1700px]:max-w-[1200px]">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-4 sm:mb-7">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[.24em] text-[#a27848]">Your Christmas story · {lantern?.seasonYear ?? new Date().getFullYear()}</p>
@@ -226,6 +229,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
                     </p>
                   </div>
                 </div>
+                {lantern.isAdmin && <AdminMessages lanternId={lantern.id} friendCount={accepted} />}
               </section>
 
               <aside className="min-w-0 space-y-4">
@@ -252,14 +256,15 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
                   </button>
                 </section>
 
+                <RectangleAd />
               </aside>
             </div>
 
-            {import.meta.env.DEV && <section className="mt-8 rounded-2xl border border-dashed border-[#d8c7ae] bg-[#fffaf3] p-4 sm:p-5">
+            {lantern.isAdmin && <section className="mt-8 rounded-2xl border border-dashed border-[#d8c7ae] bg-[#fffaf3] p-4 sm:p-5">
               <button type="button" aria-expanded={showTestingLab}
                 onClick={() => setShowTestingLab(value => !value)}
                 className="flex w-full items-center justify-between gap-3 text-left text-sm font-semibold text-[#74614e]">
-                <span>Development testing lab <span className="font-normal text-[#a28f77]">· unsaved simulations</span></span>
+                <span>Admin testing lab <span className="font-normal text-[#a28f77]">· unsaved simulations</span></span>
                 <span aria-hidden="true">{showTestingLab ? '↑ Hide' : '↓ Show'}</span>
               </button>
               {showTestingLab && <div className="mt-4 space-y-4 border-t border-[#e4d8c9] pt-4">
@@ -285,6 +290,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
           </>
         )}
       </main>
+      <BannerAd />
 
       {lantern && !pickerOpen && <MobileDesignDrawer
         open={drawerOpen} onOpenChange={setDrawerOpen}

@@ -28,6 +28,8 @@ services:
   frontend:
     build:
       context: ./src/frontend
+      args:
+        VITE_ADS_ENABLED: ${ADS_ENABLED:-true}
     depends_on:
       - backend
     restart: unless-stopped

@@ -4,6 +4,7 @@ import {createReadStream} from 'node:fs'
 import {mkdir, readdir, stat, unlink, rename} from 'node:fs/promises'
 import sharp from 'sharp'
 import {validParolImage, parolImageDigest, PAROL_IMAGE_COMPOSITION} from './parolImage.mjs'
+import {createStoryVideoJobs} from './storyVideoJobs.mjs'
 import {tmpdir} from 'node:os'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
@@ -34,6 +35,19 @@ const serveUrl = await bundle({
   }),
 })
 let busy = false
+const videoJobs = createStoryVideoJobs({
+  renderDir,
+  isBusy: () => busy,
+  setBusy: value => { busy = value },
+  cleanup,
+  renderVideo: async (payload, output) => {
+    const {kind, designKey, patternKey, friendCount, slots, highlightSlot} = payload
+    const inputProps = {kind, designKey, patternKey, friendCount, slots, highlightSlot}
+    const composition = await selectComposition({serveUrl, id:'BeMyParolStory', inputProps})
+    await renderMedia({composition, serveUrl, codec:'h264', outputLocation:output, inputProps,
+      concurrency:2, crf:24, logLevel:'error', chromiumOptions:{enableMultiProcessOnLinux:true}})
+  },
+})
 
 const values = ['classic','floral','festival','celestial','fiesta','sampaguita']
 const patterns = ['default','rings','rays']
@@ -70,11 +84,21 @@ async function cleanupImages() {
     if (!info || !info.isFile()) continue
     if (now - info.mtimeMs > 24 * 60 * 60 * 1000) await unlink(file).catch(() => {})
     else if (name.endsWith('.png') || name.endsWith('.webp'))
-      keep.push({file, mtime: info.mtimeMs})
+      keep.push({file, name, mtime: info.mtimeMs})
   }
-  // Keep the cache bounded independently of Story video exports.
-  for (const item of keep.sort((a, b) => b.mtime - a.mtime).slice(128))
-    await unlink(item.file).catch(() => {})
+  // Keep normal cached parols prioritized: only 32 high-res files and
+  // 128 total snapshots. A busy season cannot fill disk with 2x variants.
+  let retained = 0
+  let highResolutionRetained = 0
+  for (const item of keep.sort((a, b) => b.mtime - a.mtime)) {
+    const high = item.name.endsWith('-2x.webp')
+    if (retained >= 128 || (high && highResolutionRetained >= 32)) {
+      await unlink(item.file).catch(() => {})
+      continue
+    }
+    retained++
+    if (high) highResolutionRetained++
+  }
 }
 
 async function readPayload(req, res) {
@@ -115,8 +139,10 @@ async function renderParolImage(req, res) {
   if (!validParolImage(request)) return respond(res, 400, 'Invalid parol image data')
 
   const {designKey, patternKey, friendCount, slots, format} = request
+  const scale = request.scale === 2 ? 2 : 1
   const digest = parolImageDigest(request)
-  const file = path.join(imageDir, digest + '.' + format)
+  // Only high-res names carry the suffix; existing standard cache files survive.
+  const file = path.join(imageDir, digest + (scale === 2 ? '-2x' : '') + '.' + format)
   const cachedInfo = await stat(file).catch(() => null)
   if (cachedInfo?.isFile() && cachedInfo.size > 512 &&
       Date.now() - cachedInfo.mtimeMs < 24 * 60 * 60 * 1000)
@@ -138,7 +164,7 @@ async function renderParolImage(req, res) {
     })
     await renderStill({
       composition, serveUrl, output: tmpPng, inputProps,
-      frame: 0, imageFormat: 'png',
+      frame: 0, imageFormat: 'png', scale,
     })
     if (format === 'webp') {
       await sharp(tmpPng).webp({quality: 86, effort: 4}).toFile(tmpWebp)
@@ -170,6 +196,39 @@ function respond(res, status, message) {
 }
 const server = http.createServer(async(req,res)=>{
   if (req.url === '/health' && req.method === 'GET') return respond(res,200,'ready')
+  // Private video jobs receive server-verified parol state, never a public file path.
+  if (['/story-video/start', '/story-video/status', '/story-video/file'].includes(req.url)) {
+    if (req.method !== 'POST') return respond(res,405,'Method not allowed')
+    if (!authorized(req)) return respond(res,403,'Forbidden')
+    const payload = await readPayload(req,res)
+    if (payload === null) return
+    if (!valid(payload) || payload.format !== 'mp4') return respond(res,400,'Invalid video state')
+    try {
+      if (req.url === '/story-video/start') {
+        const job = await videoJobs.start(payload)
+        res.writeHead(job.status === 'busy' ? 503 : 202, {
+          'content-type':'application/json', 'cache-control':'no-store',
+        })
+        return res.end(JSON.stringify({status:job.status}))
+      }
+      if (req.url === '/story-video/status') {
+        const job = await videoJobs.status(payload)
+        res.writeHead(200, {'content-type':'application/json', 'cache-control':'no-store'})
+        return res.end(JSON.stringify({status:job.status}))
+      }
+      if (!await videoJobs.completed(payload)) return respond(res,404,'Video not ready')
+      const file = videoJobs.filename(payload)
+      const info = await stat(file)
+      res.writeHead(200, {
+        'content-type':'video/mp4', 'content-length':info.size,
+        'cache-control':'private, no-store',
+      })
+      return createReadStream(file).pipe(res)
+    } catch (error) {
+      console.error('Story video job request failed:',error)
+      return respond(res,500,'Video job unavailable')
+    }
+  }
   if (!['/render', '/render-parol'].includes(req.url) || req.method !== 'POST')
     return respond(res,404,'Not found')
   if (!authorized(req)) return respond(res,403,'Forbidden')

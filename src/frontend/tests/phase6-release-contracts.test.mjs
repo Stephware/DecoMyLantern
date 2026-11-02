@@ -4,23 +4,24 @@ import {readFileSync} from 'node:fs'
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
 
-test('Phase 1: diagnostic testing controls remain development-only', () => {
+test('Phase 1: diagnostic testing controls remain admin-only', () => {
   const dashboard = read('src/features/dashboard/HostDashboard.tsx')
-  const marker = dashboard.indexOf('{import.meta.env.DEV && <section')
-  assert.ok(marker >= 0, 'development lab must remain guarded')
-  assert.ok(dashboard.indexOf('Development testing lab') > marker)
+  const marker = dashboard.indexOf('{lantern.isAdmin && <section')
+  assert.ok(marker >= 0, 'admin lab must remain guarded')
+  assert.ok(dashboard.indexOf('Admin testing lab') > marker)
   const publicPortion = dashboard.slice(0, marker)
   assert.doesNotMatch(publicPortion, /Growth layers<\/div>|Three per friend/)
   assert.match(publicPortion, /Friends joined/)
 })
 
-test('Phases 2–3: owner and invited guest share the saved parol through the same UI', () => {
+test('Phases 2–3: owner sharing remains available but post-contribution guests only create a parol', () => {
   const share = read('src/features/story/StoryShare.tsx')
   const owner = read('src/features/invitations/InvitationManager.tsx')
   const guest = read('src/features/invitations/GuestInvitationPage.tsx')
   const api = read('src/lib/api.ts')
   assert.ok(owner.includes('<StoryShare'))
-  assert.ok(guest.includes('<StoryShare'))
+  assert.ok(!guest.includes('<StoryShare'))
+  assert.ok(guest.includes('Create my own parol →'))
   assert.ok(guest.includes('alreadyContributed ? ('))
   assert.ok(share.includes("exportParolImage(data.kind, token, controller.signal)"))
   assert.ok(share.includes("exportStoryMedia(data.kind, 'mp4', token, controller.signal)"))
@@ -98,11 +99,11 @@ test('legacy development preview closes the selected friend caption before the s
   assert.match(preview, /<figcaption role="status" aria-live="polite"/)
 })
 
-test('Vite build types expose import.meta.env for development-only controls', () => {
+test('dashboard testing controls use the admin parol flag', () => {
   const declarations = read('src/vite-env.d.ts')
   const dashboard = read('src/features/dashboard/HostDashboard.tsx')
   assert.match(declarations, /\/\/\/ <reference types="vite\/client" \/>/)
-  assert.match(dashboard, /import\.meta\.env\.DEV && <section/)
+  assert.match(dashboard, /lantern\.isAdmin && <section/)
 })
 
 test('recovery expiry display is null-safe without exposing recovery keys', () => {

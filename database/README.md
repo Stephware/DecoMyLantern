@@ -52,3 +52,17 @@ result before relying on the SQL script in production.
 Avoid `docker compose down -v` or rebuilding a production database from
 scratch. Replacing a recovery key requires deliberate owner confirmation;
 opening its dialog never rotates any key.
+
+## Admin parols
+
+Migration `20261031100000_AdminParols` adds `Lanterns.IsAdmin` as a required
+`bit` column with a default of `0`; existing and new parols remain regular.
+After applying the migration, promote only the chosen parol by its ID:
+
+```sql
+UPDATE dbo.Lanterns SET IsAdmin = 1 WHERE Id = '<parol-guid>';
+```
+
+The owner message endpoint still checks ownership. An admin parol can read
+its own message bodies before Christmas and sees the testing lab; regular
+parols receive locked message bodies until the normal unlock time.

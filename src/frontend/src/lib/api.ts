@@ -34,7 +34,22 @@ export type Lantern = {
   growthStage: string
   unlockAtUtc: string
   createdAtUtc: string
+  isAdmin: boolean
   lights: ContributionLight[]
+}
+
+export type ChristmasLetter = {
+  id: string
+  displayName: string
+  createdAtUtc: string
+  isLocked: boolean
+  body: string | null
+}
+
+export type ChristmasInbox = {
+  unlocked: boolean
+  unlockAtUtc: string
+  messages: ChristmasLetter[]
 }
 
 export type Design = {
@@ -109,6 +124,28 @@ export const signOutOwner = () => api<void>('/api/owner/sign-out', { method: 'PO
 export const finishOwnerSetup = () => api<void>('/api/owner/finish-setup', { method: 'POST' })
 export const cancelOwnerCreation = () => api<void>('/api/owner/cancel-creation', { method: 'POST' })
 
+export type OwnerVideoJobState = 'not_found' | 'queued' | 'rendering' | 'ready' | 'failed' | 'busy'
+
+/** Background MP4 jobs are bound server-side to the signed-in owner's saved parol. */
+export const startOwnerVideoJob = (signal?: AbortSignal) =>
+  api<{status: OwnerVideoJobState}>('/api/my/lantern/story/video/job', {method:'POST', signal})
+
+export const getOwnerVideoJobStatus = (signal?: AbortSignal) =>
+  api<{status: OwnerVideoJobState}>('/api/my/lantern/story/video/job', {signal})
+
+export async function getOwnerVideoJobFile(signal?: AbortSignal): Promise<Blob> {
+  const response = await fetch('/api/my/lantern/story/video/job/file', {
+    method:'GET', credentials:'same-origin', cache:'no-store', signal,
+  })
+  if (!response.ok) {
+    const payload: unknown = await response.json().catch(() => null)
+    throw new ApiError(response.status, errorMessage(payload, 'Your video is not ready yet.'))
+  }
+  if (response.headers.get('content-type')?.split(';')[0]?.trim() !== 'video/mp4')
+    throw new Error('Unexpected video format.')
+  return response.blob()
+}
+
 // Story exports are binary, so do not use the JSON-only api<T> helper.
 export async function exportStoryMedia(kind: 'owner' | 'friend', format: 'mp4' | 'png', token?: string, signal?: AbortSignal): Promise<Blob> {
   const guest = kind === 'friend'
@@ -140,6 +177,7 @@ export async function fetchParolSnapshot(
   token?: string,
   signal?: AbortSignal,
   format: 'webp' | 'png' = 'webp',
+  scale: 1 | 2 = 1,
 ): Promise<Blob> {
   if (kind === 'guest' && !token) throw new Error('Missing invitation token.')
   const guest = kind === 'guest'
@@ -149,7 +187,10 @@ export async function fetchParolSnapshot(
   const response = await fetch(path, {
     method: 'POST', credentials: 'same-origin', cache: 'no-store', signal,
     headers: {'Content-Type':'application/json', 'X-CSRF-TOKEN':csrf},
-    body: JSON.stringify(guest ? {token, format} : {format}),
+    // Normal / PNG request bodies stay unchanged; only zoomed WebP adds scale.
+    body: JSON.stringify(guest
+      ? {token, format, ...(scale === 2 ? {scale} : {})}
+      : {format, ...(scale === 2 ? {scale} : {})}),
   })
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null)
@@ -170,6 +211,8 @@ export function exportParolImage(kind: 'owner' | 'friend', token?: string, signa
 }
 
 export const getMyLantern = () => api<Lantern>('/api/my/lantern')
+export const getLanternMessages = (lanternId: string) =>
+  api<ChristmasInbox>(`/api/my/lanterns/${encodeURIComponent(lanternId)}/messages`)
 export const createMyLantern = () => api<Lantern>('/api/my/lantern', { method: 'POST' })
 export const updateMyLantern = (designKey: string, patternKey: string) =>
   api<Lantern>('/api/my/lantern', { method: 'PUT', body: JSON.stringify({ designKey, patternKey }) })
