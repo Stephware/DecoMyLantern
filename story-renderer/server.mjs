@@ -84,11 +84,21 @@ async function cleanupImages() {
     if (!info || !info.isFile()) continue
     if (now - info.mtimeMs > 24 * 60 * 60 * 1000) await unlink(file).catch(() => {})
     else if (name.endsWith('.png') || name.endsWith('.webp'))
-      keep.push({file, mtime: info.mtimeMs})
+      keep.push({file, name, mtime: info.mtimeMs})
   }
-  // Keep the cache bounded independently of Story video exports.
-  for (const item of keep.sort((a, b) => b.mtime - a.mtime).slice(128))
-    await unlink(item.file).catch(() => {})
+  // Keep normal cached parols prioritized: only 32 high-res files and
+  // 128 total snapshots. A busy season cannot fill disk with 2x variants.
+  let retained = 0
+  let highResolutionRetained = 0
+  for (const item of keep.sort((a, b) => b.mtime - a.mtime)) {
+    const high = item.name.endsWith('-2x.webp')
+    if (retained >= 128 || (high && highResolutionRetained >= 32)) {
+      await unlink(item.file).catch(() => {})
+      continue
+    }
+    retained++
+    if (high) highResolutionRetained++
+  }
 }
 
 async function readPayload(req, res) {
@@ -131,7 +141,8 @@ async function renderParolImage(req, res) {
   const {designKey, patternKey, friendCount, slots, format} = request
   const scale = request.scale === 2 ? 2 : 1
   const digest = parolImageDigest(request)
-  const file = path.join(imageDir, digest + '.' + format)
+  // Only high-res names carry the suffix; existing standard cache files survive.
+  const file = path.join(imageDir, digest + (scale === 2 ? '-2x' : '') + '.' + format)
   const cachedInfo = await stat(file).catch(() => null)
   if (cachedInfo?.isFile() && cachedInfo.size > 512 &&
       Date.now() - cachedInfo.mtimeMs < 24 * 60 * 60 * 1000)
