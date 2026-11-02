@@ -14,6 +14,9 @@ export function validParolImage(input) {
     designs.includes(input.designKey) &&
     patterns.includes(input.patternKey) &&
     PAROL_IMAGE_FORMATS.includes(input.format) &&
+    (input.scale === undefined || input.scale === 1 || input.scale === 2) &&
+    // High-resolution on-demand requests are WebP only; keep PNG exports unchanged.
+    (input.scale !== 2 || input.format === 'webp') &&
     Number.isSafeInteger(input.friendCount) &&
     input.friendCount >= 0 && input.friendCount <= 10000 &&
     Array.isArray(input.slots) && input.slots.length <= 500 &&
@@ -32,6 +35,8 @@ export function parolImageDigest(input) {
     friendCount: input.friendCount,
     slots: [...input.slots].sort((a, b) => a - b),
     format: input.format,
+    // Preserve the existing digest (and its on-disk cache) at standard scale.
+    ...(input.scale === 2 ? {scale: 2} : {}),
   }
   return crypto.createHash('sha256').update(JSON.stringify(canonical)).digest('hex')
 }

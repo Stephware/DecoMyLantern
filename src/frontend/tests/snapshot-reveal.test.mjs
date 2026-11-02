@@ -56,7 +56,7 @@ test('frontend animates the SINGLE completed cached image and never rebuilds SVG
   assert.ok(viewer.includes('URL.revokeObjectURL(url)'))
   assert.ok(viewer.includes('controller.abort()'))
   assert.ok(viewer.includes("snapshot.kind === 'guest' ? snapshot.token"))
-  assert.ok(viewer.includes('visibleImage && <image href={visibleImage.url}'))
+  assert.ok(viewer.includes('visibleImage && <image href={displayedImageUrl}'))
   assert.ok(viewer.includes('activeWave && <image href={activeWave.next.url}'))
   assert.ok(!viewer.includes('<ProceduralOuterShell'))
   assert.ok(!viewer.includes('<ParolArtwork'))
