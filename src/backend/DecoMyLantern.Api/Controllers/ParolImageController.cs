@@ -17,8 +17,8 @@ public class ParolImageRequest
     [Required, RegularExpression("^(webp|png)$")]
     public string Format { get; set; } = "webp";
 
-    // 2x only when explicitly requested on zoom. Never auto-upscale PNG exports.
-    [Range(1, 2)]
+    // 2x/3x only on zoom; normal viewing and PNG exports remain 1x.
+    [Range(1, 3)]
     public int Scale { get; set; } = 1;
 }
 
@@ -54,7 +54,7 @@ public sealed class ParolImageController(
         [FromBody] ParolImageRequest request, CancellationToken cancellationToken)
     {
         if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid request token." });
-        if (request.Scale == 2 && request.Format != "webp")
+        if (request.Scale > 1 && request.Format != "webp")
             return BadRequest(new { message = "High-resolution images are available only as WebP." });
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var ownerId))
             return Unauthorized();
@@ -75,7 +75,7 @@ public sealed class ParolImageController(
         [FromBody] GuestParolImageRequest request, CancellationToken cancellationToken)
     {
         if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid request token." });
-        if (request.Scale == 2 && request.Format != "webp")
+        if (request.Scale > 1 && request.Format != "webp")
             return BadRequest(new { message = "High-resolution images are available only as WebP." });
 
         // The validated invitation is the only public read capability; a guest
