@@ -86,18 +86,22 @@ async function cleanupImages() {
     else if (name.endsWith('.png') || name.endsWith('.webp'))
       keep.push({file, name, mtime: info.mtimeMs})
   }
-  // Keep normal cached parols prioritized: only 32 high-res files and
-  // 128 total snapshots. A busy season cannot fill disk with 2x variants.
+  // Keep normal snapshots prioritized: at most 32 2x and 12 3x WebPs
+  // within the original 128-image / 24-hour private disk cache.
   let retained = 0
-  let highResolutionRetained = 0
+  let doubleRetained = 0
+  let tripleRetained = 0
   for (const item of keep.sort((a, b) => b.mtime - a.mtime)) {
-    const high = item.name.endsWith('-2x.webp')
-    if (retained >= 128 || (high && highResolutionRetained >= 32)) {
+    const double = item.name.endsWith('-2x.webp')
+    const triple = item.name.endsWith('-3x.webp')
+    if (retained >= 128 || (double && doubleRetained >= 32) ||
+        (triple && tripleRetained >= 12)) {
       await unlink(item.file).catch(() => {})
       continue
     }
     retained++
-    if (high) highResolutionRetained++
+    if (double) doubleRetained++
+    if (triple) tripleRetained++
   }
 }
 
@@ -139,10 +143,10 @@ async function renderParolImage(req, res) {
   if (!validParolImage(request)) return respond(res, 400, 'Invalid parol image data')
 
   const {designKey, patternKey, friendCount, slots, format} = request
-  const scale = request.scale === 2 ? 2 : 1
+  const scale = request.scale === 2 || request.scale === 3 ? request.scale : 1
   const digest = parolImageDigest(request)
-  // Only high-res names carry the suffix; existing standard cache files survive.
-  const file = path.join(imageDir, digest + (scale === 2 ? '-2x' : '') + '.' + format)
+  // Existing 1x and 2x filenames remain untouched for cache compatibility.
+  const file = path.join(imageDir, digest + (scale > 1 ? `-${scale}x` : '') + '.' + format)
   const cachedInfo = await stat(file).catch(() => null)
   if (cachedInfo?.isFile() && cachedInfo.size > 512 &&
       Date.now() - cachedInfo.mtimeMs < 24 * 60 * 60 * 1000)
