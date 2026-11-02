@@ -22,12 +22,13 @@ public sealed class ParolImageScaleTests
     }
 
     [Fact]
-    public void Only_one_x_and_two_x_scales_are_valid_for_parol_image_requests()
+    public void Only_one_two_and_three_x_scales_are_valid_for_parol_image_requests()
     {
         Assert.True(IsValid(new ParolImageRequest { Scale = 1 }));
         Assert.True(IsValid(new ParolImageRequest { Scale = 2 }));
+        Assert.True(IsValid(new ParolImageRequest { Scale = 3 }));
         Assert.False(IsValid(new ParolImageRequest { Scale = 0 }));
-        Assert.False(IsValid(new ParolImageRequest { Scale = 3 }));
+        Assert.False(IsValid(new ParolImageRequest { Scale = 4 }));
         Assert.False(IsValid(new ParolImageRequest { Scale = -2 }));
     }
 
@@ -36,6 +37,9 @@ public sealed class ParolImageScaleTests
     {
         Assert.True(IsValid(new GuestParolImageRequest {
             Format = "webp", Scale = 2, Token = new string('A', 16),
+        }));
+        Assert.True(IsValid(new GuestParolImageRequest {
+            Format = "webp", Scale = 3, Token = new string('A', 16),
         }));
         Assert.False(IsValid(new GuestParolImageRequest {
             Format = "webp", Scale = 4, Token = new string('A', 16),
