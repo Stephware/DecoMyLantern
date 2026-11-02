@@ -40,6 +40,20 @@ test('identical saved parol snapshots share one reusable image', () => {
   assert.ok(PAROL_IMAGE_VERSION.includes('snapshot'))
 })
 
+test('2x zoom cache is distinct, validated, and standard image cache stays compatible', () => {
+  assert.equal(validParolImage({...base, scale:1}), true)
+  assert.equal(validParolImage({...base, scale:2}), true)
+  assert.equal(validParolImage({...base, format:'png', scale:2}), false)
+  for (const scale of [0, -1, 1.5, 3, null, '2']) {
+    assert.equal(validParolImage({...base, scale}), false)
+  }
+  assert.equal(parolImageDigest(base), parolImageDigest({...base, scale:1}),
+    'existing standard cache must not be invalidated')
+  assert.notEqual(parolImageDigest(base), parolImageDigest({...base, scale:2}))
+  assert.equal(parolImageDigest({...base, scale:2}),
+    parolImageDigest({...base, slots:[2, 0, 1], scale:2}))
+})
+
 test('parol snapshot uses exactly the current approved artwork, not Story framing', () => {
   const composition = readFileSync(new URL('../remotionEntry.tsx', import.meta.url), 'utf8')
   const snapshot = readFileSync(
