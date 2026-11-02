@@ -23,6 +23,8 @@ type ImageTransition = { next: RenderedImage; wave: SnapshotWave }
 
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 4
+const HIGH_RES_ZOOM_THRESHOLD = 1.75
+const HIGH_RES_DEBOUNCE_MS = 400
 const WIDTH = 600
 const HEIGHT = 640
 const CENTER_X = 300
@@ -44,6 +46,10 @@ export default function CachedParolScene({
   )
 
   const [rendered, setRendered] = useState<RenderedImage | null>(null)
+  const [highRes, setHighRes] = useState<RenderedImage | null>(null)
+  // Suppress repeated requests on a failed zoom while the user stays zoomed.
+  // Zooming back out allows a new attempt if the server was temporarily busy.
+  const attemptedHighResKey = useRef<string | null>(null)
   const [transition, setTransition] = useState<ImageTransition | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -86,14 +92,14 @@ export default function CachedParolScene({
     return () => { for (const url of all) URL.revokeObjectURL(url); all.clear() }
   }, [])
   useEffect(() => {
-    const needed = new Set([rendered?.url, transition?.next.url])
+    const needed = new Set([rendered?.url, transition?.next.url, highRes?.url])
     for (const url of ownedUrls.current) {
       if (!needed.has(url)) {
         URL.revokeObjectURL(url)
         ownedUrls.current.delete(url)
       }
     }
-  }, [rendered?.url, transition?.next.url])
+  }, [rendered?.url, transition?.next.url, highRes?.url])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -102,6 +108,8 @@ export default function CachedParolScene({
     setError('')
     setSelectedId(null)
     setTransition(null)
+    setHighRes(null)
+    attemptedHighResKey.current = null
 
     async function load() {
       for (let tries = 0; tries < 3; tries++) {
@@ -178,6 +186,80 @@ export default function CachedParolScene({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stateKey, attempt])
 
+  // Standard WebP remains the default; only zooming past 1.75x requests a
+  // real 2x raster of the SAME approved SVG. This is intentionally optional:
+  // a timeout or busy server never blocks normal viewing, zoom or growth.
+  const wantsHighRes = camera.zoom >= HIGH_RES_ZOOM_THRESHOLD
+  const standardReady = rendered?.key === stateKey && transition === null
+
+  useEffect(() => {
+    if (!wantsHighRes) {
+      attemptedHighResKey.current = null
+      return
+    }
+    if (!standardReady || highRes?.key === stateKey ||
+        attemptedHighResKey.current === stateKey) return
+
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      if (controller.signal.aborted) return
+      attemptedHighResKey.current = stateKey
+
+      async function loadHighRes() {
+        for (let tries = 0; tries < 3; tries++) {
+          if (controller.signal.aborted) return
+          try {
+            const blob = await fetchParolSnapshot(
+              snapshot.kind,
+              snapshot.kind === 'guest' ? snapshot.token : undefined,
+              controller.signal, 'webp', 2,
+            )
+            if (controller.signal.aborted) return
+            const url = URL.createObjectURL(blob)
+            ownedUrls.current.add(url)
+            try {
+              const image = new Image()
+              image.src = url
+              await image.decode()
+            } catch {
+              URL.revokeObjectURL(url)
+              ownedUrls.current.delete(url)
+              return // Keep the normal image on corrupt/undecodable data.
+            }
+            if (controller.signal.aborted) {
+              URL.revokeObjectURL(url)
+              ownedUrls.current.delete(url)
+              return
+            }
+            setHighRes({key:stateKey, url, source, designKey:theme.key,
+              patternKey:pattern, friendCount})
+            return
+          } catch (failure) {
+            if (controller.signal.aborted) return
+            if (failure instanceof ApiError && failure.status === 503 && tries < 2) {
+              await new Promise<void>(resolve => {
+                const timer = window.setTimeout(resolve, (tries + 1) * 2000)
+                controller.signal.addEventListener('abort', () => {
+                  window.clearTimeout(timer)
+                  resolve()
+                }, {once:true})
+              })
+              continue
+            }
+            // 401/403/429/oversize and persistent busy results are not retried.
+            // Zooming out and in again permits a later attempt.
+            return
+          }
+        }
+      }
+      void loadHighRes()
+    }, HIGH_RES_DEBOUNCE_MS)
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [wantsHighRes, standardReady, stateKey, highRes?.key])
+
   // Identical timing to the original 750ms / 850ms / 1100ms growth sequence.
   useEffect(() => {
     if (!transition) return
@@ -198,6 +280,9 @@ export default function CachedParolScene({
   const visibleImage = rendered?.source === source ? rendered : null
   const activeWave = transition?.next.key === stateKey ? transition : null
   const ready = visibleImage?.key === stateKey && activeWave === null
+  // Preserve the one-image viewer: swap its URL only after 2x decoding.
+  const displayedImageUrl = highRes?.key === visibleImage?.key &&
+    highRes?.source === source ? highRes.url : visibleImage?.url
   const fit = outerFitZoom(growthForFriends(friendCount))
   const selected = contributions.find(light => light.id === selectedId)
   const selectedPoint = selected && ready ? lightPosition(selected.slotIndex) : null
@@ -293,7 +378,7 @@ export default function CachedParolScene({
           <g transform={transform} style={{
             transition: pointers.current.size === 0 ? 'transform 420ms ease-out' : 'none',
           }}>
-            {visibleImage && <image href={visibleImage.url} width="600" height="640"
+            {visibleImage && <image href={displayedImageUrl} width="600" height="640"
               preserveAspectRatio="xMidYMid meet" />}
             {activeWave && <image href={activeWave.next.url} width="600" height="640"
               preserveAspectRatio="xMidYMid meet" pointerEvents="none"
