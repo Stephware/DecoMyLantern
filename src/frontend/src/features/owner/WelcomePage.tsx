@@ -53,9 +53,17 @@ export default function WelcomePage({
             </p>
           </div>
           <div className="overflow-hidden rounded-[26px] border border-[#263e34] bg-[#15251e] p-3 shadow-[0_20px_55px_rgba(34,48,34,.18)] sm:p-5">
-            <img src="/parol-classic-preview.svg" width={600} height={640}
-              alt="BeMyParol Classic Gold Filipino festival parol"
-              draggable={false} decoding="async"
+            <img src="/api/designs/classic/showcase?v=v1" width={1200} height={1280}
+              alt="Classic Gold grand parol fully grown with 50 sample friends"
+              draggable={false} decoding="async" loading="eager"
+              onError={event => {
+                // Keep the welcome screen usable when the private showcase
+                // renderer is busy; never mount a draggable SVG preview.
+                if (!event.currentTarget.src.endsWith('/parol-classic-preview.svg')) {
+                  event.currentTarget.src = '/parol-classic-preview.svg'
+                  event.currentTarget.alt = 'BeMyParol Classic Gold festival parol'
+                }
+              }}
               className="pointer-events-none mx-auto block h-auto w-full max-w-[710px] select-none" />
           </div>
         </section>
