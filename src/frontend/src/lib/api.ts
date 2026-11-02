@@ -177,7 +177,7 @@ export async function fetchParolSnapshot(
   token?: string,
   signal?: AbortSignal,
   format: 'webp' | 'png' = 'webp',
-  scale: 1 | 2 = 1,
+  scale: 1 | 2 | 3 = 1,
 ): Promise<Blob> {
   if (kind === 'guest' && !token) throw new Error('Missing invitation token.')
   const guest = kind === 'guest'
@@ -189,8 +189,8 @@ export async function fetchParolSnapshot(
     headers: {'Content-Type':'application/json', 'X-CSRF-TOKEN':csrf},
     // Normal / PNG request bodies stay unchanged; only zoomed WebP adds scale.
     body: JSON.stringify(guest
-      ? {token, format, ...(scale === 2 ? {scale} : {})}
-      : {format, ...(scale === 2 ? {scale} : {})}),
+      ? {token, format, ...(scale > 1 ? {scale} : {})}
+      : {format, ...(scale > 1 ? {scale} : {})}),
   })
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null)

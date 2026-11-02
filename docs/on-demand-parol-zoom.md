@@ -1,81 +1,87 @@
-# On-demand 2x parol snapshots for zoom
+# Adaptive parol zoom images (1x, 2x, 3x)
 
-## Problem
-Actual saved owner/guest parols are rasterized once as 1200x1280 WebP (quality
-86). The UI supports up to 4x zoom but currently magnifies that fixed bitmap,
-which softens the fine geometry in the approved SVG ornament.
+The actual owner/guest parol uses the **same approved vector SVG artwork**
+and always starts with the existing 1200x1280 WebP at quality 86.
+Only deliberate zooming requests additional resolution:
 
-## Implemented behavior
-- **Default remains unchanged:** 1200x1280 WebP, quality 86, the same
-  authenticated POST `/api/my/lantern/image` and `/api/invitations/image`.
-- **Only when zoom >= 1.75x:** After a 400ms debounce, request the same parol
-  at `scale:2`; the backend always retrieves authoritative owner or invitation
-  state, never accepts client-supplied designs or light slots.
-- The private Remotion renderer calls `renderStill({scale:2})` on the exact same
-  `BeMyParolSnapshot` composition, yielding **2400x2560 real rendered pixels**
-  rather than enlarging a 1x bitmap. Sharp still encodes WebP quality 86.
-- The 2x output has a **distinct SHA-256 cache key**. Standard-scale requests
-  retain their previous digest and reuse existing cached files. Owner and
-  invited guests accessing the same saved state and scale share the same
-  renderer disk cache.
-- Existing renderer cache remains **up to 24 hours / 128 images total**,
-  including **at most 32 high-resolution WebPs**, with at most
-  one cold render active at a time. Cache hits reuse the file. Cold 2x misses
-  during another render respond 503. The browser makes at most three requests
-  with short backoff after 503; other errors don't retry automatically.
-- The current standard WebP remains visible and zoomable while 2x loads and
-  decodes; the viewer swaps a single image URL after success. Abort/cancel,
-  object URL cleanup, state-key guard and fallback to the standard image
-  prevent stale images or blank displays. Zoom out and back in allows a
-  previously failed upgrade to retry; loaded 2x remains reused in the current
-  view.
-- **Unchanged:** SVG artwork, growth rules, actual owner/guest pan/zoom/fit,
-  friend-light highlight/selection, three-wave growth animation, public static
-  welcome image, PNG sharing and MP4 Story rendering.
+| Viewer zoom | Requested scale | Rendered pixels | Delay |
+| --- | --- | --- | --- |
+| Below 1.75x | 1x | 1200x1280 | Normal page load |
+| 1.75x to below 3x | 2x | 2400x2560 | 400 ms |
+| 3x to 4x (maximum) | 3x | 3600x3840 | 800 ms |
 
-## Performance and limits
-A 2x render processes **4x the pixels** of a standard snapshot. This cost is
-incurred only on a cold 2x cache miss following deliberate user zoom; standard
-visitors never request it. A short debounce and deduplication of the cached
-SHA-256 output prevent unnecessary repeat rendering. The renderer remains
-single-render CPU bounded with the existing 503 and retry behavior.
+The page requests **only the desired higher-resolution tier**. Jumping
+directly from normal view to 4x zoom therefore does not initiate a 2x
+request as well. Existing 2x images remain available as a fallback while
+a 3x image loads. The same zoom, pan, Fit and clickable friend lights work.
 
-The API still enforces its **12 MB image-response limit**. Oversized high-res
-files cannot be served through it, so the browser retains standard quality.
-The 128-file cache cap applies across both scales, with an additional
-32-file limit for the 2x variants so normal snapshots keep priority; 2x files
-occupy more disk space and retention may be less than 24 hours under heavy use. Persistent
-cloud/shared storage and multiple-renderer deduplication are **not included**.
+## Caching and load control
 
-## Verification
-Run from the repository root:
+- Both authorized POST image endpoints continue to read canonical saved owner
+  or guest state. Browser requests include only `format:'webp'` and, for
+  on-demand upgrades, `scale:2` or `scale:3` (plus invitation token for
+  guests). **No private messages, names or arbitrary artwork payloads**.
+- The private Remotion renderer rasterizes the exact same
+  `BeMyParolSnapshot` SVG using `renderStill({scale})`; Sharp still encodes
+  WebP with quality 86. Static PNG exports and animated MP4 Stories are
+  unchanged.
+- Cache keys are based on approved design, pattern, actual friend count,
+  sorted light slots and resolution. **1x and 2x digests and filenames remain
+  compatible with the previous version**. 3x has a distinct digest and
+  `-3x.webp` suffix. Identical owner/guest snapshots share renderer cache
+  files without being exposed through public URLs.
+- Renderer cache bounds: **128 total images**, **at most 32 at 2x** and
+  **at most 12 at 3x**, retained for **up to 24 hours**. Recently requested
+  images have priority on cleanup. No extra server or storage service is
+  required.
+- At most **one renderer job** runs at a time. Cold misses return 503 while
+  busy, with existing bounded retries; completed cache hits return quickly.
+  The browser uses a debounce and cancels requests on a zoom-tier change,
+  new parol state or unmount, avoiding repetitive upgrades.
+- If the requested image fails, exceeds the existing **12 MB API response
+  limit**, or the server is busy, the viewer keeps its already-loaded 2x
+  or 1x image. It never blanks the parol. A later deliberate zoom change
+  can retry.
+- The browser reuses decoded 2x and 3x images within the same parol view,
+  and object URLs are cleaned up when the saved state changes or the
+  component unmounts.
+
+**Important:** A 3x render processes **9 times the pixels of 1x** and **2.25
+times those of 2x**. The small cache and on-demand threshold reduce load,
+but a first-time render may still be CPU- and RAM-intensive on the renderer.
+The server operator should verify peak memory and latency with large
+50-friend parols before production. Cache retention can end earlier than
+24 hours under heavy use; caching is local to each renderer instance, not
+distributed across multiple hosts.
+
+## Validation
+
+From repository root:
 
 ```bash
 bash scripts/verify-phase6.sh --skip-install
-cd story-renderer && npm test
-cd ../src/frontend && npm test && npm run typecheck && npm run lint && npm run build
+(cd story-renderer && npm test)
+(cd src/frontend && npm test && npm run typecheck && npm run lint && npm run build)
+dotnet test DecoMyLantern.slnx
 ```
 
-Manual checks:
-1. Open actual saved owner and invited-guest parols. At zoom 1x, inspect the
-   network request body: it contains only `format:'webp'` (plus guest token),
-   no scale field.
-2. Zoom past 1.75x and hold for >400ms; the additional authorized WebP POST
-   includes `scale:2`. Decode/image pixel dimensions should be 2400x2560.
-3. At the same zoom, reopen/re-request identical parol data: renderer
-   `X-Parol-Cache` should report `HIT`, without a second cold Remotion render.
-   Zooming repeatedly in one mount should not cause additional image requests.
-4. Compare 1x and 2x at 2-4x zoom on a real phone/desktop: ornament edges and
-   fine decoration should be measurably clearer, with unchanged geometry.
-5. Simulate 503, a 12MB image rejection, delayed network, a rapidly changing
-   friend count and zooming out during the fetch. The standard image must
-   remain usable; outdated or aborted high-res results must not be displayed.
-6. Verify pan, Fit, selecting light labels, and a newly accepted friend's
-   three-wave growth reveal, with no extra high-res render until the wave
-   ends and zoom remains above the threshold.
-7. Verify PNG export still sends only `format:'png'`, the Story MP4 is
-   unaffected, and the public welcome page remains static.
+Manual checks with Chrome DevTools Network > Fetch/XHR:
 
-No database migrations, Cloudflare/server-host configuration, new
-infrastructure dependencies or parol design changes are required. Full
-end-to-end Remotion and real-device checks remain necessary before release.
+1. At normal zoom, the owner/guest image POST contains no `scale`; the
+   default 1200x1280 WebP is used.
+2. At about 2x zoom, after 400ms, inspect `scale:2` and a 2400x2560
+   image. A repeated identical request reports `X-Parol-Cache: HIT`.
+3. At 3x or 4x zoom, after 800ms, inspect `scale:3` and a 3600x3840
+   image. On a cache miss, the renderer generates it once; on a hit
+   it returns the prior file. Verify no simultaneous 2x request when
+   jumping directly to 4x.
+4. Simulate slow network, busy 503, 12MB rejection, zooming out during
+   load and changing the friend count: parol stays visible with the best
+   available image and never shows a stale state.
+5. Confirm owner/guest drag, pinch, zoom, Fit, friend-light selection,
+   three-wave growth reveals, PNG/MP4 sharing, and public static welcome
+   parol remain unchanged.
+
+There is no EF Core migration, hosting configuration change, external
+rendering service or change to the approved artwork. Full browser/rendering
+and peak-load tests are required before production release.

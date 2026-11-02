@@ -25,6 +25,8 @@ const MIN_ZOOM = 0.5
 const MAX_ZOOM = 4
 const HIGH_RES_ZOOM_THRESHOLD = 1.75
 const HIGH_RES_DEBOUNCE_MS = 400
+const ULTRA_RES_ZOOM_THRESHOLD = 3
+const ULTRA_RES_DEBOUNCE_MS = 800
 const WIDTH = 600
 const HEIGHT = 640
 const CENTER_X = 300
@@ -47,9 +49,10 @@ export default function CachedParolScene({
 
   const [rendered, setRendered] = useState<RenderedImage | null>(null)
   const [highRes, setHighRes] = useState<RenderedImage | null>(null)
-  // Suppress repeated requests on a failed zoom while the user stays zoomed.
-  // Zooming back out allows a new attempt if the server was temporarily busy.
-  const attemptedHighResKey = useRef<string | null>(null)
+  const [ultraRes, setUltraRes] = useState<RenderedImage | null>(null)
+  // Only one upgrade can be requested at a time. Failed upgrades are not
+  // retried continuously; leaving the zoom tier allows another attempt.
+  const attemptedUpgrade = useRef<{key: string; scale: 2 | 3} | null>(null)
   const [transition, setTransition] = useState<ImageTransition | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -93,14 +96,14 @@ export default function CachedParolScene({
     return () => { for (const url of all) URL.revokeObjectURL(url); all.clear() }
   }, [])
   useEffect(() => {
-    const needed = new Set([rendered?.url, transition?.next.url, highRes?.url])
+    const needed = new Set([rendered?.url, transition?.next.url, highRes?.url, ultraRes?.url])
     for (const url of ownedUrls.current) {
       if (!needed.has(url)) {
         URL.revokeObjectURL(url)
         ownedUrls.current.delete(url)
       }
     }
-  }, [rendered?.url, transition?.next.url, highRes?.url])
+  }, [rendered?.url, transition?.next.url, highRes?.url, ultraRes?.url])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -110,7 +113,8 @@ export default function CachedParolScene({
     setSelectedId(null)
     setTransition(null)
     setHighRes(null)
-    attemptedHighResKey.current = null
+    setUltraRes(null)
+    attemptedUpgrade.current = null
 
     async function load() {
       for (let tries = 0; tries < 3; tries++) {
@@ -187,33 +191,34 @@ export default function CachedParolScene({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stateKey, attempt])
 
-  // Standard WebP remains the default; only zooming past 1.75x requests a
-  // real 2x raster of the SAME approved SVG. This is intentionally optional:
-  // a timeout or busy server never blocks normal viewing, zoom or growth.
-  const wantsHighRes = camera.zoom >= HIGH_RES_ZOOM_THRESHOLD
+  // Render higher resolutions only when the user deliberately zooms in.
+  // Crossing directly to 3x zoom requests ONLY a 3x image, never both tiers.
+  // A cached 2x remains visible while the 3x variant is being decoded.
+  const desiredScale: 1 | 2 | 3 = camera.zoom >= ULTRA_RES_ZOOM_THRESHOLD ? 3
+    : camera.zoom >= HIGH_RES_ZOOM_THRESHOLD ? 2 : 1
   const standardReady = rendered?.key === stateKey && transition === null
+  const desiredImage = desiredScale === 3 ? ultraRes : highRes
 
   useEffect(() => {
-    if (!wantsHighRes) {
-      attemptedHighResKey.current = null
+    if (desiredScale === 1) {
+      attemptedUpgrade.current = null
       return
     }
-    if (!standardReady || highRes?.key === stateKey ||
-        attemptedHighResKey.current === stateKey) return
+    if (!standardReady || desiredImage?.key === stateKey ||
+        (attemptedUpgrade.current?.key === stateKey &&
+         attemptedUpgrade.current.scale === desiredScale)) return
 
     const controller = new AbortController()
     const timer = window.setTimeout(() => {
       if (controller.signal.aborted) return
-      attemptedHighResKey.current = stateKey
+      attemptedUpgrade.current = {key: stateKey, scale: desiredScale}
 
-      async function loadHighRes() {
+      async function loadUpgrade() {
         for (let tries = 0; tries < 3; tries++) {
           if (controller.signal.aborted) return
           try {
             const blob = await fetchParolSnapshot(
-              snapshot.kind,
-              guestToken,
-              controller.signal, 'webp', 2,
+              snapshot.kind, guestToken, controller.signal, 'webp', desiredScale,
             )
             if (controller.signal.aborted) return
             const url = URL.createObjectURL(blob)
@@ -225,41 +230,46 @@ export default function CachedParolScene({
             } catch {
               URL.revokeObjectURL(url)
               ownedUrls.current.delete(url)
-              return // Keep the normal image on corrupt/undecodable data.
+              return // Continue displaying the existing lower-resolution image.
             }
             if (controller.signal.aborted) {
               URL.revokeObjectURL(url)
               ownedUrls.current.delete(url)
               return
             }
-            setHighRes({key:stateKey, url, source, designKey:theme.key,
-              patternKey:pattern, friendCount})
+            const next: RenderedImage = {key:stateKey, url, source,
+              designKey:theme.key, patternKey:pattern, friendCount}
+            if (desiredScale === 3) setUltraRes(next)
+            else setHighRes(next)
             return
           } catch (failure) {
             if (controller.signal.aborted) return
             if (failure instanceof ApiError && failure.status === 503 && tries < 2) {
               await new Promise<void>(resolve => {
-                const timer = window.setTimeout(resolve, (tries + 1) * 2000)
+                const wait = window.setTimeout(resolve, (tries + 1) * 2000)
                 controller.signal.addEventListener('abort', () => {
-                  window.clearTimeout(timer)
+                  window.clearTimeout(wait)
                   resolve()
                 }, {once:true})
               })
               continue
             }
-            // 401/403/429/oversize and persistent busy results are not retried.
-            // Zooming out and in again permits a later attempt.
+            // No automatic retry of 401/403/429/oversize or permanent failures.
             return
           }
         }
       }
-      void loadHighRes()
-    }, HIGH_RES_DEBOUNCE_MS)
+      void loadUpgrade()
+    }, desiredScale === 3 ? ULTRA_RES_DEBOUNCE_MS : HIGH_RES_DEBOUNCE_MS)
+
     return () => {
       window.clearTimeout(timer)
       controller.abort()
+      if (attemptedUpgrade.current?.key === stateKey &&
+          attemptedUpgrade.current.scale === desiredScale)
+        attemptedUpgrade.current = null
     }
-  }, [wantsHighRes, standardReady, stateKey, highRes?.key,
+  }, [desiredScale, standardReady, stateKey, desiredImage?.key,
     snapshot.kind, guestToken, source, theme.key, pattern, friendCount])
 
   // Identical timing to the original 750ms / 850ms / 1100ms growth sequence.
@@ -283,8 +293,11 @@ export default function CachedParolScene({
   const activeWave = transition?.next.key === stateKey ? transition : null
   const ready = visibleImage?.key === stateKey && activeWave === null
   // Preserve the one-image viewer: swap its URL only after 2x decoding.
-  const displayedImageUrl = highRes?.key === visibleImage?.key &&
-    highRes?.source === source ? highRes.url : visibleImage?.url
+  const displayedImageUrl = desiredScale === 3 &&
+    ultraRes?.key === visibleImage?.key && ultraRes?.source === source
+      ? ultraRes.url
+      : highRes?.key === visibleImage?.key && highRes?.source === source
+        ? highRes.url : visibleImage?.url
   const fit = outerFitZoom(growthForFriends(friendCount))
   const selected = contributions.find(light => light.id === selectedId)
   const selectedPoint = selected && ready ? lightPosition(selected.slotIndex) : null
