@@ -65,6 +65,7 @@ export default function CachedParolScene({
   const source = snapshot.kind === 'owner'
     ? `owner:${snapshot.stateId}`
     : `guest:${snapshot.stateId}:${snapshot.token}`
+  const guestToken = snapshot.kind === 'guest' ? snapshot.token : undefined
 
   useEffect(() => { displayedRef.current = rendered }, [rendered])
   useEffect(() => { transitionRef.current = transition }, [transition])
@@ -211,7 +212,7 @@ export default function CachedParolScene({
           try {
             const blob = await fetchParolSnapshot(
               snapshot.kind,
-              snapshot.kind === 'guest' ? snapshot.token : undefined,
+              guestToken,
               controller.signal, 'webp', 2,
             )
             if (controller.signal.aborted) return
@@ -258,7 +259,8 @@ export default function CachedParolScene({
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [wantsHighRes, standardReady, stateKey, highRes?.key])
+  }, [wantsHighRes, standardReady, stateKey, highRes?.key,
+    snapshot.kind, guestToken, source, theme.key, pattern, friendCount])
 
   // Identical timing to the original 750ms / 850ms / 1100ms growth sequence.
   useEffect(() => {
