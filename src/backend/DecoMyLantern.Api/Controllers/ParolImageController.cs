@@ -56,8 +56,6 @@ public sealed class ParolImageController(
         if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid request token." });
         if (request.Scale == 2 && request.Format != "webp")
             return BadRequest(new { message = "High-resolution images are available only as WebP." });
-        if (request.Scale == 2 && request.Format != "webp")
-            return BadRequest(new { message = "High-resolution images are available only as WebP." });
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var ownerId))
             return Unauthorized();
 
@@ -77,6 +75,8 @@ public sealed class ParolImageController(
         [FromBody] GuestParolImageRequest request, CancellationToken cancellationToken)
     {
         if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid request token." });
+        if (request.Scale == 2 && request.Format != "webp")
+            return BadRequest(new { message = "High-resolution images are available only as WebP." });
 
         // The validated invitation is the only public read capability; a guest
         // does not need to contribute to view the existing parol.
