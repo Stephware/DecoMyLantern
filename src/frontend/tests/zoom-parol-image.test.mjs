@@ -78,9 +78,9 @@ test('zoom upgrades never replace existing real-parol zoom or growth interaction
 })
 
 test('renderer renders real 2x pixels, with the same geometry and bounded cache', () => {
-  const renderer = read('../story-renderer/server.mjs')
-  const keys = read('../story-renderer/parolImage.mjs')
-  const api = read('../src/backend/DecoMyLantern.Api/Controllers/ParolImageController.cs')
+  const renderer = read('../../story-renderer/server.mjs')
+  const keys = read('../../story-renderer/parolImage.mjs')
+  const api = read('../../src/backend/DecoMyLantern.Api/Controllers/ParolImageController.cs')
   assert.ok(renderer.includes('const scale = request.scale === 2 ? 2 : 1'))
   assert.ok(renderer.includes("frame: 0, imageFormat: 'png', scale"))
   assert.ok(renderer.includes('sharp(tmpPng).webp({quality: 86, effort: 4})'))
