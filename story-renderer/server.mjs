@@ -129,6 +129,7 @@ async function renderParolImage(req, res) {
   if (!validParolImage(request)) return respond(res, 400, 'Invalid parol image data')
 
   const {designKey, patternKey, friendCount, slots, format} = request
+  const scale = request.scale === 2 ? 2 : 1
   const digest = parolImageDigest(request)
   const file = path.join(imageDir, digest + '.' + format)
   const cachedInfo = await stat(file).catch(() => null)
@@ -152,7 +153,7 @@ async function renderParolImage(req, res) {
     })
     await renderStill({
       composition, serveUrl, output: tmpPng, inputProps,
-      frame: 0, imageFormat: 'png',
+      frame: 0, imageFormat: 'png', scale,
     })
     if (format === 'webp') {
       await sharp(tmpPng).webp({quality: 86, effort: 4}).toFile(tmpWebp)
