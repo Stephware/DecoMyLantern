@@ -18,7 +18,8 @@ which softens the fine geometry in the approved SVG ornament.
   retain their previous digest and reuse existing cached files. Owner and
   invited guests accessing the same saved state and scale share the same
   renderer disk cache.
-- Existing renderer cache remains **up to 24 hours / 128 images** with at most
+- Existing renderer cache remains **up to 24 hours / 128 images total**,
+  including **at most 32 high-resolution WebPs**, with at most
   one cold render active at a time. Cache hits reuse the file. Cold 2x misses
   during another render respond 503. The browser makes at most three requests
   with short backoff after 503; other errors don't retry automatically.
@@ -41,8 +42,9 @@ single-render CPU bounded with the existing 503 and retry behavior.
 
 The API still enforces its **12 MB image-response limit**. Oversized high-res
 files cannot be served through it, so the browser retains standard quality.
-The 128-file cache cap applies to both scales, and 2x files occupy more disk
-space; effective retention may be less than 24 hours under heavy use. Persistent
+The 128-file cache cap applies across both scales, with an additional
+32-file limit for the 2x variants so normal snapshots keep priority; 2x files
+occupy more disk space and retention may be less than 24 hours under heavy use. Persistent
 cloud/shared storage and multiple-renderer deduplication are **not included**.
 
 ## Verification
