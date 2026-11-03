@@ -19,6 +19,7 @@ export default function ChristmasRevealDialog({
   const [stage, setStage] = useState<0 | 1 | 2>(0)
   const dialogRef = useRef<HTMLDivElement>(null)
   const skipRef = useRef<HTMLButtonElement>(null)
+  const unwrapRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!open) return
@@ -65,6 +66,10 @@ export default function ChristmasRevealDialog({
         previousFocus.focus()
     }
   }, [open, onClose])
+
+  useEffect(() => {
+    if (open && stage === 2) unwrapRef.current?.focus()
+  }, [open, stage])
 
   if (!open) return null
   const hasLetters = messageCount > 0
@@ -121,7 +126,7 @@ export default function ChristmasRevealDialog({
             <p className="text-sm text-[#e9d4ae]">
               {hasLetters ? 'Ready to unwrap the words behind your lights?' : 'Keep the Christmas glow going.'}
             </p>
-            <button type="button" onClick={onOpenMessages}
+            <button ref={unwrapRef} type="button" onClick={onOpenMessages}
               className="min-h-12 w-full rounded-xl bg-[#eacb8d] px-5 py-3 text-sm font-bold text-[#563323] shadow-lg hover:bg-[#ffdda0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffe5ad]">
               {hasLetters ? 'Unwrap my Christmas messages' : 'View my Christmas inbox'}
             </button>
