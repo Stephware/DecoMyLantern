@@ -322,7 +322,7 @@ export default function CachedParolScene({
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     exploreDoneRef.current?.focus()
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+    const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
         stopExploring()
@@ -513,7 +513,6 @@ export default function CachedParolScene({
           loading ? 'Loading parol…' :
           ready ? 'Parol ready' : 'Parol unavailable. Retry to refresh.'}
       </figcaption>
-    </figure>
       </figure>
       {exploring && createPortal(
         <div className="fixed inset-0 z-[110] bg-[#07121b]/95 text-amber-50 backdrop-blur-md">
