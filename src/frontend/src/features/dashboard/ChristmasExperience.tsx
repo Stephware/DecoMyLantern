@@ -79,7 +79,7 @@ export default function ChristmasExperience({
     const onVisible = () => { if (!document.hidden) setRefresh(n => n + 1) }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [inbox?.christmasDayReached, inbox])
+  }, [inbox])
 
   // One automatic celebration per saved parol and season in this browser.
   // The backend's true ChristmasDayReached flag prevents admin early access
@@ -142,10 +142,17 @@ export default function ChristmasExperience({
           </p>
           <h3 className="mt-1 font-serif text-2xl text-[#283a30]">Christmas letters</h3>
         </div>
-        {unlocked && <button type="button" onClick={replay}
-          className="min-h-11 rounded-full border border-[#d5b78a] bg-[#fff6e7] px-4 py-2 text-xs font-bold text-[#7e3b35] hover:bg-[#ffe7c5]">
-          {earlyAdmin ? 'Preview Christmas reveal' : 'Replay Christmas surprise'}
-        </button>}
+        <div className="flex flex-wrap items-center gap-2">
+          {(isAdmin || unlocked) && <button type="button" disabled={loading}
+            onClick={() => setRefresh(n => n + 1)}
+            className="min-h-11 rounded-full border border-[#d5c6ae] px-4 py-2 text-xs font-semibold text-[#685744] disabled:opacity-50">
+            Refresh letters
+          </button>}
+          {unlocked && <button type="button" onClick={replay}
+            className="min-h-11 rounded-full border border-[#d5b78a] bg-[#fff6e7] px-4 py-2 text-xs font-bold text-[#7e3b35] hover:bg-[#ffe7c5]">
+            {earlyAdmin ? 'Preview Christmas reveal' : 'Replay Christmas surprise'}
+          </button>}
+        </div>
       </div>
 
       {loading && !inbox && <p role="status" className="mt-4 text-sm text-[#766b5d]">
