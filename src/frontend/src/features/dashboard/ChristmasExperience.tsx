@@ -68,9 +68,14 @@ export default function ChristmasExperience({
     if (!inbox || inbox.christmasDayReached) return
     const until = Date.parse(inbox.unlockAtUtc) - Date.now()
     const delay = Number.isFinite(until)
-      ? Math.min(Math.max(until + 1500, 30_000), MAX_REFRESH_DELAY_MS)
+      ? Math.min(until > 0 ? Math.max(until + 1500, 2_000) : 5 * 60_000,
+        MAX_REFRESH_DELAY_MS)
       : MAX_REFRESH_DELAY_MS
-    const timer = window.setTimeout(() => setRefresh(n => n + 1), delay)
+    // Don't wake the hidden page just for polling; visibilitychange will
+    // perform the server-authoritative check when the owner returns.
+    const timer = window.setTimeout(() => {
+      if (!document.hidden) setRefresh(n => n + 1)
+    }, delay)
     return () => window.clearTimeout(timer)
   }, [inbox])
 
