@@ -28,6 +28,18 @@ public sealed class GuestParolImageRequest : ParolImageRequest
     public string Token { get; set; } = "";
 }
 
+/// <summary>Strictly synthetic images for a flagged admin parol's Design Lab.
+/// Counts and designs are bounded; no arbitrary light slots or private data
+/// can be injected by the caller.</summary>
+public sealed class AdminPreviewParolImageRequest : ParolImageRequest
+{
+    [Required, RegularExpression("^(classic|floral|festival|celestial|fiesta|sampaguita)$")]
+    public string DesignKey { get; set; } = "classic";
+
+    [Range(0, 60)]
+    public int FriendCount { get; set; }
+}
+
 public sealed record ParolImageRenderPayload(
     string DesignKey, string PatternKey, int FriendCount, int[] Slots, string Format, int Scale);
 
@@ -66,6 +78,35 @@ public sealed class ParolImageController(
             lantern.DesignKey, lantern.PatternKey, lantern.AcceptedFriends,
             lantern.Lights.OrderBy(x => x.SlotIndex).Take(500)
                 .Select(x => x.SlotIndex).ToArray(), request.Format, request.Scale), cancellationToken);
+    }
+
+    /// <summary>
+    /// Opt-in, rate-limited, cached admin-only image simulations. These never
+    /// change the saved lantern. The same 1x/2x/3x renderer and cache are
+    /// reused by normal owner/guest parols and the admin Design Lab.
+    /// </summary>
+    [Authorize]
+    [HttpPost("my/lantern/admin-preview/image")]
+    [EnableRateLimiting("parol-image-owner")]
+    public async Task<IActionResult> AdminPreviewImage(
+        [FromBody] AdminPreviewParolImageRequest request, CancellationToken cancellationToken)
+    {
+        if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid request token." });
+        if (request.Format != "webp")
+            return BadRequest(new { message = "Admin previews use WebP only." });
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var ownerId))
+            return Unauthorized();
+
+        var lantern = await lanterns.GetCurrentAsync(ownerId, cancellationToken);
+        if (lantern is null || !lantern.IsAdmin) return NotFound();
+
+        // Only the approved six designs and 0-60 synthetic friend slots can
+        // reach the renderer. In particular, callers cannot supply real
+        // contribution IDs, private messages, recovery codes, or names.
+        return await RenderImageAsync(new ParolImageRenderPayload(
+            request.DesignKey, lantern.PatternKey, request.FriendCount,
+            Enumerable.Range(0, request.FriendCount).ToArray(), "webp", request.Scale),
+            cancellationToken);
     }
 
     [AllowAnonymous]
