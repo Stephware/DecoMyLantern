@@ -59,7 +59,9 @@ async function nextPaint(signal: AbortSignal): Promise<void> {
  * checked; any unsupported rasterization returns control to the server queue.
  */
 function frameSvg(data: StoryData, frame: number): string {
+  // An SVG nested inside XHTML foreignObject needs its own XML namespace.
   const markup = renderToStaticMarkup(createElement(StoryFrame, {data, frame}))
+    .replace(/<svg(?=\\s|>)/g, '<svg xmlns="http://www.w3.org/2000/svg"')
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${STORY_WIDTH}" height="${STORY_HEIGHT}" viewBox="0 0 ${STORY_WIDTH} ${STORY_HEIGHT}"><foreignObject x="0" y="0" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml">${markup}</div></foreignObject></svg>`
 }
 
