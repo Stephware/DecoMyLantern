@@ -254,6 +254,12 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
         } catch (caught) {
           if (controller.signal.aborted || latestDataKey.current !== requestedKey ||
               activeRequest.current !== request) return
+          // Hiding the tab interrupts local work intentionally: never queue a
+          // server job just because the owner switched apps or locked a phone.
+          if (caught instanceof DOMException && caught.name === 'AbortError') {
+            setNotice('Phone generation paused because the page was hidden. Open sharing to try again or use the background queue.')
+            return
+          }
           console.warn('Phone MP4 generation failed; using the private renderer queue:', caught)
           phoneFailed = true
           setPhoneAvailable(false)
