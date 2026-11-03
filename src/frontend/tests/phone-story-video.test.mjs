@@ -59,7 +59,7 @@ test('phone render is bounded, cancelable and never claims to survive a closed t
   assert.match(share, /latestDataKey\.current !== requestedKey/)
 })
 
-test('dependency is pinned and code stays separated from PNG, guest, and 3x parol zoom', () => {
+test('dependency is pinned and phone MP4 remains separate from Story PNG, guests, and 3x zoom', () => {
   const packageJson = JSON.parse(read('package.json'))
   const lock = JSON.parse(read('package-lock.json'))
   const share = read('src/features/story/StoryShare.tsx')
@@ -69,7 +69,7 @@ test('dependency is pinned and code stays separated from PNG, guest, and 3x paro
   assert.equal(lock.packages['node_modules/mediabunny'].version, '1.65.0')
   assert.ok(lock.packages['node_modules/@types/dom-webcodecs'])
   assert.ok(!guest.includes('<StoryShare'))
-  assert.match(share, /exportParolImage\(data\.kind, token, controller\.signal\)/)
+  assert.match(share, /exportStoryMedia\(data\.kind, 'png', token, controller\.signal\)/)
   assert.match(share, /exportStoryMedia\(data\.kind, 'mp4', token, controller\.signal\)/)
   assert.match(share, /Download MP4/)
   assert.match(share, /Share video/)
