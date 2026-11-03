@@ -1,5 +1,7 @@
 # Phase 1 — Phone-first animated MP4 with existing server queue fallback
 
+> **Phase 2 update:** The shareable PNG is now a complete 9:16 Story poster, not the old transparent parol snapshot. This changes only the PNG output; the phone-first MP4 encoder and existing server queue remain as implemented here. See [still-story-poster.md](still-story-poster.md).
+
 ## Scope
 
 Only **animated Story MP4 generation** changes. The transparent PNG sharing
