@@ -10,4 +10,5 @@ public sealed record ChristmasLetterDto(
 public sealed record ChristmasInboxDto(
     bool Unlocked,
     DateTime UnlockAtUtc,
-    IReadOnlyList<ChristmasLetterDto> Messages);
+    IReadOnlyList<ChristmasLetterDto> Messages,
+    bool ChristmasDayReached);

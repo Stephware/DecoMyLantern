@@ -90,6 +90,36 @@ button:focus-visible, input:focus-visible { outline: 2px solid #ffcf75; outline-
   .parol-mobile-explore-action { display: flex; }
 }
 
+/* Christmas surprise uses inexpensive opacity/transform-only effects.
+   The actual saved parol remains the single cached WebP, even in admin mode. */
+.christmas-reveal-backdrop {
+  background-image: radial-gradient(ellipse at 50% 35%, rgba(146,95,45,.20), transparent 65%);
+}
+@keyframes christmas-reveal-enter {
+  from { opacity: 0; transform: translateY(22px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes christmas-reveal-glow {
+  0%, 100% { box-shadow: 0 0 16px rgba(255,197,87,.22), inset 0 0 14px rgba(255,214,128,.10); }
+  50% { box-shadow: 0 0 38px rgba(255,197,87,.54), inset 0 0 21px rgba(255,214,128,.25); }
+}
+@keyframes christmas-reveal-twinkle {
+  0%, 100% { opacity: .15; transform: scale(.65) rotate(-15deg); }
+  48% { opacity: .95; transform: scale(1.18) rotate(12deg); }
+}
+@keyframes christmas-reveal-count-appear {
+  from { opacity: 0; transform: translateY(10px) scale(.92); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.christmas-reveal-panel { animation: christmas-reveal-enter 650ms ease-out both; }
+.christmas-reveal-light { animation: christmas-reveal-glow 3s ease-in-out infinite; }
+.christmas-sparkle {
+  color: #ffdd95;
+  font-size: 1.75rem;
+  animation: christmas-reveal-twinkle 2.8s ease-in-out infinite;
+}
+.christmas-reveal-count { animation: christmas-reveal-count-appear 500ms ease-out both; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import type { Theme } from '../../customization/themes'
-import { ApiError, fetchParolSnapshot } from '../../../lib/api'
+import { ApiError, fetchAdminParolPreview, fetchParolSnapshot } from '../../../lib/api'
 import { growthForFriends, outerFitZoom } from '../growth/outerGrowth'
 import { lightPosition } from './lightPositions'
 import { snapshotRequestKey } from './snapshotState'
@@ -16,6 +16,8 @@ type Props = {
   contributions: readonly LanternLight[]
   friendCount: number
   snapshot: SavedParolSource
+  /** Admin-only synthetic simulations reuse the real cached viewer. */
+  adminPreview?: boolean
 }
 
 type Point = { x: number; y: number }
@@ -40,11 +42,11 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
  * No procedural parol SVGs are mounted in the real owner and guest viewers.
  */
 export default function CachedParolScene({
-  theme, contributions, friendCount, pattern, snapshot,
+  theme, contributions, friendCount, pattern, snapshot, adminPreview = false,
 }: Props) {
   // The backend always re-reads the saved state. Only a meaningful change
   // to the owner, invitation or parol requests another flattened image.
-  const stateKey = snapshotRequestKey(
+  const stateKey = (adminPreview ? 'admin-preview|' : '') + snapshotRequestKey(
     snapshot, theme.key, pattern, friendCount,
     contributions.map(light => light.slotIndex),
   )
@@ -71,9 +73,10 @@ export default function CachedParolScene({
   const displayedRef = useRef<RenderedImage | null>(null)
   const transitionRef = useRef<ImageTransition | null>(null)
   const lastTabReturn = useRef(0)
-  const source = snapshot.kind === 'owner'
-    ? `owner:${snapshot.stateId}`
-    : `guest:${snapshot.stateId}:${snapshot.token}`
+  const source = adminPreview ? `admin-preview:${snapshot.stateId}`
+    : snapshot.kind === 'owner'
+      ? `owner:${snapshot.stateId}`
+      : `guest:${snapshot.stateId}:${snapshot.token}`
   const guestToken = snapshot.kind === 'guest' ? snapshot.token : undefined
 
   useEffect(() => { displayedRef.current = rendered }, [rendered])
@@ -126,11 +129,13 @@ export default function CachedParolScene({
       for (let tries = 0; tries < 3; tries++) {
         if (!active || controller.signal.aborted) return
         try {
-          const blob = await fetchParolSnapshot(
-            snapshot.kind,
-            snapshot.kind === 'guest' ? snapshot.token : undefined,
-            controller.signal,
-          )
+          const blob = adminPreview
+            ? await fetchAdminParolPreview(theme.key, friendCount, controller.signal)
+            : await fetchParolSnapshot(
+              snapshot.kind,
+              snapshot.kind === 'guest' ? snapshot.token : undefined,
+              controller.signal,
+            )
           if (!active || controller.signal.aborted) return
           const url = URL.createObjectURL(blob)
           ownedUrls.current.add(url)
@@ -223,9 +228,11 @@ export default function CachedParolScene({
         for (let tries = 0; tries < 3; tries++) {
           if (controller.signal.aborted) return
           try {
-            const blob = await fetchParolSnapshot(
-              snapshot.kind, guestToken, controller.signal, 'webp', desiredScale,
-            )
+            const blob = adminPreview
+              ? await fetchAdminParolPreview(theme.key, friendCount, controller.signal, desiredScale)
+              : await fetchParolSnapshot(
+                snapshot.kind, guestToken, controller.signal, 'webp', desiredScale,
+              )
             if (controller.signal.aborted) return
             const url = URL.createObjectURL(blob)
             ownedUrls.current.add(url)
@@ -276,7 +283,7 @@ export default function CachedParolScene({
         attemptedUpgrade.current = null
     }
   }, [desiredScale, standardReady, stateKey, desiredImage?.key,
-    snapshot.kind, guestToken, source, theme.key, pattern, friendCount])
+    snapshot.kind, guestToken, source, theme.key, pattern, friendCount, adminPreview])
 
   // Identical timing to the original 750ms / 850ms / 1100ms growth sequence.
   useEffect(() => {

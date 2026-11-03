@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import LanternScene from '../lantern/renderer/LanternScene'
 import { MAX_TEST_FRIENDS } from '../lantern/growth/stages'
-import { growthForFriends } from '../lantern/growth/outerGrowth'
+
 import { THEMES } from '../customization/themes'
 import { FirstTimeDesignPicker, MobileDesignDrawer } from '../customization/DesignSelectionPanels'
 import RecoveryKeyDialog from '../owner/RecoveryKeyDialog'
 import InvitationManager from '../invitations/InvitationManager'
-import AdminMessages from './AdminMessages'
+import ChristmasExperience from './ChristmasExperience'
 import { BannerAd, DesktopSideAds, RectangleAd } from '../ads/AdPlacements'
 import type { Design, Lantern } from '../../lib/api'
+
+const AdminCachedParolPreview = lazy(() => import('../lantern/renderer/AdminCachedParolPreview'))
 
 type Props = {
   lantern: Lantern | null
@@ -35,6 +37,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [previewCount, setPreviewCount] = useState<number | null>(null)
   const [showTestingLab, setShowTestingLab] = useState(false)
+  const [adminChristmasPreviewSignal, setAdminChristmasPreviewSignal] = useState(0)
 
   useEffect(() => {
     setDraftDesign(lantern?.designKey ?? 'classic')
@@ -220,16 +223,10 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
                   </div>
                 </div>
 
-                <div className={`${card} flex items-start gap-3 p-5`}>
-                  <span className="rounded-xl bg-[#f4e8ce] p-3 text-xl text-[#966732]" aria-hidden="true">✉</span>
-                  <div>
-                    <h3 className="font-serif text-xl">Christmas letters</h3>
-                    <p className="mt-1 text-sm leading-6 text-[#786f63]">
-                      Messages from friends stay private until Christmas Day.
-                    </p>
-                  </div>
-                </div>
-                {lantern.isAdmin && <AdminMessages lanternId={lantern.id} friendCount={accepted} />}
+                <ChristmasExperience key={lantern.id} lanternId={lantern.id}
+                  seasonYear={lantern.seasonYear} friendCount={accepted}
+                  isAdmin={lantern.isAdmin}
+                  adminPreviewSignal={adminChristmasPreviewSignal} />
               </section>
 
               <aside className="min-w-0 space-y-4">
@@ -268,7 +265,17 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
                 <span aria-hidden="true">{showTestingLab ? '↑ Hide' : '↓ Show'}</span>
               </button>
               {showTestingLab && <div className="mt-4 space-y-4 border-t border-[#e4d8c9] pt-4">
-                <p className="text-xs text-[#786d60]">These controls remain available until the separate staging Admin Lab is built. Simulated friends are never sent to the API.</p>
+                <p className="text-xs text-[#786d60]">
+                  Admin-only diagnostics. Sample friend counts render as cached WebP images using the same 1×/2×/3× pipeline as the real parol. No simulated friend or message is saved.
+                </p>
+                <button type="button"
+                  onClick={() => setAdminChristmasPreviewSignal(value => value + 1)}
+                  className="min-h-11 rounded-xl border border-[#ad8f61] bg-[#f9ebcf] px-4 py-3 text-sm font-bold text-[#6b4235] hover:bg-[#ffdfa7]">
+                  ✦ Preview Christmas message reveal
+                </button>
+                <p className="text-xs text-[#786d60]">
+                  Uses messages from this saved admin parol, even before December 25. Normal owners remain sealed.
+                </p>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" className="rounded-full border border-[#d7c7b4] px-3 py-2 text-xs" onClick={() => setPreviewCount(null)}>Real parol</button>
                   <button type="button" className="rounded-full border border-[#d7c7b4] px-3 py-2 text-xs" onClick={() => setPreviewCount(Math.max(0,(previewCount ?? accepted)-1))}>−1</button>
@@ -280,10 +287,12 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
                       : 'border-[#d7c7b4]'}`}>{n} friends</button>)}
                 </div>
                 {previewCount !== null && <div className="mx-auto max-w-xl rounded-2xl bg-[#101e1d] p-3 text-white">
-                  <LanternScene theme={theme} pattern={lantern.patternKey} previewCount={previewCount} />
-                  <p className="mt-2 text-center text-xs text-[#e4c99f]">
-                    {previewCount} simulated friends · {growthForFriends(previewCount)} growth layers · Not saved
-                  </p>
+                  <Suspense fallback={<p role="status" className="py-12 text-center text-amber-100">
+                    Preparing cached admin preview…
+                  </p>}>
+                    <AdminCachedParolPreview lanternId={lantern.id}
+                      theme={theme} pattern={lantern.patternKey} friendCount={previewCount} />
+                  </Suspense>
                 </div>}
               </div>}
             </section>}
