@@ -72,7 +72,20 @@ async function paintFrame(canvas: HTMLCanvasElement, data: StoryData, frame: num
   try {
     const image = new Image()
     image.src = blobUrl
-    await image.decode()
+    // A few WebKit/browser builds never settle decode() for foreignObject
+    // images. Bound each decode so the existing queue can take over.
+    let decodeTimeout: number | undefined
+    try {
+      await Promise.race([
+        image.decode(),
+        new Promise<never>((_, reject) => {
+          decodeTimeout = window.setTimeout(
+            () => reject(new Error('Phone Story frame decoding timed out.')), 8_000)
+        }),
+      ])
+    } finally {
+      if (decodeTimeout !== undefined) window.clearTimeout(decodeTimeout)
+    }
     abortIfNeeded(signal)
     const context = canvas.getContext('2d', {alpha:false})
     if (!context) throw new Error('Canvas drawing is unavailable.')
