@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react'
+import { createPortal } from 'react-dom'
 import type { Theme } from '../../customization/themes'
 import { ApiError, fetchParolSnapshot } from '../../../lib/api'
 import { growthForFriends, outerFitZoom } from '../growth/outerGrowth'
 import { lightPosition } from './lightPositions'
 import { snapshotRequestKey } from './snapshotState'
+import { canPanParol } from './parolTouchPolicy'
 import { shouldAnimateSnapshot, SNAPSHOT_WAVE_DURATIONS_MS, SNAPSHOT_WAVE_LABEL,
   SNAPSHOT_WAVE_RADIUS, type SnapshotWave, type SnapshotIdentity } from './snapshotReveal'
 import type { LanternLight, SavedParolSource } from './LanternScene'
@@ -59,6 +61,10 @@ export default function CachedParolScene({
   const [attempt, setAttempt] = useState(0)
   const [camera, setCamera] = useState<Camera>({ zoom: 1, x: 0, y: 0 })
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [exploring, setExploring] = useState(false)
+  const exploreTriggerRef = useRef<HTMLButtonElement>(null)
+  const exploreDoneRef = useRef<HTMLButtonElement>(null)
+  const exploreDialogRef = useRef<HTMLDivElement>(null)
   const pointers = useRef<Map<number, Point>>(new Map())
   const dragged = useRef(false)
   const ownedUrls = useRef<Set<string>>(new Set())
@@ -303,7 +309,53 @@ export default function CachedParolScene({
   const selectedPoint = selected && ready ? lightPosition(selected.slotIndex) : null
   const transform = `translate(${CENTER_X + camera.x} ${CENTER_Y + camera.y}) scale(${camera.zoom}) translate(${-CENTER_X} ${-CENTER_Y})`
 
+  const stopExploring = useCallback(() => {
+    pointers.current.clear()
+    dragged.current = false
+    setExploring(false)
+  }, [])
+
+  // Only the full-screen Explore viewer owns touch gestures on a phone.
+  // Leaving it restores normal page scrolling and keyboard focus.
+  useEffect(() => {
+    if (!exploring) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    exploreDoneRef.current?.focus()
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        stopExploring()
+      } else if (event.key === 'Tab') {
+        const buttons = exploreDialogRef.current?.querySelectorAll<HTMLButtonElement>(
+          'button:not(:disabled)',
+        )
+        if (!buttons?.length) return
+        const first = buttons[0]
+        const last = buttons[buttons.length - 1]
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault()
+          last.focus()
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault()
+          first.focus()
+        }
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+      if (exploreTriggerRef.current?.isConnected) exploreTriggerRef.current.focus()
+    }
+  }, [exploring, stopExploring])
+
+  function touchCanPan(): boolean {
+    return canPanParol(window.matchMedia('(pointer: coarse)').matches, exploring)
+  }
+
   function pointerDown(event: PointerEvent<SVGSVGElement>) {
+    if (!touchCanPan()) return
     if (event.pointerType === 'mouse' && event.button !== 0) return
     if (pointers.current.size === 0) dragged.current = false
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
@@ -311,6 +363,7 @@ export default function CachedParolScene({
   }
 
   function pointerMove(event: PointerEvent<SVGSVGElement>) {
+    if (!touchCanPan()) return
     const tracked = pointers.current
     const previous = tracked.get(event.pointerId)
     if (!previous) return
