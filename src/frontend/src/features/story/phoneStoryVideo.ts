@@ -88,6 +88,27 @@ async function paintFrame(canvas: HTMLCanvasElement, data: StoryData, frame: num
   }
 }
 
+/** Reject browsers that decode foreignObject SVG but discard its changing
+ * contents. A successfully decoded image is not by itself proof of a real Story.
+ */
+async function verifyFramePainting(canvas: HTMLCanvasElement, data: StoryData,
+                                   signal: AbortSignal): Promise<void> {
+  const context = canvas.getContext('2d', {alpha:false})
+  if (!context) throw new Error('Canvas drawing is unavailable.')
+  const points = [
+    [540, 470], [430, 600], [650, 700], [540, 770],
+    [370, 900], [700, 900], [540, 1080], [540, 1160],
+  ] as const
+  await paintFrame(canvas, data, 0, signal)
+  const before = points.map(([x, y]) => Array.from(context.getImageData(x, y, 1, 1).data))
+  await paintFrame(canvas, data, 200, signal)
+  const changed = points.some(([x, y], index) => {
+    const after = context.getImageData(x, y, 1, 1).data
+    return [0, 1, 2].some(channel => Math.abs(after[channel] - before[index][channel]) > 8)
+  })
+  if (!changed) throw new Error('This browser cannot capture the animated Story accurately.')
+}
+
 export async function renderStoryOnPhone(
   data: StoryData, signal: AbortSignal, onProgress: (percent: number) => void,
 ): Promise<Blob> {
@@ -109,6 +130,9 @@ export async function renderStoryOnPhone(
   const startedAt = performance.now()
   let finished = false
   try {
+    // Verify that the browser really paints the varying parol artwork,
+    // not just a silent blank frame, before encoding 240 video samples.
+    await verifyFramePainting(canvas, data, signal)
     await output.start()
     for (let frame = 0; frame < STORY_FRAMES; frame++) {
       abortIfNeeded(signal)
