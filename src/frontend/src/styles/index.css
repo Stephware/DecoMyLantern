@@ -76,6 +76,43 @@ button:focus-visible, input:focus-visible { outline: 2px solid #ffcf75; outline-
   animation: parol-snapshot-glint 720ms ease-out both;
 }
 
+/* Only the welcome image's *light* shimmers. Its cached 50-friend art
+   never changes position, scale, rendered pixels, or interaction behavior.
+   No canvas, video, or additional renderer requests are needed. */
+@keyframes welcome-parol-halo-pulse {
+  0%, 100% { opacity: .12; }
+  50% { opacity: .45; }
+}
+@keyframes welcome-parol-twinkle {
+  0%, 100% { opacity: .08; transform: scale(.6); }
+  30% { opacity: .88; transform: scale(1.14); }
+  52% { opacity: .33; transform: scale(.83); }
+  72% { opacity: .72; transform: scale(1); }
+}
+.welcome-parol-halo {
+  background: radial-gradient(ellipse 45% 47% at 50% 48%,
+    rgba(255, 215, 117, .34), rgba(255, 201, 101, .14) 55%, transparent 100%);
+  animation: welcome-parol-halo-pulse 6.4s ease-in-out infinite;
+}
+.welcome-parol-sparkle {
+  position: absolute;
+  color: #fff0c0;
+  font-size: clamp(14px, 2.5vw, 24px);
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(255, 221, 127, .95);
+  animation: welcome-parol-twinkle 5s ease-in-out infinite;
+}
+.welcome-parol-sparkle:nth-child(2) { left: 26%; top: 30%; animation-delay: -1.8s; }
+.welcome-parol-sparkle:nth-child(3) { left: 72%; top: 35%; animation-delay: -3.2s; }
+.welcome-parol-sparkle:nth-child(4) { left: 40%; top: 19%; animation-delay: -4.3s; }
+.welcome-parol-sparkle:nth-child(5) { left: 33%; top: 62%; animation-delay: -2.5s; }
+.welcome-parol-sparkle:nth-child(6) { left: 67%; top: 66%; animation-delay: -4.8s; }
+.welcome-parol-sparkle:nth-child(7) { left: 49%; top: 80%; animation-delay: -1.1s; }
+@media (prefers-reduced-motion: reduce) {
+  .welcome-parol-halo { animation: none !important; opacity: .2; }
+  .welcome-parol-sparkle { animation: none !important; opacity: .48; }
+}
+
 /* Real parol on touchscreens: allow the browser to scroll the page by
    default. Deliberate Explore mode captures drag/pinch within its dialog.
    Desktop mouse/trackpad parol behavior stays unchanged. */
