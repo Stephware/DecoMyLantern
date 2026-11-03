@@ -60,10 +60,10 @@ test('returning owner sees queued/running/ready state and uses cached completed 
   assert.ok(story.includes('controller.abort()'))
 })
 
-test('PNG and friend video legacy actions are not changed', () => {
+test('Story PNG, friend video endpoint and owner background queue remain distinct', () => {
   const story = read('features/story/StoryShare.tsx')
   const guest = read('features/invitations/GuestInvitationPage.tsx')
-  assert.ok(story.includes('exportParolImage(data.kind, token, controller.signal)'))
+  assert.ok(story.includes("exportStoryMedia(data.kind, 'png', token, controller.signal)"))
   assert.ok(story.includes("exportStoryMedia(data.kind, 'mp4', token, controller.signal)"))
   assert.ok(story.includes("selected === 'mp4' && data.kind === 'owner'"))
   assert.ok(!guest.includes('<StoryShare'))
