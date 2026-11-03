@@ -2,7 +2,6 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import LanternScene from '../lantern/renderer/LanternScene'
 import { MAX_TEST_FRIENDS } from '../lantern/growth/stages'
 
-const AdminCachedParolPreview = lazy(() => import('../lantern/renderer/AdminCachedParolPreview'))
 import { THEMES } from '../customization/themes'
 import { FirstTimeDesignPicker, MobileDesignDrawer } from '../customization/DesignSelectionPanels'
 import RecoveryKeyDialog from '../owner/RecoveryKeyDialog'
@@ -10,6 +9,8 @@ import InvitationManager from '../invitations/InvitationManager'
 import ChristmasExperience from './ChristmasExperience'
 import { BannerAd, DesktopSideAds, RectangleAd } from '../ads/AdPlacements'
 import type { Design, Lantern } from '../../lib/api'
+
+const AdminCachedParolPreview = lazy(() => import('../lantern/renderer/AdminCachedParolPreview'))
 
 type Props = {
   lantern: Lantern | null
