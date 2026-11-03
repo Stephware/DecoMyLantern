@@ -33,9 +33,10 @@ saved season's unlock timestamp. This is **different** from `unlocked`:
 an admin test parol may have `unlocked = true` before Christmas, but
 `christmasDayReached = false`.
 
-- **Normal owner before Christmas:** the existing authenticated inbox
-  returns locked letters with `body = null`. The UI shows a sealed note,
-  **not** the letters, their names, or their count.
+- **Normal owner before Christmas:** the authenticated inbox returns
+  `unlocked:false`, `christmasDayReached:false`, and an **empty letters
+  array**. The backend does not query or serialize private messages or names
+  until they become readable; the UI only displays a sealed note.
 - **Normal owner on or after Christmas:** only a server-confirmed
   `christmasDayReached = true` and `unlocked = true` can show the
   automatic surprise and letter bodies.
@@ -112,8 +113,8 @@ For the already saved admin testing parol:
 3. Confirm a regular owner's dashboard **cannot access** the admin lab
    endpoint, early message bodies or preview button.
 4. Test normal owner with a saved letter before Dec 25: the API returns
-   `body:null`, `unlocked:false`, `christmasDayReached:false`. No
-   early celebration, even if the phone date is advanced.
+   `messages:[]`, `unlocked:false`, `christmasDayReached:false`. No
+   early celebration or letter query, even if the phone date is advanced.
 5. At or after the actual date (using an isolated test server clock /
    controlled backend fixture, not the public production clock), the API
    returns `christmasDayReached:true` and the reveal plays once.
