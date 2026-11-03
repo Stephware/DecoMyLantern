@@ -22,9 +22,9 @@ public sealed class MessageService(IMessageRepository repository) : IMessageServ
         // Before Christmas, normal owners need only the sealed-inbox status.
         // Avoid selecting contributor names and thousands of letter records
         // on every dashboard visit until the server really unlocks them.
-        var letters = unlocked
+        IReadOnlyList<ChristmasLetterDto> letters = unlocked
             ? await repository.GetLettersAsync(lanternId, true, cancellationToken)
-            : [];
+            : Array.Empty<ChristmasLetterDto>();
         return new ChristmasInboxDto(unlocked, lantern.UnlockAtUtc, letters, christmasDayReached);
     }
 }
