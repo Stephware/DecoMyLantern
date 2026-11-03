@@ -28,7 +28,16 @@ public sealed class AdminMessageAccessTests
         Assert.Equal(expectedUnlocked, inbox.Unlocked);
         // An admin can test early without changing when Christmas actually arrives.
         Assert.False(inbox.ChristmasDayReached);
-        Assert.Equal(expectedUnlocked ? "private test message" : null, inbox.Messages.Single().Body);
+        if (isAdmin)
+        {
+            Assert.Equal("private test message", inbox.Messages.Single().Body);
+            Assert.True(repository.LettersRequested);
+        }
+        else
+        {
+            Assert.Empty(inbox.Messages);
+            Assert.False(repository.LettersRequested);
+        }
     }
 
     [Theory]
