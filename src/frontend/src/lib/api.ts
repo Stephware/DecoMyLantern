@@ -164,6 +164,9 @@ export async function exportStoryMedia(kind: 'owner' | 'friend', format: 'mp4' |
     throw new ApiError(response.status, errorMessage(body,
       response.status === 429 ? 'Too many exports. Try again later.' : 'Story export is unavailable.'))
   }
+  const expectedMime = format === 'png' ? 'image/png' : 'video/mp4'
+  if (response.headers.get('content-type')?.split(';')[0]?.trim() !== expectedMime)
+    throw new Error('The server returned an unexpected Story media format.')
   return response.blob()
 }
 
