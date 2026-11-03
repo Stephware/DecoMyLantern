@@ -261,6 +261,9 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
         }
       }
       if (selected === 'mp4' && data.kind === 'owner') {
+        // From this point cancellation stops only the request, not the accepted
+        // background job. Even an auto-fallback follows the normal queue rules.
+        request.mode = 'server'
         // The API accepts the job promptly; no MP4 bytes are waited for here.
         // Closing this dialog cancels only this request, not the queued render.
         const job = await startOwnerVideoJob(controller.signal)
