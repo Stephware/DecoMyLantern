@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
-import {exportParolImage, exportStoryMedia, startOwnerVideoJob,
+import {exportStoryMedia, startOwnerVideoJob,
   getOwnerVideoJobStatus, getOwnerVideoJobFile, type OwnerVideoJobState} from '../../lib/api'
 import {prepareMediaWithRetry} from './mediaExportTask'
 import {StoryFrame, type StoryData, type StoryFormat} from './StoryFrame'
@@ -25,8 +25,8 @@ function download(blob: Blob, name: string) {
 }
 
 /**
- * Share the current saved parol as a transparent PNG or the existing animated
- * Story as MP4. Both owner and invitation guests use authorized saved data.
+ * Share the authorized saved Story as a still 9:16 PNG or animated MP4.
+ * The PNG is the complete frame 200 of the same StoryFrame used for video.
  */
 export default function StoryShare({data, invitationUrl, token}: Props) {
   const [open, setOpen] = useState(false)
@@ -287,7 +287,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
       const blob = await prepareMediaWithRetry(
         () => selected === 'mp4'
           ? exportStoryMedia(data.kind, 'mp4', token, controller.signal)
-          : exportParolImage(data.kind, token, controller.signal),
+          : exportStoryMedia(data.kind, 'png', token, controller.signal),
         controller.signal,
         retryNumber => {
           if (activeRequest.current === request) setRetrying(retryNumber)
@@ -302,7 +302,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
         setPng(blob)
         setPngKey(requestedKey)
       }
-      setNotice(selected === 'mp4' ? 'Your animated Story is ready.' : 'Your parol image is ready.')
+      setNotice(selected === 'mp4' ? 'Your animated Story is ready.' : 'Your still Story image is ready.')
     } catch (caught) {
       if (!controller.signal.aborted && latestDataKey.current === requestedKey &&
           activeRequest.current === request) {
@@ -322,7 +322,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     const mediaKey = selected === 'png' ? pngKey : videoKey
     if (!blob || mediaKey !== dataKey) return
     const image = selected === 'png'
-    const file = new File([blob], image ? 'BeMyParol-Parol.png' : 'BeMyParol-Story.mp4',
+    const file = new File([blob], image ? 'BeMyParol-Story.png' : 'BeMyParol-Story.mp4',
       {type: image ? 'image/png' : 'video/mp4'})
     setError('')
     setNotice('')
@@ -331,7 +331,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
       return
     }
     try {
-      await navigator.share({files: [file], title: image ? 'My BeMyParol parol' : 'My BeMyParol Story'})
+      await navigator.share({files: [file], title: image ? 'My BeMyParol Story image' : 'My BeMyParol Story'})
       setNotice('Your device handed off the file. Add your invitation link separately when needed.')
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === 'AbortError') return
@@ -354,7 +354,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
   const ready = format === 'png'
     ? (pngKey === dataKey ? png : null)
     : (videoKey === dataKey ? video : null)
-  const fileName = format === 'png' ? 'BeMyParol-Parol.png' : 'BeMyParol-Story.mp4'
+  const fileName = format === 'png' ? 'BeMyParol-Story.png' : 'BeMyParol-Story.mp4'
   const awaitingVideo = data.kind === 'owner' && format === 'mp4' && !ready &&
     ['checking', 'queued', 'rendering', 'ready'].includes(videoJobStatus)
 
@@ -386,23 +386,17 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
                 {format === 'png' ? 'Still image preview' : 'Animated Story preview'}
               </p>
               <div ref={previewRef}
-                className={`relative w-full max-w-[240px] overflow-hidden rounded-xl border-[3px] border-[#d6b575]/65 bg-[radial-gradient(ellipse_at_50%_45%,#294b41,#0a1520_80%)] shadow-[0_15px_45px_rgba(0,0,0,.35)] sm:max-w-[270px] ${format === 'png' ? 'aspect-[15/16]' : 'aspect-[9/16]'}`}>
-                {format === 'png' ? (
-                  pngKey === dataKey && pngUrl ? (
-                    <img src={pngUrl} alt="Your actual saved parol as a PNG image"
-                      className="h-full w-full object-contain"/>
-                  ) : (
-                    <div className="flex h-full flex-col items-center justify-center gap-3 px-5 text-center text-[#f4deaf]">
-                      <span aria-hidden="true" className="text-6xl text-[#e4c78d]">✦</span>
-                      <p className="text-sm font-semibold">Your parol image</p>
-                      <p className="text-xs leading-5 text-[#e7d5b0]">Prepare the image to preview your saved parol.</p>
-                    </div>
-                  )
-                ) : videoKey === dataKey && videoUrl ? (
+                className="relative aspect-[9/16] w-full max-w-[240px] overflow-hidden rounded-xl border-[3px] border-[#d6b575]/65 bg-[radial-gradient(ellipse_at_50%_45%,#294b41,#0a1520_80%)] shadow-[0_15px_45px_rgba(0,0,0,.35)] sm:max-w-[270px]">
+                {format === 'png' && pngKey === dataKey && pngUrl ? (
+                  <img src={pngUrl} alt="Completed 9:16 BeMyParol Story poster"
+                    className="h-full w-full object-contain"/>
+                ) : format === 'mp4' && videoKey === dataKey && videoUrl ? (
                   <video key={videoUrl} src={videoUrl} controls loop playsInline
                     aria-label="Generated animated parol Story" className="h-full w-full object-contain"/>
                 ) : (
-                  <div aria-label="Still preview of your animated Story" role="img"
+                  <div aria-label={format === 'png'
+                      ? 'Preview of your still Story image'
+                      : 'Still preview of your animated Story'} role="img"
                     style={{width:1080, height:1920, transform:'scale(' + previewScale + ')', transformOrigin:'top left'}}>
                     <StoryFrame data={data} frame={200}/>
                   </div>
@@ -410,7 +404,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
               </div>
               <p className="mt-4 max-w-sm text-xs leading-5 text-[#f2e2be]">
                 {format === 'png'
-                  ? 'An image of your actual parol with a transparent background, without the Story text or borders.'
+                  ? 'Your still Story has the same completed parol, background, festive border, branding and invitation text as the video—without motion.'
                   : videoKey === dataKey && videoUrl ? 'Play your generated animation above.' : 'This is a still preview. Generate the video to watch the animation.'}
               </p>
             </div>
@@ -425,7 +419,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
                       : 'rounded-2xl border-2 border-[#ded1bf] bg-white px-3 py-4 text-left text-[#46564a] hover:border-[#bd9656] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b68c49]'}>
                     <span aria-hidden="true" className="text-xl">▧</span>
                     <span className="mt-1 block text-sm font-bold">Static image</span>
-                    <span className="block text-xs opacity-75">Parol PNG</span>
+                    <span className="block text-xs opacity-75">Story PNG</span>
                   </button>
                   <button type="button" aria-pressed={format === 'mp4'} onClick={() => {setFormat('mp4'); setNotice(''); setError('')}}
                     className={format === 'mp4'
@@ -468,7 +462,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
                       className={primary}>
                       {awaitingVideo ? 'Rendering in background…' :
                         busy === format ? 'Preparing…' :
-                        format === 'png' ? 'Prepare parol PNG' :
+                        format === 'png' ? 'Prepare Story PNG' :
                         data.kind === 'owner' && phoneAvailable === null ? 'Checking phone support…' :
                         data.kind === 'owner' && phoneAvailable ? 'Generate on this phone' :
                         'Generate animated MP4'}

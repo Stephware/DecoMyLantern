@@ -1,3 +1,5 @@
+> **Historical implementation note:** This file describes the earlier transparent parol-only PNG export (previous Phase 3). The current sharing interface now exports the **completed 1080 × 1920 Story PNG** from the same video composition at frame 200. See [still-story-poster.md](still-story-poster.md). The original protected parol-snapshot API still exists for internal callers and the zoom viewer.
+
 # Phase 3 — Actual parol PNG + animated Story MP4 sharing
 
 This phase finishes the unified Share your parol interface established in Phase 2. **Frontend-only.** No ASP.NET, private renderer, SQL/database, Cloudflare, HostHatch, ads or deployment changes.

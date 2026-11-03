@@ -9,17 +9,17 @@ BeMyParol offers owners an invitation Story and contributing friends a personali
 3. On compatible mobile browsers, press **Share video** to open the native OS share menu. The receiving app and whether it offers Stories depend on the device/app.
 4. If the share menu does not support the file, press **Download MP4**, then upload it manually to Instagram or Facebook Stories.
 5. Press **Copy invitation link**, and paste it into the social Story editor's **Link sticker**. The printed URL/CTA inside the video cannot be tapped.
-6. **Save static PNG instead** is available as a lightweight fallback.
+6. **Prepare Story PNG** creates a static 1080 × 1920 image of the completed video frame (frame 200) with the same background, frame, parol, text, branding and invitation instruction. It can be shared/downloaded without generating an MP4.
 
-The video uses the *actual saved* parol design, color palette, pattern, current accepted light positions, friend count, and three actual growth layers per friend. Private messages, owner sessions, recovery secrets and contributor names are never included.
+Both Story formats use the *actual saved* parol design, color palette, pattern, current accepted light positions, friend count, and three actual growth layers per friend. Private messages, owner sessions, recovery secrets and contributor names are never included.
 
-The film-like 8-second composition reveals the three most recent growth layers, then pulls back to show the whole parol and its sharing message. Exports intentionally cap drawn ornamental layers at the first 50 friends (150 growth layers) for predictable rendering cost; the text retains the true accepted-friend count.
+The film-like 8-second MP4 composition reveals the three most recent growth layers, then pulls back to show the whole parol and its sharing message. The still PNG is rendered at frame 200 (after the full reveal) by the **existing** `BeMyParolStory` Remotion composition; it is an ordinary non-moving, 9:16 poster with the same title, decorative background, branding, friend count, invitation text and fully grown parol. Exports intentionally cap drawn ornamental layers at the first 50 friends (150 growth layers) for predictable rendering cost; the text retains the true accepted-friend count.
 
 ## Architecture
 
 - **React web UI**: `StoryFrame.tsx` is the reusable deterministic Story composition. `phoneStoryVideo.ts` lazily serializes that same component, paints frames to canvas and uses WebCodecs plus pinned Mediabunny to create an MP4 locally on capable phones. `StoryShare.tsx` handles capability checks, progress, automatic fallback, preview, native Web Share, downloads and link copying.
 - **ASP.NET API**: `StoryExportController` supports `POST /api/my/lantern/story` (owner cookie required) and `POST /api/invitations/story` (valid invitation **and** existing guest contribution required). Both require CSRF, are rate-limited, and collect only public parol fields from SQL. Owner/design data is never trusted from frontend export arguments.
-- **Private Node/Remotion renderer**: `story-renderer` remains the fallback and explicit background option, receives sanitized Story props over the private Docker network and renders H.264 MP4 or PNG. It caches identical exports for 24 hours (up to 32 files) and runs one render job at a time. No public ingress or social API credentials.
+- **Private Node/Remotion renderer**: `story-renderer` remains the MP4 fallback and explicit background option; it also generates the 9:16 still PNG from frame 200 of the same Story. It receives sanitized Story props over the private Docker network and renders H.264 MP4 or PNG. It caches identical exports for 24 hours (up to 32 files) and runs one render job at a time. No public ingress or social API credentials.
 - **No database migration** for Stories. The existing backend stores all required light and pattern data.
 
 ## Local development: single command (recommended)
@@ -74,3 +74,5 @@ Story-sharing branches.
 **Limitations:** File sharing varies by device/browser; posting Stories still requires manual confirmation. Remotion is an additional Node runtime and may be CPU-intensive at 1080p. Monitor latency, memory and disk pressure and consider a background job queue before high traffic.
 
 See [Phase 1 phone-first video design](phone-first-story-video.md) for device capability, fallback rules, and required real-phone tests.
+
+See [completed still Story poster](still-story-poster.md) for the PNG change and its test matrix.

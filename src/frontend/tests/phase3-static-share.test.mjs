@@ -1,7 +1,7 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
-import {ApiError, exportParolImage, fetchParolSnapshot} from '../src/lib/api.ts'
+import {ApiError, exportParolImage, exportStoryMedia, fetchParolSnapshot} from '../src/lib/api.ts'
 
 const read = path => readFileSync(new URL('../src/' + path, import.meta.url), 'utf8')
 
@@ -29,7 +29,7 @@ function stubImageServer(mime = 'image/png') {
   return {requests, restore: () => {globalThis.fetch = previous}}
 }
 
-test('static PNG shares the real saved owner parol using existing protected image API', async () => {
+test('separate parol-only snapshot endpoint remains available to authorized owners', async () => {
   const fake = stubImageServer()
   try {
     const blob = await exportParolImage('owner')
@@ -47,7 +47,7 @@ test('static PNG shares the real saved owner parol using existing protected imag
   } finally { fake.restore() }
 })
 
-test('static PNG for a guest uses the invitation capability only inside the POST body', async () => {
+test('separate parol-only guest snapshot retains invitation authorization', async () => {
   const fake = stubImageServer()
   try {
     const token = 'abcdefghijklmnop'
@@ -86,19 +86,62 @@ test('incorrect response MIME does not expose a mislabeled PNG', async () => {
   } finally { fake.restore() }
 })
 
-test('static-image preview and downloads are separate from the 9:16 video Story', () => {
+test('shareable still PNG uses the existing secured owner Story endpoint', async () => {
+  const fake = stubImageServer()
+  try {
+    const blob = await exportStoryMedia('owner', 'png')
+    assert.equal(blob.type, 'image/png')
+    assert.equal(fake.requests[0].path, '/api/owner/csrf')
+    const request = fake.requests[1]
+    assert.equal(request.path, '/api/my/lantern/story')
+    assert.equal(request.options.method, 'POST')
+    assert.equal(request.options.credentials, 'same-origin')
+    assert.equal(request.options.cache, 'no-store')
+    assert.equal(request.options.headers['X-CSRF-TOKEN'], 'csrf-test')
+    assert.deepEqual(JSON.parse(request.options.body), {format:'png'})
+  } finally {fake.restore()}
+})
+
+test('guest Story PNG uses existing contributor authorization and private POST body', async () => {
+  const fake = stubImageServer()
+  try {
+    const token = 'abcdefghijklmnop'
+    const blob = await exportStoryMedia('friend', 'png', token)
+    assert.equal(blob.type, 'image/png')
+    assert.equal(fake.requests[0].path, '/api/invitations/csrf')
+    const request = fake.requests[1]
+    assert.equal(request.path, '/api/invitations/story')
+    assert.equal(request.options.credentials, 'same-origin')
+    assert.deepEqual(JSON.parse(request.options.body), {format:'png', token})
+    assert.ok(!String(request.path).includes(token))
+  } finally {fake.restore()}
+})
+
+test('Story export rejects mismatched media responses instead of exposing them', async () => {
+  const fake = stubImageServer('text/html')
+  try {
+    await assert.rejects(exportStoryMedia('owner', 'png'), /unexpected Story media format/)
+  } finally {fake.restore()}
+})
+
+test('shareable PNG is the same completed 9:16 poster as the video, without movement', () => {
   const component = read('features/story/StoryShare.tsx')
-  assert.ok(component.includes("format === 'png' ? 'aspect-[15/16]' : 'aspect-[9/16]'"))
-  assert.ok(component.includes('exportParolImage(data.kind, token, controller.signal)'))
+  const renderer = read('../../story-renderer/server.mjs')
+  const story = read('features/story/StoryFrame.tsx')
+  assert.ok(component.includes('aspect-[9/16]'))
+  assert.ok(component.includes("exportStoryMedia(data.kind, 'png', token, controller.signal)"))
   assert.ok(component.includes("exportStoryMedia(data.kind, 'mp4', token, controller.signal)"))
-  assert.ok(component.includes('BeMyParol-Parol.png'))
+  assert.ok(!component.includes('exportParolImage(data.kind, token, controller.signal)'))
+  assert.ok(component.includes('BeMyParol-Story.png'))
   assert.ok(component.includes('BeMyParol-Story.mp4'))
-  assert.ok(component.includes('image/png'))
-  assert.ok(component.includes('video/mp4'))
-  assert.ok(component.includes('Your actual saved parol as a PNG image'))
-  assert.ok(component.includes('transparent background'))
-  assert.ok(!component.includes('A parol-only photo is coming in Phase 3'))
+  assert.ok(component.includes("image ? 'image/png' : 'video/mp4'"))
+  assert.ok(component.includes('Completed 9:16 BeMyParol Story poster'))
   assert.ok(component.includes('<StoryFrame data={data} frame={200}/>'))
+  assert.ok(component.includes('background, festive border, branding and invitation text'))
+  assert.ok(renderer.includes("frame:200,imageFormat:'png'"))
+  assert.ok(renderer.includes("id:'BeMyParolStory'"))
+  assert.ok(story.includes('A light from every friend'))
+  assert.ok(story.includes('Find my invitation in the Link sticker'))
 })
 
 test('a different owner/link/guest or contribution cannot share previously generated media', () => {
