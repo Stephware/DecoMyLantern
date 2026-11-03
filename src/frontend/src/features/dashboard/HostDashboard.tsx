@@ -3,7 +3,6 @@ import LanternScene from '../lantern/renderer/LanternScene'
 import { MAX_TEST_FRIENDS } from '../lantern/growth/stages'
 
 const AdminCachedParolPreview = lazy(() => import('../lantern/renderer/AdminCachedParolPreview'))
-import { growthForFriends } from '../lantern/growth/outerGrowth'
 import { THEMES } from '../customization/themes'
 import { FirstTimeDesignPicker, MobileDesignDrawer } from '../customization/DesignSelectionPanels'
 import RecoveryKeyDialog from '../owner/RecoveryKeyDialog'
