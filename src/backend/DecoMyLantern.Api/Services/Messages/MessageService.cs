@@ -15,8 +15,11 @@ public sealed class MessageService(IMessageRepository repository) : IMessageServ
     {
         var lantern = await repository.FindOwnedLanternAsync(lanternId, ownerId, cancellationToken);
         if (lantern is null) return null;
-        var unlocked = lantern.IsAdmin || ChristmasUnlockPolicy.CanRead(utcNow, lantern.UnlockAtUtc);
+        // Separating the true Christmas timestamp from admin early access
+        // prevents ordinary visitors from seeing a pre-Christmas reveal.
+        var christmasDayReached = ChristmasUnlockPolicy.CanRead(utcNow, lantern.UnlockAtUtc);
+        var unlocked = lantern.IsAdmin || christmasDayReached;
         var letters = await repository.GetLettersAsync(lanternId, unlocked, cancellationToken);
-        return new ChristmasInboxDto(unlocked, lantern.UnlockAtUtc, letters);
+        return new ChristmasInboxDto(unlocked, lantern.UnlockAtUtc, letters, christmasDayReached);
     }
 }
