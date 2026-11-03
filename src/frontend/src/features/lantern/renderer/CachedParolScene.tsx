@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import type { Theme } from '../../customization/themes'
 import { ApiError, fetchParolSnapshot } from '../../../lib/api'
@@ -431,15 +431,13 @@ export default function CachedParolScene({
     setSelectedId(contributions[(index + 1) % contributions.length].id)
   }
 
-  return (
-    <figure className="relative mx-auto w-full max-w-[710px]">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-[14%] top-[19%] aspect-square rounded-full bg-amber-300/5 blur-3xl" />
+  const viewerSurface = (
       <div className="relative overflow-hidden rounded-[26px] border border-white/5 bg-[radial-gradient(ellipse_at_50%_42%,rgba(249,177,82,0.10),rgba(8,14,32,0)_65%)]">
         <svg viewBox="0 0 600 640" preserveAspectRatio="xMidYMid meet"
           role="img"
           aria-label={`${theme.label} festival parol with ${friendCount} friends, rendered as one optimized image`}
-          className="block h-auto w-full cursor-grab select-none active:cursor-grabbing"
-          style={{touchAction:'none', userSelect:'none'}}
+          className={`parol-touch-surface block h-auto w-full cursor-grab select-none active:cursor-grabbing ${exploring ? 'parol-explore-active' : ''}`}
+          style={{userSelect:'none'}}
           onPointerDown={pointerDown} onPointerMove={pointerMove}
           onPointerUp={pointerEnd} onPointerCancel={pointerEnd}
           onClick={selectLight}>
@@ -476,7 +474,7 @@ export default function CachedParolScene({
           <button type="button" className="rounded-lg border border-rose-200/40 px-3 py-2 font-semibold"
             onClick={() => setAttempt(n => n + 1)}>Retry</button>
         </div>}
-        <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full border border-white/15 bg-[#101b33]/90 p-1.5 text-sm shadow-xl backdrop-blur">
+        <div className={`parol-zoom-controls absolute bottom-3 right-3 flex items-center gap-1 rounded-full border border-white/15 bg-[#101b33]/90 p-1.5 text-sm shadow-xl backdrop-blur ${exploring ? 'parol-explore-active' : ''}`}>
           <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-white hover:bg-white/15 disabled:opacity-30"
             aria-label="Zoom out" disabled={camera.zoom <= MIN_ZOOM}
             onClick={() => setCamera(old => ({...old, zoom: clamp(old.zoom - .2, MIN_ZOOM, MAX_ZOOM)}))}>−</button>
@@ -490,7 +488,24 @@ export default function CachedParolScene({
             onClick={selectNextLight} aria-label="Highlight next friend's light">Lights</button>}
         </div>
       </div>
-      {selected && <figcaption className="mt-2 text-center text-xs text-amber-200">
+  )
+
+  return (
+    <>
+      <figure className="relative mx-auto w-full max-w-[710px]">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-[14%] top-[19%] aspect-square rounded-full bg-amber-300/5 blur-3xl" />
+        {exploring
+          ? <div aria-hidden="true" className="aspect-[15/16] rounded-[26px] border border-white/5 bg-[#111d29]" />
+          : viewerSurface}
+        <div className="parol-mobile-explore-action mt-3 flex-col items-center gap-2 px-3 pb-1 text-center">
+          <button ref={exploreTriggerRef} type="button" aria-haspopup="dialog"
+            onClick={() => { pointers.current.clear(); dragged.current = false; setExploring(true) }}
+            className="min-h-11 rounded-full border border-amber-200/45 bg-[#192c32] px-6 py-3 text-sm font-bold text-amber-100 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300">
+            Explore parol
+          </button>
+          <p className="text-xs text-amber-100/75">Swipe over the parol to scroll this page. Tap Explore to move or zoom it.</p>
+        </div>
+      {!exploring && selected && <figcaption className="mt-2 text-center text-xs text-amber-200">
         {selected.displayName}
       </figcaption>}
       <figcaption role="status" aria-live="polite" className="sr-only">
@@ -499,5 +514,35 @@ export default function CachedParolScene({
           ready ? 'Parol ready' : 'Parol unavailable. Retry to refresh.'}
       </figcaption>
     </figure>
+      </figure>
+      {exploring && createPortal(
+        <div className="fixed inset-0 z-[110] bg-[#07121b]/95 text-amber-50 backdrop-blur-md">
+          <div ref={exploreDialogRef} role="dialog" aria-modal="true"
+            aria-labelledby="parol-explore-title" aria-describedby="parol-explore-help"
+            className="flex h-[100dvh] flex-col overflow-hidden">
+            <header className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-200/15 px-4 py-3">
+              <h2 id="parol-explore-title" className="font-serif text-xl text-amber-100">Explore parol</h2>
+              <button ref={exploreDoneRef} type="button" onClick={stopExploring}
+                aria-label="Done exploring parol"
+                className="min-h-11 rounded-full border border-amber-200/40 bg-amber-100/10 px-5 py-2.5 text-sm font-bold text-amber-50">
+                Done exploring
+              </button>
+            </header>
+            <div className="flex min-h-0 flex-1 items-center overflow-y-auto overscroll-contain p-3">
+              <div className="mx-auto w-full max-w-[min(710px,72dvh)]">
+                {viewerSurface}
+              </div>
+            </div>
+            <div className="shrink-0 border-t border-amber-200/15 px-4 py-3 text-center">
+              <p id="parol-explore-help" className="text-xs text-amber-100/80">
+                Drag to move, pinch to zoom, or use the controls. Tap Done to return to the page.
+              </p>
+              {selected && <p className="mt-1 text-sm font-semibold text-amber-200">{selected.displayName}</p>}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
   )
 }
