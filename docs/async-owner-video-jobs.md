@@ -2,7 +2,9 @@
 
 ## Goal
 
-The owner can click **Generate animated MP4**, close the share dialog or page,
+This original background queue is **retained** for owners choosing **Generate in background instead**, for unsupported devices, and as the automatic fallback if phone-side MP4 encoding fails. The separate phone-first implementation is documented in [phone-first-story-video.md](phone-first-story-video.md).
+
+The owner can click **Generate in background instead** (or the server fallback action), close the share dialog or page,
 and come back later while the private renderer continues working. Reopening
 **Share your parol → Animated Story** checks the job and loads the completed
 video automatically. PNG preparation stays immediate; friend-side sharing
