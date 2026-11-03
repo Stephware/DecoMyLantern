@@ -76,6 +76,20 @@ button:focus-visible, input:focus-visible { outline: 2px solid #ffcf75; outline-
   animation: parol-snapshot-glint 720ms ease-out both;
 }
 
+/* Real parol on touchscreens: allow the browser to scroll the page by
+   default. Deliberate Explore mode captures drag/pinch within its dialog.
+   Desktop mouse/trackpad parol behavior stays unchanged. */
+.parol-touch-surface { touch-action: none; }
+.parol-mobile-explore-action { display: none; }
+@media (pointer: coarse) {
+  .parol-touch-surface:not(.parol-explore-active) {
+    touch-action: auto;
+    cursor: default;
+  }
+  .parol-zoom-controls:not(.parol-explore-active) { display: none; }
+  .parol-mobile-explore-action { display: flex; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;
