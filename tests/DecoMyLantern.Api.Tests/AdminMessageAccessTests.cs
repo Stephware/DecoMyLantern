@@ -26,7 +26,34 @@ public sealed class AdminMessageAccessTests
 
         Assert.NotNull(inbox);
         Assert.Equal(expectedUnlocked, inbox.Unlocked);
+        // An admin can test early without changing when Christmas actually arrives.
+        Assert.False(inbox.ChristmasDayReached);
         Assert.Equal(expectedUnlocked ? "private test message" : null, inbox.Messages.Single().Body);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Server_marks_actual_christmas_midnight_for_admin_and_regular_owners(bool isAdmin)
+    {
+        var ownerId = Guid.NewGuid();
+        var lanternId = Guid.NewGuid();
+        var repository = new FakeRepository(new Lantern
+        {
+            Id = lanternId, OwnerUserId = ownerId, IsAdmin = isAdmin, UnlockAtUtc = UnlockAt
+        });
+        var before = await new MessageService(repository).GetInboxAsync(
+            lanternId, ownerId, UnlockAt.AddTicks(-1), default);
+        Assert.NotNull(before);
+        Assert.False(before.ChristmasDayReached);
+        Assert.Equal(isAdmin, before.Unlocked);
+
+        var after = await new MessageService(repository).GetInboxAsync(
+            lanternId, ownerId, UnlockAt, default);
+        Assert.NotNull(after);
+        Assert.True(after.ChristmasDayReached);
+        Assert.True(after.Unlocked);
+        Assert.Equal("private test message", after.Messages.Single().Body);
     }
 
     [Fact]
