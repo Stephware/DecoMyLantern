@@ -312,6 +312,8 @@ export default function CachedParolScene({
   const stopExploring = useCallback(() => {
     pointers.current.clear()
     dragged.current = false
+    // The embedded mobile view has no zoom controls: always return it fitted.
+    setCamera({zoom: 1, x: 0, y: 0})
     setExploring(false)
   }, [])
 
