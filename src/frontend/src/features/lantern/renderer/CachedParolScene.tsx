@@ -352,12 +352,14 @@ export default function CachedParolScene({
     }
   }, [exploring, stopExploring])
 
-  function touchCanPan(): boolean {
-    return canPanParol(window.matchMedia('(pointer: coarse)').matches, exploring)
+  function touchCanPan(pointerType: string): boolean {
+    // Even a touch-capable tablet can have a real mouse; preserve mouse drag.
+    return canPanParol(pointerType !== 'mouse' &&
+      window.matchMedia('(pointer: coarse)').matches, exploring)
   }
 
   function pointerDown(event: PointerEvent<SVGSVGElement>) {
-    if (!touchCanPan()) return
+    if (!touchCanPan(event.pointerType)) return
     if (event.pointerType === 'mouse' && event.button !== 0) return
     if (pointers.current.size === 0) dragged.current = false
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
@@ -365,7 +367,7 @@ export default function CachedParolScene({
   }
 
   function pointerMove(event: PointerEvent<SVGSVGElement>) {
-    if (!touchCanPan()) return
+    if (!touchCanPan(event.pointerType)) return
     const tracked = pointers.current
     const previous = tracked.get(event.pointerId)
     if (!previous) return
