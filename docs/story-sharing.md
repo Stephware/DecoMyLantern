@@ -5,7 +5,7 @@ BeMyParol offers owners an invitation Story and contributing friends a personali
 ## Flow
 
 1. Open **Share animated Story** (owner dashboard beside the single invitation link, or guest confirmation after adding a light).
-2. See the portrait preview. Press **Generate animated MP4** to render an 8-second, 1080 × 1920, 30fps H.264 video; the Story is silent by default.
+2. See the portrait preview. On a capable phone, press **Generate on this phone** to encode the 8-second, 1080 × 1920, 30fps H.264 MP4 directly in the browser; keep the page open. Select **Generate in background instead** to use the original private server queue and return later. On unsupported phones or desktop, the existing server generation remains the default. The Story is silent by default.
 3. On compatible mobile browsers, press **Share video** to open the native OS share menu. The receiving app and whether it offers Stories depend on the device/app.
 4. If the share menu does not support the file, press **Download MP4**, then upload it manually to Instagram or Facebook Stories.
 5. Press **Copy invitation link**, and paste it into the social Story editor's **Link sticker**. The printed URL/CTA inside the video cannot be tapped.
@@ -17,9 +17,9 @@ The film-like 8-second composition reveals the three most recent growth layers, 
 
 ## Architecture
 
-- **React web UI**: `StoryFrame.tsx` is a reusable deterministic SVG composition; `StoryShare.tsx` provides the preview, video generation button, native Web Share file hand-off, downloads, and link copying.
+- **React web UI**: `StoryFrame.tsx` is the reusable deterministic Story composition. `phoneStoryVideo.ts` lazily serializes that same component, paints frames to canvas and uses WebCodecs plus pinned Mediabunny to create an MP4 locally on capable phones. `StoryShare.tsx` handles capability checks, progress, automatic fallback, preview, native Web Share, downloads and link copying.
 - **ASP.NET API**: `StoryExportController` supports `POST /api/my/lantern/story` (owner cookie required) and `POST /api/invitations/story` (valid invitation **and** existing guest contribution required). Both require CSRF, are rate-limited, and collect only public parol fields from SQL. Owner/design data is never trusted from frontend export arguments.
-- **Private Node/Remotion renderer**: `story-renderer` receives sanitized Story props over the private Docker network and renders H.264 MP4 or PNG. It caches identical exports for 24 hours (up to 32 files) and runs one render job at a time. No public ingress or social API credentials.
+- **Private Node/Remotion renderer**: `story-renderer` remains the fallback and explicit background option, receives sanitized Story props over the private Docker network and renders H.264 MP4 or PNG. It caches identical exports for 24 hours (up to 32 files) and runs one render job at a time. No public ingress or social API credentials.
 - **No database migration** for Stories. The existing backend stores all required light and pattern data.
 
 ## Local development: single command (recommended)
@@ -72,3 +72,5 @@ Story-sharing branches.
 - Confirm a manually added Instagram/Facebook **Link sticker** works with the current single invitation URL.
 
 **Limitations:** File sharing varies by device/browser; posting Stories still requires manual confirmation. Remotion is an additional Node runtime and may be CPU-intensive at 1080p. Monitor latency, memory and disk pressure and consider a background job queue before high traffic.
+
+See [Phase 1 phone-first video design](phone-first-story-video.md) for device capability, fallback rules, and required real-phone tests.
