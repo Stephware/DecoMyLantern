@@ -1,0 +1,139 @@
+import {createElement} from 'react'
+import {renderToStaticMarkup} from 'react-dom/server'
+import {StoryFrame, type StoryData} from './StoryFrame'
+import {STORY_FPS, STORY_FRAMES, STORY_HEIGHT, STORY_WIDTH} from './storySpec'
+
+/**
+ * Strictly opt-in browser path: nothing is sent to a video server.
+ * This is loaded only when a user selects phone generation.
+ * The existing authorized server queue remains the fallback.
+ */
+const MAX_PHONE_RENDER_MS = 120_000
+
+export function isPhoneStoryDevice(): boolean {
+  return typeof window !== 'undefined' &&
+    window.matchMedia('(max-width: 900px)').matches &&
+    (window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0)
+}
+
+export async function canRenderStoryOnPhone(): Promise<boolean> {
+  if (!isPhoneStoryDevice() || !window.isSecureContext ||
+      typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return false
+  try {
+    const {canEncodeVideo} = await import('mediabunny')
+    return await canEncodeVideo('avc', {
+      width: STORY_WIDTH, height: STORY_HEIGHT, frameRate: STORY_FPS,
+    })
+  } catch {
+    return false
+  }
+}
+
+function abortIfNeeded(signal: AbortSignal): void {
+  if (signal.aborted || document.hidden)
+    throw new DOMException('Phone video generation stopped.', 'AbortError')
+}
+
+async function nextPaint(signal: AbortSignal): Promise<void> {
+  abortIfNeeded(signal)
+  await new Promise<void>((resolve, reject) => {
+    let frameId = 0
+    const fail = () => {
+      window.cancelAnimationFrame(frameId)
+      cleanup()
+      reject(new DOMException('Phone video generation interrupted.', 'AbortError'))
+    }
+    const visibility = () => { if (document.hidden) fail() }
+    const cleanup = () => {
+      signal.removeEventListener('abort', fail)
+      document.removeEventListener('visibilitychange', visibility)
+    }
+    signal.addEventListener('abort', fail, {once:true})
+    document.addEventListener('visibilitychange', visibility)
+    frameId = window.requestAnimationFrame(() => { cleanup(); resolve() })
+  })
+}
+
+/** Serialize the SAME deterministic StoryFrame used by Remotion into an
+ * inline, self-contained SVG foreignObject. Browser support is deliberately
+ * checked; any unsupported rasterization returns control to the server queue.
+ */
+function frameSvg(data: StoryData, frame: number): string {
+  const markup = renderToStaticMarkup(createElement(StoryFrame, {data, frame}))
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${STORY_WIDTH}" height="${STORY_HEIGHT}" viewBox="0 0 ${STORY_WIDTH} ${STORY_HEIGHT}"><foreignObject x="0" y="0" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml">${markup}</div></foreignObject></svg>`
+}
+
+async function paintFrame(canvas: HTMLCanvasElement, data: StoryData, frame: number,
+                          signal: AbortSignal): Promise<void> {
+  abortIfNeeded(signal)
+  const blobUrl = URL.createObjectURL(new Blob([frameSvg(data, frame)], {type:'image/svg+xml'}))
+  try {
+    const image = new Image()
+    image.src = blobUrl
+    await image.decode()
+    abortIfNeeded(signal)
+    const context = canvas.getContext('2d', {alpha:false})
+    if (!context) throw new Error('Canvas drawing is unavailable.')
+    context.clearRect(0, 0, STORY_WIDTH, STORY_HEIGHT)
+    context.drawImage(image, 0, 0, STORY_WIDTH, STORY_HEIGHT)
+    // This readback also rejects tainted foreignObject rendering. Empty or
+    // unsupported captures must never be exported as apparently valid MP4s.
+    if (frame === 0) {
+      const pixel = context.getImageData(STORY_WIDTH / 2, STORY_HEIGHT / 2, 1, 1).data
+      if (pixel[3] === 0 || (pixel[0] === 0 && pixel[1] === 0 && pixel[2] === 0))
+        throw new Error('This browser cannot capture the Story artwork.')
+    }
+  } finally {
+    URL.revokeObjectURL(blobUrl)
+  }
+}
+
+export async function renderStoryOnPhone(
+  data: StoryData, signal: AbortSignal, onProgress: (percent: number) => void,
+): Promise<Blob> {
+  if (!await canRenderStoryOnPhone()) throw new Error('Phone MP4 encoding is unsupported.')
+  abortIfNeeded(signal)
+
+  const {Output, Mp4OutputFormat, BufferTarget, CanvasSource, Quality} = await import('mediabunny')
+  const canvas = document.createElement('canvas')
+  canvas.width = STORY_WIDTH
+  canvas.height = STORY_HEIGHT
+  const output = new Output({format: new Mp4OutputFormat(), target: new BufferTarget()})
+  const source = new CanvasSource(canvas, {
+    codec: 'avc',
+    quality: new Quality('high'),
+    keyFrameInterval: 2,
+    latencyMode: 'quality', // never drop frames from the deterministic Story
+  })
+  output.addVideoTrack(source)
+  const startedAt = performance.now()
+  let finished = false
+  try {
+    await output.start()
+    for (let frame = 0; frame < STORY_FRAMES; frame++) {
+      abortIfNeeded(signal)
+      if (performance.now() - startedAt > MAX_PHONE_RENDER_MS)
+        throw new Error('This phone is taking too long to render the video.')
+      await paintFrame(canvas, data, frame, signal)
+      await source.add(frame / STORY_FPS, 1 / STORY_FPS)
+      if (frame % 12 === 11 || frame === STORY_FRAMES - 1)
+        onProgress(Math.round((frame + 1) * 100 / STORY_FRAMES))
+      // Yield frequently so cancellation, progress and touch feedback work.
+      if (frame % 4 === 3) await nextPaint(signal)
+    }
+    abortIfNeeded(signal)
+    await output.finalize()
+    finished = true
+    const buffer = output.target.buffer
+    if (!buffer || buffer.byteLength < 1024)
+      throw new Error('Phone video export was incomplete.')
+    const result = new Blob([buffer], {type:'video/mp4'})
+    if (await result.slice(4, 8).text() !== 'ftyp')
+      throw new Error('Phone video did not produce a valid MP4 container.')
+    return result
+  } finally {
+    if (!finished) await output.cancel().catch(() => {})
+    canvas.width = 0
+    canvas.height = 0
+  }
+}
