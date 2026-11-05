@@ -225,11 +225,12 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     if (selected === 'mp4' && videoKey === dataKey && video) return
 
     const requestedKey = dataKey
-    const mode = requestedMode !== 'server' &&
+    const mode: 'device' | 'server' = requestedMode !== 'server' &&
       (selected === 'png' || (selected === 'mp4' && deviceAvailable))
       ? 'device' : 'server'
     const controller = new AbortController()
-    const request = {key: requestedKey, format: selected, controller, mode}
+    const request: NonNullable<typeof activeRequest.current> =
+      {key: requestedKey, format: selected, controller, mode}
     activeRequest.current = request
     setBusy(selected)
     setRetrying(0)
