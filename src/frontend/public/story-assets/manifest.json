@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "templateVersion": "story-hybrid-v2",
+  "assets": [
+    {
+      "id": "story-night",
+      "file": "story-night-v2.svg",
+      "width": 1080,
+      "height": 1920,
+      "fps": 24,
+      "duration": 8,
+      "sourceSha256": "b42f0259330ce8786ab465a79b825bc88febc1cc78b84ec968ac32207abcadd9",
+      "sha256": "b42f0259330ce8786ab465a79b825bc88febc1cc78b84ec968ac32207abcadd9",
+      "compatibility": {"mime": "image/svg+xml", "public": true}
+    }
+  ]
+}
