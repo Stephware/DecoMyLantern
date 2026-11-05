@@ -1,54 +1,69 @@
-# Public welcome parol: full-grown, still image
+# Public welcome parol: 20-friend Classic Gold with gentle shimmer
 
 ## Scope
 
-Only the **public welcome/landing page's displayed illustration** changes.
-The interactive, saved owner/guest parols, approved geometry, friendship growth,
-three-wave reveals, zoom/pan, light selection, sharing and admin Design Lab
-are not modified by this change.
+Only the **welcome page** uses a 20-friend showcase. The six onboarding
+design-gallery cards still default to their original **50-friend previews**.
+Real owner and guest parols, their contribution counts, design choices,
+1x/2x/3x zoom, mobile Explore, message reveals, and PNG/MP4 sharing are
+unchanged.
 
-## Welcome image
+## Showcase image and caching
 
-- The welcome page displays an ordinary non-draggable HTML `<img>` with
-  `pointer-events-none`, allowing normal page scrolling on mobile and
-  desktop. There are no SVG pointer handlers, pan/zoom buttons, or JS
-  reconstruction of the artwork.
-- Its main image source is the existing, public
-  `/api/designs/classic/showcase?v=v1` endpoint. The endpoint creates the
-  **approved Classic Gold parol at exactly 50 synthetic friends**,
-  `patternKey = "default"`, and 50 ordered light slots via the same
-  server-side `BeMyParolSnapshot` composition used in the design selector.
-- This is a **fixed raster image in the browser**, not a procedural or
-  movable viewer. The first uncached request may cause one background
-  Remotion image render; subsequent requests reuse the renderer's
-  content-addressed 24-hour disk cache and the API's
-  `Cache-Control: public, max-age=86400` browser cache.
-- If the optional showcase renderer is offline or busy, the welcome
-  illustration falls back to the already committed standalone zero-friend
-  `/parol-classic-preview.svg`, which exactly matches the approved
-  Classic Gold image in `downtime/index.html`.
-- The zero-friend SVG remains committed for the fallback. The downtime
-  screen stays fully standalone and is not changed.
+- Welcome uses `/api/designs/classic/showcase?friends=20&v=v2`, rendered
+  with the approved Classic Gold / default pattern and the **20 synthetic
+  slots 0–19**. It is still a **non-draggable, non-zoomable HTML img**.
+- The existing public `GET /api/designs/{designKey}/showcase` defaults to
+  **50 friends** for all the design-picker cards, as before. Its optional
+  `friends` query is restricted to exactly **20 or 50**; unsupported
+  values are rejected. It never reads or mutates real owner contributions.
+- The same `BeMyParolSnapshot` Remotion render and content-addressed
+  private cache are used for both counts. The synthetic count and slots
+  are included in the cache identity, keeping 20 and 50 distinct.
+  `Cache-Control: public, max-age=86400` remains; the URL version
+  changed for the welcome page so old 50-friend browser caches cannot
+  masquerade as the 20-friend welcome image.
+- If the optional showcase render fails, the committed standalone
+  `/parol-classic-preview.svg` fallback still appears. The downtime
+  page is not modified.
+
+## Visual effects
+
+- The **actual image** gently varies in brightness/saturation and casts
+  a very subtle warm drop-shadow; its position, silhouette and scale
+  never move.
+- **Eight tiny, staggered glints** sit over the parol ornament rings,
+  making the lights feel alive; **only two small stars** sit in the dark
+  space outside. A subdued radial halo supports the effect without
+  washing out the artwork.
+- All decorative overlays are `aria-hidden` and
+  `pointer-events-none`. No listeners capture touch, wheel, drag or
+  pinch, so users can scroll normally over the welcome picture.
+- Under `prefers-reduced-motion: reduce`, animations stop and light
+  effects become static. No canvas, JS animation loop, video playback,
+  additional backend renderer or new dependency is introduced.
 
 ## Verification
 
-1. Open the unauthenticated welcome page on phone and desktop. It should
-   show **Classic Gold at 50 friends** and never capture drag/swipe
-   gestures; scrolling over the image should move the page.
-2. In DevTools Network, confirm `GET /api/designs/classic/showcase?v=v1`
-   responds with `image/webp` and browser cache headers. Reload to see
-   the cached copy. A cold request may take longer while Remotion renders.
-3. Compare the welcome image with the **Classic Gold 50-friend** card
-   inside the onboarding design picker: same actual ornament/artwork and
-   full-bloom decorative regions.
-4. Stop the renderer and reload without a cached response: the welcome
-   image should gracefully fall back to the old local Classic Gold SVG,
-   not a broken image or draggable parol.
-5. Verify owner/guest parol interactions, PNG/MP4 sharing and the
-   separate admin Design Lab are unchanged.
-6. Run `bash scripts/verify-phase6.sh --skip-install` at repository root.
+1. On desktop and mobile, verify the public landing page shows the 20-friend
+   image and that its internal ornaments, not just its surroundings,
+   visibly twinkle. The image must **never** pan or zoom, and finger swipes
+   across it must scroll the page.
+2. In DevTools verify `GET /api/designs/classic/showcase?friends=20&v=v2`
+   responds with `image/webp` and HTTP caching; reloading should reuse
+   cached media. Unsupported `friends=35` should return 400.
+3. Open the design selection gallery and verify its original
+   `/api/designs/{designKey}/showcase?v=v1` URLs still return **50**
+   friend illustrations.
+4. Test `prefers-reduced-motion` and intentionally stop the renderer:
+   the fallback still displays without a broken image or scrolling trap.
+5. Check saved owner/guest parols, 2x/3x zoom, admin lab, Christmas reveal,
+   Story PNG and phone/server MP4 for regressions.
+6. Run `(cd src/frontend && npm ci && npm test && npm run typecheck &&
+   npm run lint && npm run build)`, plus the repository's existing
+   ASP.NET test suite.
 
-**Limitation:** The 50-friend graphic is an HTTP-cached server-rendered
-WebP, not an offline-bundled `public` file. A cold visit relies on the
-existing showcase renderer; this reuses its cache and does not create a new
-rendering endpoint. Real-device and end-to-end testing remain required.
+**Limitations:** A cold 20-friend image still relies on the existing
+server renderer, not an offline-committed image. Exact glint alignment
+and mobile visual performance need an actual browser review; source
+checks alone cannot prove pixel-perfect appearance.
