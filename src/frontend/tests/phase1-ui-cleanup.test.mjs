@@ -82,3 +82,16 @@ test('sharing, recovery and accessibility remain functional', () => {
   assert.ok(recovery.includes('Valid until'))
   assert.ok(recovery.includes('Leave anyway'))
 })
+
+test('save interactions have no redundant design-saved or debugging copy', () => {
+  const owner = read('features/dashboard/HostDashboard.tsx')
+  const panels = read('features/customization/DesignSelectionPanels.tsx')
+  const adminInbox = read('features/dashboard/AdminMessages.tsx')
+  assert.ok(owner.includes('if (changed) await onSave(draftDesign, lantern.patternKey)'))
+  assert.ok(owner.includes('setError(caught instanceof Error'))
+  assert.ok(!owner.includes('Design saved.'))
+  assert.ok(!owner.includes('All changes saved'))
+  assert.ok(!owner.includes('setNotice('))
+  assert.doesNotMatch(panels, /Current design saved|All changes saved/)
+  assert.doesNotMatch(adminInbox, /available early for debugging/)
+})

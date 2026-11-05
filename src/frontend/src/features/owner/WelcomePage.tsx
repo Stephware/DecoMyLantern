@@ -53,7 +53,13 @@ export default function WelcomePage({
             </p>
           </div>
           <div className="overflow-hidden rounded-[26px] border border-[#263e34] bg-[#15251e] p-3 shadow-[0_20px_55px_rgba(34,48,34,.18)] sm:p-5">
-            <div className="relative mx-auto w-full max-w-[710px] p-6 sm:p-8">
+            <div className="welcome-parol-stage relative mx-auto w-full max-w-[710px] p-6 sm:p-8">
+              {/* Decorative lighting is positioned only in the empty space surrounding the parol.
+                  The approved 20-friend artwork remains the same static, non-interactive image. */}
+              <div aria-hidden="true" className="welcome-parol-ambient pointer-events-none absolute inset-0 z-0" />
+              <div aria-hidden="true" className="welcome-parol-bokeh welcome-parol-bokeh-1" />
+              <div aria-hidden="true" className="welcome-parol-bokeh welcome-parol-bokeh-2" />
+              <div aria-hidden="true" className="welcome-parol-bokeh welcome-parol-bokeh-3" />
               <img src="/api/designs/classic/showcase?friends=20&v=v2" width={1200} height={1280}
                 alt="Classic Gold festival parol with 20 sample friends"
                 draggable={false} decoding="async" loading="eager"
@@ -65,21 +71,22 @@ export default function WelcomePage({
                     event.currentTarget.alt = 'BeMyParol Classic Gold festival parol'
                   }
                 }}
-                className="welcome-parol-artwork pointer-events-none block h-auto w-full select-none" />
-              <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-visible">
-                <div className="welcome-parol-halo absolute inset-[10%]" />
-                {/* Light glints follow ornament locations on the actual parol;
-                    only two small stars float in its surrounding dark space. */}
-                <span className="welcome-parol-glint">✦</span>
-                <span className="welcome-parol-glint">✧</span>
-                <span className="welcome-parol-glint">✦</span>
-                <span className="welcome-parol-glint">✧</span>
-                <span className="welcome-parol-glint">✦</span>
-                <span className="welcome-parol-glint">✧</span>
-                <span className="welcome-parol-glint">✦</span>
-                <span className="welcome-parol-glint">✧</span>
-                <span className="welcome-parol-sparkle">✧</span>
-                <span className="welcome-parol-sparkle">✦</span>
+                className="welcome-parol-artwork pointer-events-none relative z-10 block h-auto w-full select-none" />
+              <div aria-hidden="true" className="welcome-parol-decor pointer-events-none absolute inset-0 z-20">
+                <span className="welcome-parol-starburst">✦</span>
+                <span className="welcome-parol-starburst">✦</span>
+                <span className="welcome-parol-starburst">✦</span>
+                <span className="welcome-parol-starburst">✦</span>
+                <span className="welcome-parol-dust" />
+                <span className="welcome-parol-dust" />
+                <span className="welcome-parol-dust" />
+                <span className="welcome-parol-dust" />
+                <span className="welcome-parol-dust" />
+                <span className="welcome-parol-dust" />
+                <span className="welcome-parol-dust" />
+                <span className="welcome-parol-dust" />
+                <span className="welcome-parol-dust" />
+                <span className="welcome-parol-dust" />
               </div>
             </div>
           </div>

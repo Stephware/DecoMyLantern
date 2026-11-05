@@ -28,7 +28,6 @@ export default function AdminMessages({ lanternId, friendCount }: { lanternId: s
         Refresh messages
       </button>
     </div>
-    <p className="mt-2 text-xs leading-5 text-[#766b5d]">Messages on this parol are available early for debugging.</p>
     {loading && <p role="status" className="mt-4 text-sm text-[#766b5d]">Loading messages…</p>}
     {error && <p role="alert" className="mt-4 text-sm text-[#902632]">{error}</p>}
     {!loading && !error && inbox && (inbox.messages.length ?
