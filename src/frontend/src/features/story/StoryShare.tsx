@@ -275,6 +275,9 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
           setDeviceProgress(0)
         }
       }
+      // If device painting or encoding fails, the rest of this request runs on
+      // the authenticated server path and should be labelled accordingly.
+      request.mode = 'server'
       if (selected === 'mp4' && data.kind === 'owner') {
         // From this point cancellation stops only the request, not the accepted
         // background job. Even an auto-fallback follows the normal queue rules.
