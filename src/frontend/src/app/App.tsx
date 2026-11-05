@@ -129,7 +129,8 @@ export default function App() {
 
   if (screen === 'loading') return (
     <div className="flex min-h-screen items-center justify-center bg-[#f7f2e9] px-5 text-center text-[#263d32]">
-      <div role="status"><div className="mb-4 text-5xl text-[#ac804a]" aria-hidden="true">✦</div><p className="font-serif text-2xl">Lighting your parol…</p></div>
+      <div role="status"><img src="/bemyparol-logo.png" width={68} height={68} alt="" aria-hidden="true"
+        className="mx-auto mb-4 h-[68px] w-[68px] object-contain" /><p className="font-serif text-2xl">Lighting your parol…</p></div>
     </div>
   )
 

@@ -67,7 +67,8 @@ export default function GuestInvitationPage({ token }: Props) {
       <div className="mx-auto max-w-[1250px] min-[1700px]:max-w-[1200px]">
         <header className="flex items-center justify-between gap-3 border-b border-[#e2d8c8] py-5">
           <a href="/" className="inline-flex items-center gap-2 font-serif text-2xl font-semibold text-[#293c30]">
-            <span className="text-[#aa7c3b]" aria-hidden="true">✦</span> BeMyParol
+            <img src="/bemyparol-logo.png" alt="" aria-hidden="true" width={36} height={36} draggable={false}
+              className="inline-block h-9 w-9 align-middle object-contain" /> BeMyParol
           </a>
         </header>
         <div className="pb-5 pt-7 sm:pt-9">

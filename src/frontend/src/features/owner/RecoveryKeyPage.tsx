@@ -33,7 +33,8 @@ export default function RecoveryKeyPage({ code, onContinue, onCancel }: Props) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f7f2e9] px-4 py-10 text-[#273a30]">
       <section className="w-full max-w-xl rounded-[28px] border border-[#e5d8c4] bg-[#fffdf8] p-6 shadow-[0_16px_45px_rgba(54,43,27,.08)] sm:p-10">
-        <div className="font-serif text-2xl font-semibold text-[#27392d]"><span className="text-[#aa7e45]">✦</span> BeMyParol</div>
+        <div className="font-serif text-2xl font-semibold text-[#27392d]"><img src="/bemyparol-logo.png" alt="" aria-hidden="true" width={40} height={40}
+          className="mr-1 inline-block h-10 w-10 align-middle object-contain" /> BeMyParol</div>
         <h1 className="mt-2 font-serif text-3xl font-semibold sm:text-4xl">Save your recovery key.</h1>
         <p className="mt-3 text-sm leading-7 text-[#70685a]">
           Save this private key to return to your parol on another device.

@@ -4,9 +4,9 @@ import {StoryFrame, type StoryData} from './StoryFrame'
 import {STORY_FPS, STORY_FRAMES, STORY_HEIGHT, STORY_WIDTH} from './storySpec'
 
 /**
- * Strictly opt-in browser path: nothing is sent to a video server.
- * This is loaded only when a user selects phone generation.
- * The existing authorized server queue remains the fallback.
+ * Device-local Story generation: browser Canvas + WebCodecs (MP4), and Canvas PNG.
+ * No device-rendered media is uploaded. Existing authorized server exports remain
+ * the fallback for unsupported/low-memory devices, large parols, or failures.
  */
 const MAX_PHONE_RENDER_MS = 120_000
 
@@ -16,9 +16,21 @@ export function isPhoneStoryDevice(): boolean {
     (window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0)
 }
 
-export async function canRenderStoryOnPhone(): Promise<boolean> {
-  if (!isPhoneStoryDevice() || !window.isSecureContext ||
+/** Device memory limits came from the feature/video-parsing-optimization
+ * benchmarks (50 friends used ~2.3 GiB in Chrome). Unknown-memory phones
+ * are conservatively capped at 6; well-provisioned devices may render more. */
+export function deviceVideoFriendLimit(): number {
+  if (typeof navigator === 'undefined') return 0
+  const memory = (navigator as Navigator & {deviceMemory?: number}).deviceMemory
+  if (memory === undefined) return 6
+  return memory >= 4 ? 12 : 6
+}
+
+export async function canRenderStoryOnDevice(friendCount?: number, slotCount?: number): Promise<boolean> {
+  if (typeof window === 'undefined' || !window.isSecureContext ||
       typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return false
+  if ((friendCount ?? 0) > deviceVideoFriendLimit() ||
+      (slotCount ?? 0) > deviceVideoFriendLimit()) return false
   try {
     const {canEncodeVideo} = await import('mediabunny')
     return await canEncodeVideo('avc', {
@@ -28,6 +40,9 @@ export async function canRenderStoryOnPhone(): Promise<boolean> {
     return false
   }
 }
+
+// Preserve the old entrypoint for code still importing the phone-specific API.
+export const canRenderStoryOnPhone = canRenderStoryOnDevice
 
 function abortIfNeeded(signal: AbortSignal): void {
   if (signal.aborted || document.hidden)
@@ -124,10 +139,11 @@ async function verifyFramePainting(canvas: HTMLCanvasElement, data: StoryData,
   if (!changed) throw new Error('This browser cannot capture the animated Story accurately.')
 }
 
-export async function renderStoryOnPhone(
+/** Uses the existing deterministic StoryFrame for every media frame. */
+export async function renderStoryOnDevice(
   data: StoryData, signal: AbortSignal, onProgress: (percent: number) => void,
 ): Promise<Blob> {
-  if (!await canRenderStoryOnPhone()) throw new Error('Phone MP4 encoding is unsupported.')
+  if (!await canRenderStoryOnDevice(data.friendCount, data.slots.length)) throw new Error('Device MP4 encoding is unsupported for this parol.')
   abortIfNeeded(signal)
 
   const {Output, Mp4OutputFormat, BufferTarget, CanvasSource, Quality} = await import('mediabunny')
@@ -176,3 +192,39 @@ export async function renderStoryOnPhone(
     canvas.height = 0
   }
 }
+
+/** A local PNG uses the exact completed frame 200 of the same StoryFrame.
+ * If foreignObject drawing/Canvas is blocked, the caller uses the authorized
+ * legacy PNG endpoint instead. This method never fetches image media remotely. */
+export async function renderStoryImageOnDevice(
+  data: StoryData, signal: AbortSignal,
+): Promise<Blob> {
+  if (typeof document === 'undefined') throw new Error('Canvas is unavailable.')
+  abortIfNeeded(signal)
+  const canvas = document.createElement('canvas')
+  canvas.width = STORY_WIDTH
+  canvas.height = STORY_HEIGHT
+  try {
+    // Two sufficiently different frames are required to prove the browser
+    // actually painted our parol, not merely the background or a blank SVG.
+    await verifyFramePainting(canvas, data, signal)
+    abortIfNeeded(signal)
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(value => value ? resolve(value) :
+        reject(new Error('This device cannot export a Story PNG.')), 'image/png')
+    })
+    abortIfNeeded(signal)
+    if (blob.type !== 'image/png' || blob.size < 1024)
+      throw new Error('Device PNG export was incomplete.')
+    const signature = new Uint8Array(await blob.slice(0, 8).arrayBuffer())
+    if ([137,80,78,71,13,10,26,10].some((byte, i) => byte !== signature[i]))
+      throw new Error('Device image is not a valid PNG.')
+    return blob
+  } finally {
+    canvas.width = 0
+    canvas.height = 0
+  }
+}
+
+// Compatibility with existing phone-only users.
+export const renderStoryOnPhone = renderStoryOnDevice

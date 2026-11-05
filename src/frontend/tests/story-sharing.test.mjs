@@ -34,7 +34,7 @@ test('owner and guest sharing is present without requesting a Meta account',()=>
   assert.ok(code.includes('navigator.canShare'))
   assert.ok(code.includes('Download MP4'))
   assert.ok(code.includes('Copy invitation link'))
-  assert.ok(code.includes("generate(format, phoneAvailable ? 'phone' : 'server')"))
+  assert.ok(code.includes("generate(format, format === 'png' || deviceAvailable ? 'device' : 'server')"))
   assert.ok(code.includes("share(format)"))
   assert.ok(code.includes("Download PNG"))
   assert.ok(!code.includes('instagramAccessToken'))
