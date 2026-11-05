@@ -53,7 +53,7 @@ export default function WelcomePage({
             </p>
           </div>
           <div className="overflow-hidden rounded-[26px] border border-[#263e34] bg-[#15251e] p-3 shadow-[0_20px_55px_rgba(34,48,34,.18)] sm:p-5">
-            <div className="relative mx-auto w-full max-w-[710px]">
+            <div className="relative mx-auto w-full max-w-[710px] p-6 sm:p-8">
               <img src="/api/designs/classic/showcase?v=v1" width={1200} height={1280}
                 alt="Classic Gold grand parol fully grown with 50 sample friends"
                 draggable={false} decoding="async" loading="eager"
@@ -66,8 +66,8 @@ export default function WelcomePage({
                   }
                 }}
                 className="pointer-events-none block h-auto w-full select-none" />
-              <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-                <div className="welcome-parol-halo absolute inset-0" />
+              <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-visible">
+                <div className="welcome-parol-halo absolute inset-[10%]" />
                 <span className="welcome-parol-sparkle">✦</span>
                 <span className="welcome-parol-sparkle">✧</span>
                 <span className="welcome-parol-sparkle">✦</span>
