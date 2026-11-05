@@ -25,9 +25,8 @@ reached ~2.28 GiB and ~323 seconds, so arbitrary device rendering is unsafe.
   240 frames at 30 fps and 1080 × 1920 on the device, verify nonblank and
   varying artwork, validate MP4 container, and keep the file in the browser
   for native share/download. No MP4 data is uploaded.
-- **Memory guard:** Unknown-memory devices cap at 6 friends (or 12 on
-  sufficiently multicore hardware); browsers reporting at least 4 GiB cap
-  at 12, and at least 8 GiB cap at 20. Larger parols continue through the
+- **Memory guard:** Unknown-memory devices cap at 6 friends; browsers
+  reporting at least 4 GiB cap at 12. Larger parols continue through the
   private server path. The historical 50-friend benchmark is why local
   rendering is not forced on all phones.
 - **Server fallback:** Existing owner async queue remains resumable when
