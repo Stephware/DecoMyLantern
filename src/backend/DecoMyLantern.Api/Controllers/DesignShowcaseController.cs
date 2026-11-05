@@ -18,6 +18,8 @@ public sealed class DesignShowcaseController(
     IConfiguration configuration,
     ILogger<DesignShowcaseController> logger) : ControllerBase
 {
+    public static bool SupportsFriendCount(int? friends) => friends is null or 20 or 50;
+
     [HttpGet("{designKey}/showcase")]
     [EnableRateLimiting("design-showcase")]
     public async Task<IActionResult> GetShowcase(
@@ -26,7 +28,7 @@ public sealed class DesignShowcaseController(
         if (designKey.Length > 40) return NotFound();
         // The existing six design-gallery previews stay fixed at 50 friends.
         // Only the welcome page opts into 20; never accept arbitrary counts.
-        if (friends is not null and not (20 or 50))
+        if (!SupportsFriendCount(friends))
             return BadRequest(new { message = "Supported showcase friend counts are 20 and 50." });
         var previewFriendCount = friends ?? 50;
         var enabled = await designs.GetEnabledAsync(cancellationToken);
