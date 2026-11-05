@@ -26,11 +26,11 @@ export function deviceVideoFriendLimit(): number {
   return navigator.hardwareConcurrency >= 8 ? 12 : 6
 }
 
-export async function canRenderStoryOnDevice(data?: StoryData): Promise<boolean> {
+export async function canRenderStoryOnDevice(friendCount?: number, slotCount?: number): Promise<boolean> {
   if (typeof window === 'undefined' || !window.isSecureContext ||
       typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return false
-  if (data && (data.friendCount > deviceVideoFriendLimit() ||
-      data.slots.length > deviceVideoFriendLimit())) return false
+  if ((friendCount ?? 0) > deviceVideoFriendLimit() ||
+      (slotCount ?? 0) > deviceVideoFriendLimit()) return false
   try {
     const {canEncodeVideo} = await import('mediabunny')
     return await canEncodeVideo('avc', {
@@ -143,7 +143,7 @@ async function verifyFramePainting(canvas: HTMLCanvasElement, data: StoryData,
 export async function renderStoryOnDevice(
   data: StoryData, signal: AbortSignal, onProgress: (percent: number) => void,
 ): Promise<Blob> {
-  if (!await canRenderStoryOnDevice(data)) throw new Error('Device MP4 encoding is unsupported for this parol.')
+  if (!await canRenderStoryOnDevice(data.friendCount, data.slots.length)) throw new Error('Device MP4 encoding is unsupported for this parol.')
   abortIfNeeded(signal)
 
   const {Output, Mp4OutputFormat, BufferTarget, CanvasSource, Quality} = await import('mediabunny')
