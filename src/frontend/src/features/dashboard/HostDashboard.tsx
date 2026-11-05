@@ -117,7 +117,8 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
       <header className="relative border-b border-[#e5dac8] bg-[#fffaf2]/95">
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:flex-nowrap sm:gap-4 sm:px-8 lg:py-5 min-[1700px]:max-w-[1200px]">
           <div className="flex items-center gap-2.5">
-            <span className="text-2xl text-[#a77a3d]" aria-hidden="true">✦</span>
+            <img src="/bemyparol-logo.png" alt="" aria-hidden="true" width={40} height={40} draggable={false}
+              className="h-10 w-10 shrink-0 object-contain" />
             <span className="font-serif text-2xl font-semibold tracking-tight text-[#283b2f]">BeMyParol</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
