@@ -244,7 +244,7 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
                   </button>
                   <button type="button" className={`${button} mt-5 w-full`}
                     disabled={!changed || busy || !knownDesign} onClick={() => void saveDesign()}>
-                    {busy ? 'Saving…' : changed ? 'Save customization' : 'All changes saved'}
+                    {busy ? 'Saving…' : 'Save customization'}
                   </button>
                 </section>
 
