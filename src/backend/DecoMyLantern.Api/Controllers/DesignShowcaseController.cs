@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace DecoMyLantern.Api.Controllers;
 
 /// <summary>
-/// Public, generic 50-friend design previews. No owner's parol, invitation
+/// Public, generic 50-friend design previews or a 20-friend welcome image. No owner's parol, invitation
 /// token or private contribution data is ever read or returned here.
 /// </summary>
 [ApiController]
@@ -18,11 +18,19 @@ public sealed class DesignShowcaseController(
     IConfiguration configuration,
     ILogger<DesignShowcaseController> logger) : ControllerBase
 {
+    public static bool SupportsFriendCount(int? friends) => friends is null or 20 or 50;
+
     [HttpGet("{designKey}/showcase")]
     [EnableRateLimiting("design-showcase")]
-    public async Task<IActionResult> GetShowcase(string designKey, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetShowcase(
+        string designKey, [FromQuery] int? friends, CancellationToken cancellationToken)
     {
         if (designKey.Length > 40) return NotFound();
+        // The existing six design-gallery previews stay fixed at 50 friends.
+        // Only the welcome page opts into 20; never accept arbitrary counts.
+        if (!SupportsFriendCount(friends))
+            return BadRequest(new { message = "Supported showcase friend counts are 20 and 50." });
+        var previewFriendCount = friends ?? 50;
         var enabled = await designs.GetEnabledAsync(cancellationToken);
         var selected = enabled.FirstOrDefault(d =>
             string.Equals(d.DesignKey, designKey, StringComparison.OrdinalIgnoreCase));
@@ -32,12 +40,13 @@ public sealed class DesignShowcaseController(
         if (string.IsNullOrWhiteSpace(secret))
             return StatusCode(503, new { message = "Preview service is not configured." });
 
-        // Fixed, synthetic full-bloom preview: NEVER mutate real contribution data.
+        // Fixed, synthetic preview: NEVER mutate real contribution data.
+        // The renderer already keys its WebP cache by friendCount and slots.
         var payload = new {
             designKey = selected.DesignKey,
             patternKey = "default",
-            friendCount = 50,
-            slots = Enumerable.Range(0, 50).ToArray(),
+            friendCount = previewFriendCount,
+            slots = Enumerable.Range(0, previewFriendCount).ToArray(),
             format = "webp"
         };
 
