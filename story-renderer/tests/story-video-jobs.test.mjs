@@ -107,3 +107,43 @@ test('queue capacity is bounded and rejects new distinct work', async () => {
     await waitUntil(async()=> (await jobs.status(payload)).status==='ready')
   })
 })
+
+
+test('render identity invalidates saved-state files when source or preset changes', async () => {
+  await fixture(async dir => {
+    const setup = version => createStoryVideoJobs({
+      renderDir:dir, digest:p=>version + storyVideoDigest(p),
+      isBusy:()=>false, setBusy:()=>{},
+      renderVideo:async (_props, output)=>writeFile(output, Buffer.alloc(2048)),
+    })
+    const original = setup('source-standard-')
+    await original.start(payload)
+    await waitUntil(async()=> (await original.status(payload)).status==='ready')
+    assert.equal((await setup('source-standard-').status(payload)).status,'ready')
+    assert.equal((await setup('source-high-').status(payload)).status,'not_found')
+    assert.equal((await setup('changed-standard-').status(payload)).status,'not_found')
+  })
+})
+
+test('concurrent owner starts deduplicate while other media holds the renderer', async () => {
+  await fixture(async dir => {
+    let busy = true, calls = 0, active = 0, peak = 0
+    const jobs = createStoryVideoJobs({
+      renderDir:dir, isBusy:()=>busy, setBusy:value=>{busy=value},
+      renderVideo:async (_props, output)=> {
+        calls++; active++; peak=Math.max(peak,active)
+        await delay(20)
+        await writeFile(output, Buffer.alloc(2048))
+        active--
+      },
+    })
+    const results = await Promise.all([jobs.start(payload), jobs.start(payload),
+      jobs.start({...payload,friendCount:2,slots:[0,1]})])
+    assert.ok(results.every(result=>result.status==='queued'))
+    assert.equal(calls,0)
+    busy=false
+    await waitUntil(async()=> (await jobs.status({...payload,friendCount:2,slots:[0,1]})).status==='ready')
+    assert.equal(calls,2)
+    assert.equal(peak,1)
+  })
+})

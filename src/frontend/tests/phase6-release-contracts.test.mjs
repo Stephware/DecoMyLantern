@@ -43,7 +43,7 @@ test('Share PNG matches the completed Story video frame; real-parol snapshots st
   assert.ok(share.includes('BeMyParol-Story.png'))
   assert.ok(share.includes('BeMyParol-Story.mp4'))
   assert.ok(share.includes('aspect-[9/16]'))
-  assert.ok(share.includes('<StoryFrame data={data} frame={200}/>'))
+  assert.ok(share.includes('<StoryFrame data={data} frame={200} preset="high"/>'))
   assert.ok(poster.includes('<ProceduralOuterShell'))
   assert.ok(snapshot.includes('<ProceduralOuterShell'))
   assert.ok(snapshot.includes('<ParolArtwork'))
@@ -56,7 +56,7 @@ test('Phase 1/6: shared Story text stays friendly, not technical', () => {
   assert.doesNotMatch(poster, /Story layers|Growth layers|debug|simulation/i)
   assert.ok(poster.includes('I added my light!'))
   assert.ok(poster.includes('Help my parol shine!'))
-  assert.ok(poster.includes('storyGrowthAtFrame(data.friendCount, frame)'))
+  assert.ok(poster.includes('storyGrowthAtFrame(data.friendCount, frame, output.fps)'))
 })
 
 test('Phase 4: exports cannot leak obsolete media or loop forever on failure', () => {

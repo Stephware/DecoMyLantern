@@ -1,5 +1,7 @@
 # Phase 1 — Phone-first animated MP4 with existing server queue fallback
 
+> Rendering implementation updated 2026-11-06: see [the original hybrid port](story-hybrid-rendering.md) for current presets, device encoder, fallback and verification. Earlier implementation notes below are historical where they conflict.
+
 > **Historical implementation:** This document describes the original phone-only
 > behavior. The current device-first PNG and MP4 approach, memory guards and
 > deployment verification are in [device-first-story-media.md](device-first-story-media.md).

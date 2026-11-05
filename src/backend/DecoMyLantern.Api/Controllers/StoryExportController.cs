@@ -52,15 +52,8 @@ public sealed class StoryExportController(
         CancellationToken cancellationToken)
     {
         if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid security token." });
-        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var ownerId))
-            return Unauthorized();
-        var lantern = await lanternService.GetCurrentAsync(ownerId, cancellationToken);
-        if (lantern is null) return NotFound(new { message = "Create your parol first." });
-        var snapshot = new StoryRenderPayload("owner", lantern.DesignKey, lantern.PatternKey,
-            lantern.AcceptedFriends,
-            lantern.Lights.OrderBy(x => x.SlotIndex).Take(500).Select(x => x.SlotIndex).ToArray(),
-            null, request.Format);
-        return await RenderAsync(snapshot, cancellationToken);
+        var (snapshot, error) = await OwnerSnapshotAsync(request.Format, cancellationToken);
+        return error ?? await RenderAsync(snapshot!, cancellationToken);
     }
 
     [AllowAnonymous]
@@ -70,18 +63,61 @@ public sealed class StoryExportController(
         CancellationToken cancellationToken)
     {
         if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid security token." });
+        var (snapshot, error) = await GuestSnapshotAsync(request.Token, request.Format, cancellationToken);
+        return error ?? await RenderAsync(snapshot!, cancellationToken);
+    }
+
+    [Authorize]
+    [HttpPost("my/lantern/story/composition")]
+    [EnableRateLimiting("story-owner")]
+    public async Task<IActionResult> OwnerComposition(CancellationToken cancellationToken)
+    {
+        if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid security token." });
+        var (snapshot, error) = await OwnerSnapshotAsync("mp4", cancellationToken);
+        Response.Headers.CacheControl = "private, no-store";
+        return error ?? Ok(snapshot);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("invitations/story/composition")]
+    [EnableRateLimiting("story-guest")]
+    public async Task<IActionResult> GuestComposition([FromBody] GuestStoryExportRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid security token." });
+        var (snapshot, error) = await GuestSnapshotAsync(request.Token, "mp4", cancellationToken);
+        Response.Headers.CacheControl = "private, no-store";
+        return error ?? Ok(snapshot);
+    }
+
+    private async Task<(StoryRenderPayload?, IActionResult?)> OwnerSnapshotAsync(string format,
+        CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var ownerId))
+            return (null, Unauthorized());
+        var lantern = await lanternService.GetCurrentAsync(ownerId, cancellationToken);
+        if (lantern is null) return (null, NotFound(new { message = "Create your parol first." }));
+        return (new StoryRenderPayload("owner", lantern.DesignKey, lantern.PatternKey,
+            lantern.AcceptedFriends,
+            lantern.Lights.OrderBy(x => x.SlotIndex).Take(500).Select(x => x.SlotIndex).ToArray(),
+            null, format), null);
+    }
+
+    private async Task<(StoryRenderPayload?, IActionResult?)> GuestSnapshotAsync(string token, string format,
+        CancellationToken cancellationToken)
+    {
         if (!Request.Cookies.TryGetValue("BeMyParol.Guest", out var visitorSecret) ||
             !OwnerSecrets.TryHash(visitorSecret, out var visitorHash))
-            return StatusCode(403, new { message = "Contribute your light before sharing your Story." });
+            return (null, StatusCode(403, new { message = "Contribute your light before sharing your Story." }));
 
         InvitationPreviewDto preview;
-        try { preview = await invitations.PreviewAsync(request.Token, visitorSecret, cancellationToken); }
-        catch (InvitationException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
+        try { preview = await invitations.PreviewAsync(token, visitorSecret, cancellationToken); }
+        catch (InvitationException ex) { return (null, StatusCode(ex.StatusCode, new { message = ex.Message })); }
         if (!preview.AlreadyContributed)
-            return StatusCode(403, new { message = "Contribute your light before sharing your Story." });
+            return (null, StatusCode(403, new { message = "Contribute your light before sharing your Story." }));
 
-        if (!InvitationPolicy.TryHash(request.Token, out var inviteHash))
-            return NotFound(new { message = "Invalid invitation." });
+        if (!InvitationPolicy.TryHash(token, out var inviteHash))
+            return (null, NotFound(new { message = "Invalid invitation." }));
         var ownSlot = await database.Contributions.AsNoTracking()
             .Where(c => c.RemovedAtUtc == null &&
                 c.Lantern.ShareLinks.Any(l => l.IsOfficial && l.TokenHash == inviteHash) &&
@@ -89,14 +125,13 @@ public sealed class StoryExportController(
             .Select(c => (int?)c.SlotIndex)
             .FirstOrDefaultAsync(cancellationToken);
         if (ownSlot is null)
-            return StatusCode(403, new { message = "Your light is not available on this parol." });
+            return (null, StatusCode(403, new { message = "Your light is not available on this parol." }));
 
-        var snapshot = new StoryRenderPayload("friend", preview.DesignKey, preview.PatternKey,
+        return (new StoryRenderPayload("friend", preview.DesignKey, preview.PatternKey,
             preview.AcceptedFriends,
             preview.Lights.OrderBy(x => x.SlotIndex).Take(499).Select(x => x.SlotIndex)
                 .Append(ownSlot.Value).Distinct().ToArray(),
-            ownSlot, request.Format);
-        return await RenderAsync(snapshot, cancellationToken);
+            ownSlot, format), null);
     }
 
     private async Task<IActionResult> RenderAsync(StoryRenderPayload snapshot, CancellationToken cancellationToken)

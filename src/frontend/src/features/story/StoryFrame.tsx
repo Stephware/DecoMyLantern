@@ -1,6 +1,6 @@
 import {THEMES} from '../customization/themes'
 import {festivalOutlinePath, festivalPointAt, outerFitZoom} from '../lantern/growth/outerGrowth'
-import {storyGrowthAtFrame} from './storySpec'
+import {STORY_PRESETS, STORY_TIMING, storyGrowthAtFrame, storySecondsAt, type StoryPreset} from './storySpec'
 import ParolArtwork from '../lantern/renderer/ParolArtwork'
 import ProceduralOuterShell from '../lantern/renderer/ProceduralOuterShell'
 import {lightPosition} from '../lantern/renderer/lightPositions'
@@ -19,44 +19,78 @@ export type StoryData = {
 /** Shared by the website's poster and the Remotion MP4/PNG renderer.
  * Frames are deterministic; no DOM timers, browser recording or private data.
  */
-export function StoryFrame({data, frame}: {data: StoryData; frame: number}) {
+export type StoryLayer = 'all' | 'background' | 'parol' | 'flash' | 'text'
+
+export function StoryFrame({data, frame, layer = 'all', preset = 'standard', backgroundAssetUrl}: {data: StoryData; frame: number; layer?: StoryLayer; preset?: StoryPreset; backgroundAssetUrl?: string}) {
+  const output = STORY_PRESETS[preset]
+  const seconds = storySecondsAt(frame, output.fps)
+  const scaled = output.width / STORY_PRESETS.high.width
+  const fade = (start: number, end: number) => Math.min(1, Math.max(0, (seconds - start) / (end - start)))
   const theme = THEMES.find(t => t.key === data.designKey) ?? THEMES[0]
-  const count = storyGrowthAtFrame(data.friendCount, frame)
-  const wave = frame < 30 ? 0 : frame < 60 ? 1 : frame < 90 ? 2 : 3
+  const count = storyGrowthAtFrame(data.friendCount, frame, output.fps)
+  const wave = seconds < 1 ? 0 : seconds < 2 ? 1 : seconds < 3 ? 2 : 3
   const fit = outerFitZoom(count)
-  const zoom = 1.12 - 0.12 * Math.min(1, Math.max(0, (frame - 96) / 55))
-  const parolOpacity = Math.min(1, Math.max(0, (frame - 4) / 22))
-  const overlayOpacity = Math.min(1, Math.max(0, (frame - 155) / 26))
-  const headOpacity = Math.min(1, frame / 24)
+  const zoom = STORY_TIMING.zoom.from + (STORY_TIMING.zoom.to - STORY_TIMING.zoom.from) *
+    fade(STORY_TIMING.zoom.start, STORY_TIMING.zoom.end)
+  const parolOpacity = fade(...STORY_TIMING.parolFade)
+  const overlayOpacity = fade(...STORY_TIMING.textFade)
+  const headOpacity = fade(0, STORY_TIMING.headerFadeEnd)
   const lights = data.slots.filter(slot => slot >= 0 && slot <= 100000)
   const title = data.kind === 'friend' ? 'I added my light!' : 'Help my parol shine!'
   const subtitle = data.kind === 'friend'
     ? 'Add your own light to our Christmas parol'
     : 'Add your light to my Christmas parol'
-  const sparkle = 0.65 + 0.35 * Math.cos(frame * 0.12)
-  const waveAge = frame < 30 ? 50 : frame < 60 ? frame-30 : frame < 90 ? frame-60 : frame-90
-  const waveFlash = frame < 30 || frame >= 122 ? 0 : Math.max(0, 1-waveAge/25)
+  const sparkle = 0.65 + 0.35 * Math.cos(seconds * 3.6)
+  const waveAge = seconds - wave
+  const waveFlash = wave === 0 || seconds >= 122 / 30 ? 0 : Math.max(0, 1-waveAge/STORY_TIMING.flashDuration)
   return (
+    <div style={{width:output.width,height:output.height,position:'relative',overflow:'hidden'}}>
     <div style={{
       position: 'relative', width:1080, height:1920, overflow:'hidden',
-      background:'radial-gradient(ellipse at 50% 41%,#28405d 0%,#101c32 52%,#080e20 100%)',
+      transform:`scale(${scaled})`,transformOrigin:'top left',
+      background:'transparent',
       color:'#fff3d7', fontFamily:'Arial, Helvetica, sans-serif'
     }}>
-      <div style={{position:'absolute',inset:55,border:'2px solid rgba(246,202,111,.23)',borderRadius:55}}/>
-      <div style={{position:'absolute',top:145,width:'100%',textAlign:'center',opacity:headOpacity}}>
+      {(layer === 'all' || layer === 'background') && (backgroundAssetUrl ?
+        <img alt="" src={backgroundAssetUrl} width="1080" height="1920"
+          style={{position:'absolute',inset:0}}/> : <svg aria-hidden="true" width="1080" height="1920"
+        style={{position:'absolute',inset:0}} viewBox="0 0 1080 1920">
+        <defs><radialGradient id="story-night-v2" gradientUnits="userSpaceOnUse"
+          cx="540" cy="787" r="1602"
+          gradientTransform="translate(540 787) scale(.477 1) translate(-540 -787)">
+          <stop offset="0%" stopColor="#28405d"/>
+          <stop offset="52%" stopColor="#101c32"/>
+          <stop offset="100%" stopColor="#080e20"/>
+        </radialGradient></defs>
+        <rect width="1080" height="1920" fill="url(#story-night-v2)"/>
+      </svg>)}
+      {(layer === 'all' || layer === 'background') && <div style={{position:'absolute',inset:55,border:'2px solid rgba(246,202,111,.23)',borderRadius:55}}/>}
+      {(layer === 'all' || layer === 'background') && <div style={{position:'absolute',top:145,width:'100%',textAlign:'center',opacity:headOpacity}}>
         <div style={{fontSize:35,letterSpacing:13,fontWeight:700,color:'#fbd998'}}>✦ B E M Y P A R O L ✦</div>
         <div style={{fontSize:48,marginTop:18,fontWeight:700}}>A light from every friend</div>
-      </div>
-      <div style={{position:'absolute',top:325,left:120,width:840,height:890,
-        opacity:parolOpacity,transform:`scale(${zoom})`,transformOrigin:'center'}}>
-        <div style={{position:'absolute',inset:120,borderRadius:'50%',background:'rgba(250,189,93,.19)',
-          filter:'blur(115px)',opacity:sparkle}}/>
+      </div>}
+      {(layer === 'all' || layer === 'background' || layer === 'parol' || layer === 'flash') && <div style={{position:'absolute',top:325,left:120,width:840,height:890,
+        opacity:layer === 'all' || layer === 'background' ? parolOpacity : 1,
+        transform:layer === 'all' || layer === 'background' ? `scale(${zoom})` : undefined,
+        transformOrigin:'center'}}>
+        {(layer === 'all' || layer === 'background') && <svg aria-hidden="true" width="840" height="890"
+          viewBox="0 0 840 890" style={{position:'absolute',inset:0,opacity:sparkle}}>
+          <defs><radialGradient id="story-glow-v2">
+            <stop offset="0%" stopColor="#fabd5d" stopOpacity=".21"/>
+            <stop offset="55%" stopColor="#fabd5d" stopOpacity=".13"/>
+            <stop offset="100%" stopColor="#fabd5d" stopOpacity="0"/>
+          </radialGradient></defs>
+          <ellipse cx="420" cy="445" rx="420" ry="445" fill="url(#story-glow-v2)"/>
+        </svg>}
+        {layer !== 'background' && <>
         <svg viewBox="0 0 600 640" width="840" height="890" role="img"
           aria-label="Glowing Pampanga-inspired parol" style={{overflow:'visible'}}>
           <g transform={`translate(300 302) scale(${fit}) translate(-300 -302)`}>
-            <ProceduralOuterShell theme={theme} growthCount={count} pattern={data.patternKey}/>
-            <ParolArtwork theme={theme} pattern={data.patternKey}/>
-            {waveFlash > 0 && <g opacity={waveFlash} aria-hidden="true">
+            {layer !== 'flash' && <>
+              <ProceduralOuterShell theme={theme} growthCount={count} pattern={data.patternKey}/>
+              <ParolArtwork theme={theme} pattern={data.patternKey}/>
+            </>}
+            {(layer === 'flash' || layer === 'all') && waveFlash > 0 && <g opacity={waveFlash} aria-hidden="true">
               <path d={festivalOutlinePath(count)} fill="none" stroke="#fff5bf"
                 strokeWidth={5 + 9*waveFlash}/>
               {Array.from({length:20},(_,index)=>{
@@ -68,7 +102,7 @@ export function StoryFrame({data, frame}: {data: StoryData; frame: number}) {
                 </g>
               })}
             </g>}
-            {lights.slice(0, wave === 3 ? lights.length : Math.max(0, lights.length - 1)).map(slot=>{
+            {layer !== 'flash' && lights.slice(0, wave === 3 ? lights.length : Math.max(0, lights.length - 1)).map(slot=>{
               const point=lightPosition(slot)
               const chosen=slot === data.highlightSlot
               const color=theme.colors[slot % theme.colors.length]
@@ -81,24 +115,26 @@ export function StoryFrame({data, frame}: {data: StoryData; frame: number}) {
             })}
           </g>
         </svg>
-      </div>
-      <div style={{position:'absolute',top:1225,left:110,right:110,
-        textAlign:'center',opacity:overlayOpacity}}>
+        </>}
+      </div>}
+      {(layer === 'all' || layer === 'text') && <div style={{position:'absolute',top:1225,left:110,right:110,
+        textAlign:'center',opacity:layer === 'all' ? overlayOpacity : 1}}>
         <div style={{fontSize:65,fontWeight:800,lineHeight:1.15,
           textShadow:'0 3px 22px #09101f'}}>{title}</div>
         <div style={{fontSize:43,marginTop:29,color:'#f5d28c'}}>
           {data.friendCount} {data.friendCount === 1 ? 'friend' : 'friends'}
         </div>
         <div style={{fontSize:37,marginTop:39,lineHeight:1.35}}>{subtitle}</div>
-      </div>
-      <div style={{position:'absolute',bottom:240,left:110,right:110,
-        textAlign:'center',opacity:overlayOpacity}}>
+      </div>}
+      {(layer === 'all' || layer === 'text') && <div style={{position:'absolute',bottom:240,left:110,right:110,
+        textAlign:'center',opacity:layer === 'all' ? overlayOpacity : 1}}>
         <div style={{height:2,background:'rgba(249,207,118,.37)',marginBottom:35}}/>
         <div style={{fontSize:36,color:'#ffe8ad',fontWeight:700}}>Find my invitation in the Link sticker ✦</div>
         <div style={{fontSize:28,marginTop:23,letterSpacing:3,color:'#c6bbad'}}>BEMYPAROL.SITE</div>
-      </div>
-      <div style={{position:'absolute',inset:0,pointerEvents:'none',
-        background:'linear-gradient(transparent 74%,rgba(5,10,21,.26))'}}/>
+      </div>}
+      {(layer === 'all' || layer === 'background') && <div style={{position:'absolute',inset:0,pointerEvents:'none',
+        background:'linear-gradient(transparent 74%,rgba(5,10,21,.26))'}}/>}
+    </div>
     </div>
   )
 }
