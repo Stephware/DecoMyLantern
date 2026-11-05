@@ -77,7 +77,7 @@ test('interactive Design Lab remains separate from the static welcome page', () 
 test('landing shimmer stays decorative, has no image movement and respects reduced motion', () => {
   const welcome = read('src/features/owner/WelcomePage.tsx')
   const css = read('src/styles/index.css')
-  assert.ok(welcome.includes('src="/api/designs/classic/showcase?v=v1"'))
+  assert.ok(welcome.includes('src="/api/designs/classic/showcase?friends=20&v=v2"'))
   assert.ok(welcome.includes("event.currentTarget.src = '/parol-classic-preview.svg'"))
   assert.match(welcome, /<img[^>]*src="\/api\/designs\/classic\/showcase\?friends=20&v=v2"/)
   assert.ok(welcome.includes('draggable={false}'))
