@@ -31,7 +31,6 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
   const [recoveryDialog, setRecoveryDialog] = useState<'view' | 'leave' | null>(null)
   const closeRecoveryDialog = useCallback(() => setRecoveryDialog(null), [])
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
   const [firstPicker, setFirstPicker] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -80,10 +79,8 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
     if (!lantern || !knownDesign || busy) return
     setBusy(true)
     setError('')
-    setNotice('')
     try {
       if (changed) await onSave(draftDesign, lantern.patternKey)
-      setNotice('Design saved.')
       if (fromPicker) {
         markChoice()
         setPickerOpen(false)
@@ -151,11 +148,9 @@ export default function HostDashboard({ lantern, designs, onCreate, onSave, onLo
           </button>}
         </div>
 
-        {(error || notice) && <div role={error ? 'alert' : 'status'}
-          className={`mb-5 rounded-xl border px-4 py-3 text-sm ${error
-            ? 'border-[#e3aaa5] bg-[#f8e7e3] text-[#8a2630]'
-            : 'border-[#bed2bb] bg-[#eef5e9] text-[#2d5936]'}`}>
-          {error || notice}
+        {error && <div role="alert"
+          className="mb-5 rounded-xl border border-[#e3aaa5] bg-[#f8e7e3] px-4 py-3 text-sm text-[#8a2630]">
+          {error}
         </div>}
 
         {!lantern ? (
