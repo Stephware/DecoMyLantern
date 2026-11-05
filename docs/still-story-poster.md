@@ -1,5 +1,7 @@
 # Phase 2 — Static sharing image matches the completed animated Story
 
+> Rendering implementation updated 2026-11-06: see [the original hybrid port](story-hybrid-rendering.md) for current presets, device encoder, fallback and verification. Earlier implementation notes below are historical where they conflict.
+
 ## User-facing behavior
 
 In **Share your parol → Static image**, **Create image on this device** now exports an

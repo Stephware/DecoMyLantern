@@ -1,5 +1,7 @@
 # Device-first Story media and approved BeMyParol mark
 
+> Rendering implementation updated 2026-11-06: see [the original hybrid port](story-hybrid-rendering.md) for current presets, device encoder, fallback and verification. Earlier implementation notes below are historical where they conflict.
+
 ## Audit (before implementation)
 
 The archived `feature/video-parsing-optimization` branch contains a browser
