@@ -14,8 +14,14 @@ test('all six previously approved parol families remain available', () => {
 test('design previews show the final 50-friend state without touching owner records', () => {
   const api = readFileSync(new URL('../../../src/backend/DecoMyLantern.Api/Controllers/DesignShowcaseController.cs',
     import.meta.url),'utf8')
-  assert.ok(api.includes('friendCount = 50'))
-  assert.ok(api.includes('Enumerable.Range(0, 50).ToArray()'))
+  assert.ok(api.includes('var previewFriendCount = friends ?? 50'))
+  assert.ok(api.includes('SupportsFriendCount(friends)'))
+  assert.ok(api.includes('friends is null or 20 or 50'))
+  assert.ok(api.includes('friendCount = previewFriendCount'))
+  assert.ok(api.includes('Enumerable.Range(0, previewFriendCount).ToArray()'))
+  const gallery=read('features/customization/DesignShowcaseGallery.tsx')
+  assert.ok(gallery.includes('/showcase?v=${SHOWCASE_VERSION}'))
+  assert.ok(!gallery.includes('friends=20'))
   assert.ok(api.includes('patternKey = "default"'))
   assert.ok(api.includes('IDesignService designs'))
   assert.ok(api.includes('GetEnabledAsync'))
@@ -74,4 +80,20 @@ test('cached real parol and approved artwork are preserved', () => {
   assert.ok(guest.includes("snapshot={{kind:'guest',stateId:token,token}}"))
   assert.ok(guest.includes('contributeInvitation(token, name.trim(), message.trim())'))
   assert.ok(guest.includes('preview?.alreadyContributed'))
+})
+
+test('design choices save without a redundant success/debug banner', () => {
+  const dashboard = read('features/dashboard/HostDashboard.tsx')
+  const panels = read('features/customization/DesignSelectionPanels.tsx')
+  // Saving is still awaited and all failure feedback remains visible.
+  assert.ok(dashboard.includes('if (changed) await onSave(draftDesign, lantern.patternKey)'))
+  assert.ok(dashboard.includes("setError(caught instanceof Error ? caught.message : 'Unable to save your design.')"))
+  assert.ok(dashboard.includes('role="alert"'))
+  assert.ok(dashboard.includes('setPickerOpen(false)'))
+  assert.ok(dashboard.includes('setDrawerOpen(false)'))
+  assert.ok(panels.includes('{error && <p role="alert"'))
+  assert.ok(panels.includes("busy ? 'Saving…' : 'Save my design'"))
+  assert.ok(dashboard.includes("busy ? 'Saving…' : 'Save customization'"))
+  assert.doesNotMatch(dashboard, /Design saved\.|All changes saved|setNotice\(|\{error \|\| notice\}/)
+  assert.doesNotMatch(panels, /Current design saved/)
 })

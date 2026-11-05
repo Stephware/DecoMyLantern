@@ -23,7 +23,7 @@ test('Phases 2–3: owner sharing remains available but post-contribution guests
   assert.ok(!guest.includes('<StoryShare'))
   assert.ok(guest.includes('Create my own parol →'))
   assert.ok(guest.includes('alreadyContributed ? ('))
-  assert.ok(share.includes("exportParolImage(data.kind, token, controller.signal)"))
+  assert.ok(share.includes("exportStoryMedia(data.kind, 'png', token, controller.signal)"))
   assert.ok(share.includes("exportStoryMedia(data.kind, 'mp4', token, controller.signal)"))
   assert.ok(share.includes('navigator.canShare'))
   assert.ok(share.includes('navigator.share'))
@@ -36,13 +36,14 @@ test('Phases 2–3: owner sharing remains available but post-contribution guests
   assert.doesNotMatch(share, /instagramAccessToken|facebookAccessToken/)
 })
 
-test('Phase 3: parol PNG and animated Story are different media files', () => {
+test('Share PNG matches the completed Story video frame; real-parol snapshots stay separate', () => {
   const share = read('src/features/story/StoryShare.tsx')
   const poster = read('src/features/story/StoryFrame.tsx')
   const snapshot = read('src/features/lantern/renderer/ParolSnapshot.tsx')
-  assert.ok(share.includes('BeMyParol-Parol.png'))
+  assert.ok(share.includes('BeMyParol-Story.png'))
   assert.ok(share.includes('BeMyParol-Story.mp4'))
-  assert.ok(share.includes("'aspect-[15/16]' : 'aspect-[9/16]'"))
+  assert.ok(share.includes('aspect-[9/16]'))
+  assert.ok(share.includes('<StoryFrame data={data} frame={200}/>'))
   assert.ok(poster.includes('<ProceduralOuterShell'))
   assert.ok(snapshot.includes('<ProceduralOuterShell'))
   assert.ok(snapshot.includes('<ParolArtwork'))

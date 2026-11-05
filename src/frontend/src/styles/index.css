@@ -76,6 +76,157 @@ button:focus-visible, input:focus-visible { outline: 2px solid #ffcf75; outline-
   animation: parol-snapshot-glint 720ms ease-out both;
 }
 
+/* Welcome: keep the approved 20-friend showcase image static and interactive-free.
+   The soft halo sits behind it; the few animated lights stay in dark outer space.
+   No extra renderer work, image movement, or zoom/pan handling. */
+@keyframes welcome-parol-light-breathe {
+  0%, 100% {
+    filter: brightness(1.02) saturate(1.02) drop-shadow(0 0 5px rgba(255, 207, 112, .16));
+  }
+  50% {
+    filter: brightness(1.09) saturate(1.06) drop-shadow(0 0 12px rgba(255, 212, 126, .3));
+  }
+}
+@keyframes welcome-parol-ambient-pulse {
+  0%, 100% { opacity: .3; }
+  50% { opacity: .48; }
+}
+@keyframes welcome-parol-twinkle {
+  0%, 100% { opacity: .22; transform: translate(-50%, -50%) scale(.78); }
+  42% { opacity: .94; transform: translate(-50%, -50%) scale(1.07); }
+  70% { opacity: .36; transform: translate(-50%, -50%) scale(.9); }
+}
+@keyframes welcome-parol-dust-float {
+  0%, 100% { opacity: .2; transform: translate(-50%, -50%) translateY(0); }
+  50% { opacity: .63; transform: translate(-50%, -50%) translateY(-3px); }
+}
+.welcome-parol-artwork {
+  transform: none; /* no silhouette movement or zoom */
+  animation: welcome-parol-light-breathe 6s ease-in-out infinite;
+}
+.welcome-parol-ambient {
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 49%,
+    rgba(231, 202, 109, .29) 0%,
+    rgba(214, 188, 96, .2) 35%,
+    rgba(186, 157, 75, .09) 53%,
+    transparent 73%);
+  animation: welcome-parol-ambient-pulse 7s ease-in-out infinite;
+}
+.welcome-parol-bokeh {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(246, 218, 138, .32), rgba(246, 218, 138, .08) 58%, transparent 76%);
+  filter: blur(1.5px);
+}
+.welcome-parol-bokeh-1 { left: 10%; top: 9%; width: 42px; height: 42px; opacity: .23; }
+.welcome-parol-bokeh-2 { right: 5%; top: 59%; width: 21px; height: 21px; opacity: .3; }
+.welcome-parol-bokeh-3 { right: 6%; bottom: 15%; width: 38px; height: 38px; opacity: .2; }
+.welcome-parol-decor {
+  /* Overlay covers the padded stage, not the image's decorative rings. */
+  isolation: isolate;
+}
+.welcome-parol-starburst,
+.welcome-parol-dust {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+.welcome-parol-starburst {
+  line-height: 1;
+  color: #fff1c5;
+  text-shadow: 0 0 6px rgba(255, 246, 206, .95), 0 0 18px rgba(255, 207, 111, .75);
+  animation: welcome-parol-twinkle 5.3s ease-in-out infinite;
+}
+.welcome-parol-starburst::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150%;
+  height: 150%;
+  transform: translate(-50%, -50%);
+  background:
+    linear-gradient(transparent 46%, rgba(255, 222, 142, .55) 50%, transparent 54%),
+    linear-gradient(90deg, transparent 46%, rgba(255, 222, 142, .55) 50%, transparent 54%);
+  border-radius: 50%;
+  opacity: .64;
+}
+.welcome-parol-starburst:nth-child(1) { left: 9%; top: 19%; font-size: clamp(18px, 2vw, 27px); animation-delay: -.8s; }
+.welcome-parol-starburst:nth-child(2) { left: 91%; top: 12%; font-size: clamp(26px, 2.7vw, 38px); animation-delay: -2.3s; }
+.welcome-parol-starburst:nth-child(3) { left: 9%; top: 84%; font-size: clamp(20px, 2.2vw, 30px); animation-delay: -3.1s; }
+.welcome-parol-starburst:nth-child(4) { left: 91%; top: 84%; font-size: clamp(16px, 1.7vw, 25px); animation-delay: -1.6s; }
+.welcome-parol-dust {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #ffe5a4;
+  box-shadow: 0 0 7px rgba(255, 210, 117, .7);
+  animation: welcome-parol-dust-float 5.2s ease-in-out infinite;
+}
+/* Every point lies in the artwork's unoccupied exterior margin. */
+.welcome-parol-dust:nth-child(5)  { left: 18%; top: 8%; animation-delay: -.6s; }
+.welcome-parol-dust:nth-child(6)  { left: 33%; top: 7%; animation-delay: -2.1s; }
+.welcome-parol-dust:nth-child(7)  { left: 68%; top: 7%; animation-delay: -1.3s; }
+.welcome-parol-dust:nth-child(8)  { left: 76%; top: 8%; animation-delay: -3.4s; }
+.welcome-parol-dust:nth-child(9)  { left: 7%; top: 57%; animation-delay: -1.8s; }
+.welcome-parol-dust:nth-child(10) { left: 93%; top: 62%; animation-delay: -2.8s; }
+.welcome-parol-dust:nth-child(11) { left: 6%; top: 69%; animation-delay: -4.2s; }
+.welcome-parol-dust:nth-child(12) { left: 93%; top: 73%; animation-delay: -.9s; }
+.welcome-parol-dust:nth-child(13) { left: 25%; top: 92%; animation-delay: -2.4s; }
+.welcome-parol-dust:nth-child(14) { left: 77%; top: 92%; animation-delay: -3.7s; }
+@media (prefers-reduced-motion: reduce) {
+  .welcome-parol-artwork { animation: none !important; filter: none !important; }
+  .welcome-parol-ambient { animation: none !important; opacity: .36; }
+  .welcome-parol-starburst, .welcome-parol-dust { animation: none !important; opacity: .65; }
+}
+
+/* Real parol on touchscreens: allow the browser to scroll the page by
+   default. Deliberate Explore mode captures drag/pinch within its dialog.
+   Desktop mouse/trackpad parol behavior stays unchanged. */
+.parol-touch-surface { touch-action: none; }
+.parol-mobile-explore-action { display: none; }
+@media (pointer: coarse) {
+  .parol-touch-surface:not(.parol-explore-active) {
+    touch-action: auto;
+    cursor: default;
+  }
+  .parol-zoom-controls:not(.parol-explore-active) { display: none; }
+  .parol-mobile-explore-action { display: flex; }
+}
+
+/* Christmas surprise uses inexpensive opacity/transform-only effects.
+   The actual saved parol remains the single cached WebP, even in admin mode. */
+.christmas-reveal-backdrop {
+  background-image: radial-gradient(ellipse at 50% 35%, rgba(146,95,45,.20), transparent 65%);
+}
+@keyframes christmas-reveal-enter {
+  from { opacity: 0; transform: translateY(22px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes christmas-reveal-glow {
+  0%, 100% { box-shadow: 0 0 16px rgba(255,197,87,.22), inset 0 0 14px rgba(255,214,128,.10); }
+  50% { box-shadow: 0 0 38px rgba(255,197,87,.54), inset 0 0 21px rgba(255,214,128,.25); }
+}
+@keyframes christmas-reveal-twinkle {
+  0%, 100% { opacity: .15; transform: scale(.65) rotate(-15deg); }
+  48% { opacity: .95; transform: scale(1.18) rotate(12deg); }
+}
+@keyframes christmas-reveal-count-appear {
+  from { opacity: 0; transform: translateY(10px) scale(.92); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.christmas-reveal-panel { animation: christmas-reveal-enter 650ms ease-out both; }
+.christmas-reveal-light { animation: christmas-reveal-glow 3s ease-in-out infinite; }
+.christmas-sparkle {
+  color: #ffdd95;
+  font-size: 1.75rem;
+  animation: christmas-reveal-twinkle 2.8s ease-in-out infinite;
+}
+.christmas-reveal-count { animation: christmas-reveal-count-appear 500ms ease-out both; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;

@@ -49,6 +49,8 @@ export type ChristmasLetter = {
 export type ChristmasInbox = {
   unlocked: boolean
   unlockAtUtc: string
+  /** Server-derived true Christmas gate, independent of admin early access. */
+  christmasDayReached: boolean
   messages: ChristmasLetter[]
 }
 
@@ -164,6 +166,9 @@ export async function exportStoryMedia(kind: 'owner' | 'friend', format: 'mp4' |
     throw new ApiError(response.status, errorMessage(body,
       response.status === 429 ? 'Too many exports. Try again later.' : 'Story export is unavailable.'))
   }
+  const expectedMime = format === 'png' ? 'image/png' : 'video/mp4'
+  if (response.headers.get('content-type')?.split(';')[0]?.trim() !== expectedMime)
+    throw new Error('The server returned an unexpected Story media format.')
   return response.blob()
 }
 
@@ -205,14 +210,38 @@ export async function fetchParolSnapshot(
   return response.blob()
 }
 
+/** Restricted admin Design Lab: synthetic 0-60 friend parols, with the
+ * same private WebP cache and 2x/3x upgrade path used for real parols. */
+export async function fetchAdminParolPreview(
+  designKey: string, friendCount: number, signal?: AbortSignal, scale: 1 | 2 | 3 = 1,
+): Promise<Blob> {
+  const csrf = await csrfToken('/api/owner/csrf', signal)
+  const response = await fetch('/api/my/lantern/admin-preview/image', {
+    method: 'POST', credentials: 'same-origin', cache: 'no-store', signal,
+    headers: {'Content-Type':'application/json', 'X-CSRF-TOKEN':csrf},
+    body: JSON.stringify({designKey, friendCount, format:'webp',
+      ...(scale > 1 ? {scale} : {})}),
+  })
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null)
+    throw new ApiError(response.status, errorMessage(body,
+      response.status === 503 ? 'The preview renderer is busy. Please retry.' :
+      response.status === 429 ? 'Too many previews. Try again later.' :
+      'Unable to render the admin preview.'))
+  }
+  if (response.headers.get('content-type')?.split(';')[0]?.trim() !== 'image/webp')
+    throw new Error('The server returned an unexpected preview format.')
+  return response.blob()
+}
+
 /** Share the actual saved parol art, not the separate vertical Story poster. */
 export function exportParolImage(kind: 'owner' | 'friend', token?: string, signal?: AbortSignal): Promise<Blob> {
   return fetchParolSnapshot(kind === 'friend' ? 'guest' : 'owner', token, signal, 'png')
 }
 
 export const getMyLantern = () => api<Lantern>('/api/my/lantern')
-export const getLanternMessages = (lanternId: string) =>
-  api<ChristmasInbox>(`/api/my/lanterns/${encodeURIComponent(lanternId)}/messages`)
+export const getLanternMessages = (lanternId: string, signal?: AbortSignal) =>
+  api<ChristmasInbox>(`/api/my/lanterns/${encodeURIComponent(lanternId)}/messages`, {signal})
 export const createMyLantern = () => api<Lantern>('/api/my/lantern', { method: 'POST' })
 export const updateMyLantern = (designKey: string, patternKey: string) =>
   api<Lantern>('/api/my/lantern', { method: 'PUT', body: JSON.stringify({ designKey, patternKey }) })

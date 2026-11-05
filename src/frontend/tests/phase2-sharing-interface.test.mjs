@@ -26,7 +26,7 @@ test('owner exports keep format-aware controls without a post-contribution guest
   const invite = read('features/invitations/InvitationManager.tsx')
   const guest = read('features/invitations/GuestInvitationPage.tsx')
   assert.ok(component.includes("exportStoryMedia(data.kind, 'mp4', token, controller.signal)"))
-  assert.ok(component.includes('exportParolImage(data.kind, token, controller.signal)'))
+  assert.ok(component.includes("exportStoryMedia(data.kind, 'png', token, controller.signal)"))
   assert.ok(component.includes("const blob = selected === 'png' ? png : video"))
   assert.ok(component.includes('mediaKey !== dataKey'))
   assert.ok(component.includes('navigator.canShare?.({files: [file]})'))
@@ -72,7 +72,7 @@ test('modal keeps keyboard users safe and provides error fallback', () => {
 
 test('this phase does not introduce new media endpoints or parol geometry', () => {
   const component = read('features/story/StoryShare.tsx')
-  assert.ok(component.includes('Share the current saved parol as a transparent PNG'))
+  assert.ok(component.includes('Share the authorized saved Story as a still 9:16 PNG'))
   assert.ok(!component.includes('/api/'))
   assert.ok(!component.includes('ProceduralOuterShell'))
 })

@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
+import { createPortal } from 'react-dom'
 import type { Theme } from '../../customization/themes'
-import { ApiError, fetchParolSnapshot } from '../../../lib/api'
+import { ApiError, fetchAdminParolPreview, fetchParolSnapshot } from '../../../lib/api'
 import { growthForFriends, outerFitZoom } from '../growth/outerGrowth'
 import { lightPosition } from './lightPositions'
 import { snapshotRequestKey } from './snapshotState'
+import { canPanParol } from './parolTouchPolicy'
 import { shouldAnimateSnapshot, SNAPSHOT_WAVE_DURATIONS_MS, SNAPSHOT_WAVE_LABEL,
   SNAPSHOT_WAVE_RADIUS, type SnapshotWave, type SnapshotIdentity } from './snapshotReveal'
 import type { LanternLight, SavedParolSource } from './LanternScene'
@@ -14,6 +16,8 @@ type Props = {
   contributions: readonly LanternLight[]
   friendCount: number
   snapshot: SavedParolSource
+  /** Admin-only synthetic simulations reuse the real cached viewer. */
+  adminPreview?: boolean
 }
 
 type Point = { x: number; y: number }
@@ -38,11 +42,11 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
  * No procedural parol SVGs are mounted in the real owner and guest viewers.
  */
 export default function CachedParolScene({
-  theme, contributions, friendCount, pattern, snapshot,
+  theme, contributions, friendCount, pattern, snapshot, adminPreview = false,
 }: Props) {
   // The backend always re-reads the saved state. Only a meaningful change
   // to the owner, invitation or parol requests another flattened image.
-  const stateKey = snapshotRequestKey(
+  const stateKey = (adminPreview ? 'admin-preview|' : '') + snapshotRequestKey(
     snapshot, theme.key, pattern, friendCount,
     contributions.map(light => light.slotIndex),
   )
@@ -59,15 +63,20 @@ export default function CachedParolScene({
   const [attempt, setAttempt] = useState(0)
   const [camera, setCamera] = useState<Camera>({ zoom: 1, x: 0, y: 0 })
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [exploring, setExploring] = useState(false)
+  const exploreTriggerRef = useRef<HTMLButtonElement>(null)
+  const exploreDoneRef = useRef<HTMLButtonElement>(null)
+  const exploreDialogRef = useRef<HTMLDivElement>(null)
   const pointers = useRef<Map<number, Point>>(new Map())
   const dragged = useRef(false)
   const ownedUrls = useRef<Set<string>>(new Set())
   const displayedRef = useRef<RenderedImage | null>(null)
   const transitionRef = useRef<ImageTransition | null>(null)
   const lastTabReturn = useRef(0)
-  const source = snapshot.kind === 'owner'
-    ? `owner:${snapshot.stateId}`
-    : `guest:${snapshot.stateId}:${snapshot.token}`
+  const source = adminPreview ? `admin-preview:${snapshot.stateId}`
+    : snapshot.kind === 'owner'
+      ? `owner:${snapshot.stateId}`
+      : `guest:${snapshot.stateId}:${snapshot.token}`
   const guestToken = snapshot.kind === 'guest' ? snapshot.token : undefined
 
   useEffect(() => { displayedRef.current = rendered }, [rendered])
@@ -120,11 +129,13 @@ export default function CachedParolScene({
       for (let tries = 0; tries < 3; tries++) {
         if (!active || controller.signal.aborted) return
         try {
-          const blob = await fetchParolSnapshot(
-            snapshot.kind,
-            snapshot.kind === 'guest' ? snapshot.token : undefined,
-            controller.signal,
-          )
+          const blob = adminPreview
+            ? await fetchAdminParolPreview(theme.key, friendCount, controller.signal)
+            : await fetchParolSnapshot(
+              snapshot.kind,
+              snapshot.kind === 'guest' ? snapshot.token : undefined,
+              controller.signal,
+            )
           if (!active || controller.signal.aborted) return
           const url = URL.createObjectURL(blob)
           ownedUrls.current.add(url)
@@ -217,9 +228,11 @@ export default function CachedParolScene({
         for (let tries = 0; tries < 3; tries++) {
           if (controller.signal.aborted) return
           try {
-            const blob = await fetchParolSnapshot(
-              snapshot.kind, guestToken, controller.signal, 'webp', desiredScale,
-            )
+            const blob = adminPreview
+              ? await fetchAdminParolPreview(theme.key, friendCount, controller.signal, desiredScale)
+              : await fetchParolSnapshot(
+                snapshot.kind, guestToken, controller.signal, 'webp', desiredScale,
+              )
             if (controller.signal.aborted) return
             const url = URL.createObjectURL(blob)
             ownedUrls.current.add(url)
@@ -270,7 +283,7 @@ export default function CachedParolScene({
         attemptedUpgrade.current = null
     }
   }, [desiredScale, standardReady, stateKey, desiredImage?.key,
-    snapshot.kind, guestToken, source, theme.key, pattern, friendCount])
+    snapshot.kind, guestToken, source, theme.key, pattern, friendCount, adminPreview])
 
   // Identical timing to the original 750ms / 850ms / 1100ms growth sequence.
   useEffect(() => {
@@ -303,7 +316,57 @@ export default function CachedParolScene({
   const selectedPoint = selected && ready ? lightPosition(selected.slotIndex) : null
   const transform = `translate(${CENTER_X + camera.x} ${CENTER_Y + camera.y}) scale(${camera.zoom}) translate(${-CENTER_X} ${-CENTER_Y})`
 
+  const stopExploring = useCallback(() => {
+    pointers.current.clear()
+    dragged.current = false
+    // The embedded mobile view has no zoom controls: always return it fitted.
+    setCamera({zoom: 1, x: 0, y: 0})
+    setExploring(false)
+  }, [])
+
+  // Only the full-screen Explore viewer owns touch gestures on a phone.
+  // Leaving it restores normal page scrolling and keyboard focus.
+  useEffect(() => {
+    if (!exploring) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    exploreDoneRef.current?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        stopExploring()
+      } else if (event.key === 'Tab') {
+        const buttons = exploreDialogRef.current?.querySelectorAll<HTMLButtonElement>(
+          'button:not(:disabled)',
+        )
+        if (!buttons?.length) return
+        const first = buttons[0]
+        const last = buttons[buttons.length - 1]
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault()
+          last.focus()
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault()
+          first.focus()
+        }
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+      if (exploreTriggerRef.current?.isConnected) exploreTriggerRef.current.focus()
+    }
+  }, [exploring, stopExploring])
+
+  function touchCanPan(pointerType: string): boolean {
+    // Even a touch-capable tablet can have a real mouse; preserve mouse drag.
+    return canPanParol(pointerType !== 'mouse' &&
+      window.matchMedia('(pointer: coarse)').matches, exploring)
+  }
+
   function pointerDown(event: PointerEvent<SVGSVGElement>) {
+    if (!touchCanPan(event.pointerType)) return
     if (event.pointerType === 'mouse' && event.button !== 0) return
     if (pointers.current.size === 0) dragged.current = false
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
@@ -311,6 +374,7 @@ export default function CachedParolScene({
   }
 
   function pointerMove(event: PointerEvent<SVGSVGElement>) {
+    if (!touchCanPan(event.pointerType)) return
     const tracked = pointers.current
     const previous = tracked.get(event.pointerId)
     if (!previous) return
@@ -378,15 +442,13 @@ export default function CachedParolScene({
     setSelectedId(contributions[(index + 1) % contributions.length].id)
   }
 
-  return (
-    <figure className="relative mx-auto w-full max-w-[710px]">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-[14%] top-[19%] aspect-square rounded-full bg-amber-300/5 blur-3xl" />
+  const viewerSurface = (
       <div className="relative overflow-hidden rounded-[26px] border border-white/5 bg-[radial-gradient(ellipse_at_50%_42%,rgba(249,177,82,0.10),rgba(8,14,32,0)_65%)]">
         <svg viewBox="0 0 600 640" preserveAspectRatio="xMidYMid meet"
           role="img"
           aria-label={`${theme.label} festival parol with ${friendCount} friends, rendered as one optimized image`}
-          className="block h-auto w-full cursor-grab select-none active:cursor-grabbing"
-          style={{touchAction:'none', userSelect:'none'}}
+          className={`parol-touch-surface block h-auto w-full cursor-grab select-none active:cursor-grabbing ${exploring ? 'parol-explore-active' : ''}`}
+          style={{userSelect:'none'}}
           onPointerDown={pointerDown} onPointerMove={pointerMove}
           onPointerUp={pointerEnd} onPointerCancel={pointerEnd}
           onClick={selectLight}>
@@ -423,7 +485,7 @@ export default function CachedParolScene({
           <button type="button" className="rounded-lg border border-rose-200/40 px-3 py-2 font-semibold"
             onClick={() => setAttempt(n => n + 1)}>Retry</button>
         </div>}
-        <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full border border-white/15 bg-[#101b33]/90 p-1.5 text-sm shadow-xl backdrop-blur">
+        <div className={`parol-zoom-controls absolute bottom-3 right-3 flex items-center gap-1 rounded-full border border-white/15 bg-[#101b33]/90 p-1.5 text-sm shadow-xl backdrop-blur ${exploring ? 'parol-explore-active' : ''}`}>
           <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-white hover:bg-white/15 disabled:opacity-30"
             aria-label="Zoom out" disabled={camera.zoom <= MIN_ZOOM}
             onClick={() => setCamera(old => ({...old, zoom: clamp(old.zoom - .2, MIN_ZOOM, MAX_ZOOM)}))}>−</button>
@@ -437,7 +499,24 @@ export default function CachedParolScene({
             onClick={selectNextLight} aria-label="Highlight next friend's light">Lights</button>}
         </div>
       </div>
-      {selected && <figcaption className="mt-2 text-center text-xs text-amber-200">
+  )
+
+  return (
+    <>
+      <figure className="relative mx-auto w-full max-w-[710px]">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-[14%] top-[19%] aspect-square rounded-full bg-amber-300/5 blur-3xl" />
+        {exploring
+          ? <div aria-hidden="true" className="aspect-[15/16] rounded-[26px] border border-white/5 bg-[#111d29]" />
+          : viewerSurface}
+        <div className="parol-mobile-explore-action mt-3 flex-col items-center gap-2 px-3 pb-1 text-center">
+          <button ref={exploreTriggerRef} type="button" aria-haspopup="dialog"
+            onClick={() => { pointers.current.clear(); dragged.current = false; setExploring(true) }}
+            className="min-h-11 rounded-full border border-amber-200/45 bg-[#192c32] px-6 py-3 text-sm font-bold text-amber-100 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300">
+            Explore parol
+          </button>
+          <p className="text-xs text-amber-100/75">Swipe over the parol to scroll this page. Tap Explore to move or zoom it.</p>
+        </div>
+      {!exploring && selected && <figcaption className="mt-2 text-center text-xs text-amber-200">
         {selected.displayName}
       </figcaption>}
       <figcaption role="status" aria-live="polite" className="sr-only">
@@ -445,6 +524,35 @@ export default function CachedParolScene({
           loading ? 'Loading parol…' :
           ready ? 'Parol ready' : 'Parol unavailable. Retry to refresh.'}
       </figcaption>
-    </figure>
+      </figure>
+      {exploring && createPortal(
+        <div className="fixed inset-0 z-[110] bg-[#07121b]/95 text-amber-50 backdrop-blur-md">
+          <div ref={exploreDialogRef} role="dialog" aria-modal="true"
+            aria-labelledby="parol-explore-title" aria-describedby="parol-explore-help"
+            className="flex h-[100dvh] flex-col overflow-hidden">
+            <header className="flex shrink-0 items-center justify-between gap-3 border-b border-amber-200/15 px-4 py-3">
+              <h2 id="parol-explore-title" className="font-serif text-xl text-amber-100">Explore parol</h2>
+              <button ref={exploreDoneRef} type="button" onClick={stopExploring}
+                aria-label="Done exploring parol"
+                className="min-h-11 rounded-full border border-amber-200/40 bg-amber-100/10 px-5 py-2.5 text-sm font-bold text-amber-50">
+                Done exploring
+              </button>
+            </header>
+            <div className="flex min-h-0 flex-1 items-center overflow-y-auto overscroll-contain p-3">
+              <div className="mx-auto w-full max-w-[min(710px,72dvh)]">
+                {viewerSurface}
+              </div>
+            </div>
+            <div className="shrink-0 border-t border-amber-200/15 px-4 py-3 text-center">
+              <p id="parol-explore-help" className="text-xs text-amber-100/80">
+                Drag to move, pinch to zoom, or use the controls. Tap Done to return to the page.
+              </p>
+              {selected && <p className="mt-1 text-sm font-semibold text-amber-200">{selected.displayName}</p>}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
   )
 }

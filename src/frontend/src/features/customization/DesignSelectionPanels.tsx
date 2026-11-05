@@ -143,7 +143,7 @@ export function MobileDesignDrawer({
           {error && <p role="alert" className="mt-3 text-sm text-[#9c2630]">{error}</p>}
           <button type="button" disabled={!changed || busy || designs.length === 0} onClick={onSave}
             className="mt-5 w-full rounded-xl bg-[#922632] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-45">
-            {busy ? 'Saving…' : changed ? 'Save my design' : 'Current design saved'}
+            {busy ? 'Saving…' : 'Save my design'}
           </button>
         </div>}
       </section>

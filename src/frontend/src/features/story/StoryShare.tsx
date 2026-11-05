@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
-import {exportParolImage, exportStoryMedia, startOwnerVideoJob,
+import {exportStoryMedia, startOwnerVideoJob,
   getOwnerVideoJobStatus, getOwnerVideoJobFile, type OwnerVideoJobState} from '../../lib/api'
 import {prepareMediaWithRetry} from './mediaExportTask'
 import {StoryFrame, type StoryData, type StoryFormat} from './StoryFrame'
@@ -25,8 +25,8 @@ function download(blob: Blob, name: string) {
 }
 
 /**
- * Share the current saved parol as a transparent PNG or the existing animated
- * Story as MP4. Both owner and invitation guests use authorized saved data.
+ * Share the authorized saved Story as a still 9:16 PNG or animated MP4.
+ * The PNG is the complete frame 200 of the same StoryFrame used for video.
  */
 export default function StoryShare({data, invitationUrl, token}: Props) {
   const [open, setOpen] = useState(false)
@@ -44,6 +44,8 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
   const [previewScale, setPreviewScale] = useState(.25)
   const [videoJobStatus, setVideoJobStatus] = useState<OwnerVideoJobState | 'checking'>('not_found')
   const [videoJobRefresh, setVideoJobRefresh] = useState(0)
+  const [phoneAvailable, setPhoneAvailable] = useState<boolean | null>(null)
+  const [phoneProgress, setPhoneProgress] = useState(0)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLElement>(null)
@@ -54,6 +56,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     key: string
     format: StoryFormat
     controller: AbortController
+    mode: 'phone' | 'server'
   } | null>(null)
 
   const cancelGeneration = useCallback(() => {
@@ -63,7 +66,9 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     activeRequest.current = null
     setBusy(null)
     setRetrying(0)
-    setNotice('The browser request stopped. Any accepted video job continues in the background.')
+    setNotice(current.mode === 'phone'
+      ? 'Phone generation stopped. To continue while away, use Generate in background.'
+      : 'The browser request stopped. Any accepted video job continues in the background.')
   }, [])
 
   const closeDialog = useCallback(() => {
@@ -94,6 +99,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     setNotice('')
     setError('')
     setVideoJobStatus('not_found')
+    setPhoneProgress(0)
   }, [dataKey])
 
   // Navigating away must not leave requests, retries or state updates running.
@@ -115,6 +121,19 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     setPngUrl(url)
     return () => URL.revokeObjectURL(url)
   }, [png])
+
+  // Load device encoders and the MP4 muxer lazily only when mobile sharing is open.
+  // On unsupported devices the existing owner queue remains the default.
+  useEffect(() => {
+    if (!open || format !== 'mp4' || data.kind !== 'owner') return
+    let active = true
+    setPhoneAvailable(null)
+    void import('./phoneStoryVideo')
+      .then(module => module.canRenderStoryOnPhone())
+      .then(available => { if (active) setPhoneAvailable(available) })
+      .catch(() => { if (active) setPhoneAvailable(false) })
+    return () => { active = false }
+  }, [open, format, data.kind])
 
   // A queued video runs on the private renderer even after the modal or tab
   // closes. On reopening, re-check the saved owner parol and load its MP4.
@@ -199,23 +218,58 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     return () => observer.disconnect()
   }, [open, format])
 
-  async function generate(selected: StoryFormat) {
+  async function generate(selected: StoryFormat, requestedMode?: 'phone' | 'server') {
     // Reuse this component's prepared media until its saved parol changes.
     if (activeRequest.current) return
     if (selected === 'png' && pngKey === dataKey && png) return
     if (selected === 'mp4' && videoKey === dataKey && video) return
 
     const requestedKey = dataKey
+    const mode = selected === 'mp4' && data.kind === 'owner' && requestedMode !== 'server' &&
+      phoneAvailable ? 'phone' : 'server'
     const controller = new AbortController()
-    const request = {key: requestedKey, format: selected, controller}
+    const request = {key: requestedKey, format: selected, controller, mode}
     activeRequest.current = request
     setBusy(selected)
     setRetrying(0)
+    setPhoneProgress(0)
     setNotice('')
     setError('')
 
     try {
+      let phoneFailed = false
+      if (selected === 'mp4' && data.kind === 'owner' && mode === 'phone') {
+        try {
+          const {renderStoryOnPhone} = await import('./phoneStoryVideo')
+          if (controller.signal.aborted) return
+          const blob = await renderStoryOnPhone(data, controller.signal, percent => {
+            if (activeRequest.current === request) setPhoneProgress(percent)
+          })
+          if (controller.signal.aborted || latestDataKey.current !== requestedKey ||
+              activeRequest.current !== request) return
+          setVideo(blob)
+          setVideoKey(requestedKey)
+          setNotice('Your Story was generated on this phone. You can share or download it.')
+          return
+        } catch (caught) {
+          if (controller.signal.aborted || latestDataKey.current !== requestedKey ||
+              activeRequest.current !== request) return
+          // Hiding the tab interrupts local work intentionally: never queue a
+          // server job just because the owner switched apps or locked a phone.
+          if (caught instanceof DOMException && caught.name === 'AbortError') {
+            setNotice('Phone generation paused because the page was hidden. Open sharing to try again or use the background queue.')
+            return
+          }
+          console.warn('Phone MP4 generation failed; using the private renderer queue:', caught)
+          phoneFailed = true
+          setPhoneAvailable(false)
+          setPhoneProgress(0)
+        }
+      }
       if (selected === 'mp4' && data.kind === 'owner') {
+        // From this point cancellation stops only the request, not the accepted
+        // background job. Even an auto-fallback follows the normal queue rules.
+        request.mode = 'server'
         // The API accepts the job promptly; no MP4 bytes are waited for here.
         // Closing this dialog cancels only this request, not the queued render.
         const job = await startOwnerVideoJob(controller.signal)
@@ -224,14 +278,16 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
         if (job.status === 'busy') throw new Error('The video queue is full. Try again shortly.')
         setVideoJobStatus(job.status)
         setNotice(job.status === 'ready' ? 'Video is ready to load.' :
-          'Video queued. You can leave this page and come back later.')
+          phoneFailed
+            ? 'This phone could not finish encoding. Your video is now queued on the server; you can leave and return.'
+            : 'Video queued in the background. You can leave this page and come back later.')
         setVideoJobRefresh(n => n + 1)
         return
       }
       const blob = await prepareMediaWithRetry(
         () => selected === 'mp4'
           ? exportStoryMedia(data.kind, 'mp4', token, controller.signal)
-          : exportParolImage(data.kind, token, controller.signal),
+          : exportStoryMedia(data.kind, 'png', token, controller.signal),
         controller.signal,
         retryNumber => {
           if (activeRequest.current === request) setRetrying(retryNumber)
@@ -246,7 +302,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
         setPng(blob)
         setPngKey(requestedKey)
       }
-      setNotice(selected === 'mp4' ? 'Your animated Story is ready.' : 'Your parol image is ready.')
+      setNotice(selected === 'mp4' ? 'Your animated Story is ready.' : 'Your still Story image is ready.')
     } catch (caught) {
       if (!controller.signal.aborted && latestDataKey.current === requestedKey &&
           activeRequest.current === request) {
@@ -266,7 +322,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     const mediaKey = selected === 'png' ? pngKey : videoKey
     if (!blob || mediaKey !== dataKey) return
     const image = selected === 'png'
-    const file = new File([blob], image ? 'BeMyParol-Parol.png' : 'BeMyParol-Story.mp4',
+    const file = new File([blob], image ? 'BeMyParol-Story.png' : 'BeMyParol-Story.mp4',
       {type: image ? 'image/png' : 'video/mp4'})
     setError('')
     setNotice('')
@@ -275,7 +331,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
       return
     }
     try {
-      await navigator.share({files: [file], title: image ? 'My BeMyParol parol' : 'My BeMyParol Story'})
+      await navigator.share({files: [file], title: image ? 'My BeMyParol Story image' : 'My BeMyParol Story'})
       setNotice('Your device handed off the file. Add your invitation link separately when needed.')
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === 'AbortError') return
@@ -298,7 +354,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
   const ready = format === 'png'
     ? (pngKey === dataKey ? png : null)
     : (videoKey === dataKey ? video : null)
-  const fileName = format === 'png' ? 'BeMyParol-Parol.png' : 'BeMyParol-Story.mp4'
+  const fileName = format === 'png' ? 'BeMyParol-Story.png' : 'BeMyParol-Story.mp4'
   const awaitingVideo = data.kind === 'owner' && format === 'mp4' && !ready &&
     ['checking', 'queued', 'rendering', 'ready'].includes(videoJobStatus)
 
@@ -330,23 +386,17 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
                 {format === 'png' ? 'Still image preview' : 'Animated Story preview'}
               </p>
               <div ref={previewRef}
-                className={`relative w-full max-w-[240px] overflow-hidden rounded-xl border-[3px] border-[#d6b575]/65 bg-[radial-gradient(ellipse_at_50%_45%,#294b41,#0a1520_80%)] shadow-[0_15px_45px_rgba(0,0,0,.35)] sm:max-w-[270px] ${format === 'png' ? 'aspect-[15/16]' : 'aspect-[9/16]'}`}>
-                {format === 'png' ? (
-                  pngKey === dataKey && pngUrl ? (
-                    <img src={pngUrl} alt="Your actual saved parol as a PNG image"
-                      className="h-full w-full object-contain"/>
-                  ) : (
-                    <div className="flex h-full flex-col items-center justify-center gap-3 px-5 text-center text-[#f4deaf]">
-                      <span aria-hidden="true" className="text-6xl text-[#e4c78d]">✦</span>
-                      <p className="text-sm font-semibold">Your parol image</p>
-                      <p className="text-xs leading-5 text-[#e7d5b0]">Prepare the image to preview your saved parol.</p>
-                    </div>
-                  )
-                ) : videoKey === dataKey && videoUrl ? (
+                className="relative aspect-[9/16] w-full max-w-[240px] overflow-hidden rounded-xl border-[3px] border-[#d6b575]/65 bg-[radial-gradient(ellipse_at_50%_45%,#294b41,#0a1520_80%)] shadow-[0_15px_45px_rgba(0,0,0,.35)] sm:max-w-[270px]">
+                {format === 'png' && pngKey === dataKey && pngUrl ? (
+                  <img src={pngUrl} alt="Completed 9:16 BeMyParol Story poster"
+                    className="h-full w-full object-contain"/>
+                ) : format === 'mp4' && videoKey === dataKey && videoUrl ? (
                   <video key={videoUrl} src={videoUrl} controls loop playsInline
                     aria-label="Generated animated parol Story" className="h-full w-full object-contain"/>
                 ) : (
-                  <div aria-label="Still preview of your animated Story" role="img"
+                  <div aria-label={format === 'png'
+                      ? 'Preview of your still Story image'
+                      : 'Still preview of your animated Story'} role="img"
                     style={{width:1080, height:1920, transform:'scale(' + previewScale + ')', transformOrigin:'top left'}}>
                     <StoryFrame data={data} frame={200}/>
                   </div>
@@ -354,7 +404,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
               </div>
               <p className="mt-4 max-w-sm text-xs leading-5 text-[#f2e2be]">
                 {format === 'png'
-                  ? 'An image of your actual parol with a transparent background, without the Story text or borders.'
+                  ? 'Your still Story has the same completed parol, background, festive border, branding and invitation text as the video—without motion.'
                   : videoKey === dataKey && videoUrl ? 'Play your generated animation above.' : 'This is a still preview. Generate the video to watch the animation.'}
               </p>
             </div>
@@ -369,7 +419,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
                       : 'rounded-2xl border-2 border-[#ded1bf] bg-white px-3 py-4 text-left text-[#46564a] hover:border-[#bd9656] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b68c49]'}>
                     <span aria-hidden="true" className="text-xl">▧</span>
                     <span className="mt-1 block text-sm font-bold">Static image</span>
-                    <span className="block text-xs opacity-75">Parol PNG</span>
+                    <span className="block text-xs opacity-75">Story PNG</span>
                   </button>
                   <button type="button" aria-pressed={format === 'mp4'} onClick={() => {setFormat('mp4'); setNotice(''); setError('')}}
                     className={format === 'mp4'
@@ -389,7 +439,9 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
                 <p>{retrying > 0
                   ? 'Renderer is busy. Retrying your media…'
                   : `Preparing your ${busy === 'png' ? 'image' : 'animation'}…`}</p>
-                <p className="mt-1 text-xs">This can take a moment. You may cancel the request.</p>
+                <p className="mt-1 text-xs">{busy === 'mp4' && activeRequest.current?.mode === 'phone'
+                  ? `Rendering on this phone: ${phoneProgress}%. Keep this page open; closing it stops local rendering.`
+                  : 'This can take a moment. You may cancel the request.'}</p>
               </div>}
 
               {data.kind === 'owner' && format === 'mp4' && !ready &&
@@ -402,12 +454,29 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
                 </div>}
               <div className="space-y-2">
                 {!ready ? (
-                  <button type="button" disabled={busy !== null || awaitingVideo} onClick={() => void generate(format)}
-                    className={primary}>
-                    {awaitingVideo ? 'Rendering in background…' :
-                      busy === format ? 'Preparing…' : error ? 'Try again' :
-                      format === 'png' ? 'Prepare parol PNG' : 'Generate animated MP4'}
-                  </button>
+                  <>
+                    <button type="button"
+                      disabled={busy !== null || awaitingVideo ||
+                        (data.kind === 'owner' && format === 'mp4' && phoneAvailable === null)}
+                      onClick={() => void generate(format, phoneAvailable ? 'phone' : 'server')}
+                      className={primary}>
+                      {awaitingVideo ? 'Rendering in background…' :
+                        busy === format ? 'Preparing…' :
+                        format === 'png' ? 'Prepare Story PNG' :
+                        data.kind === 'owner' && phoneAvailable === null ? 'Checking phone support…' :
+                        data.kind === 'owner' && phoneAvailable ? 'Generate on this phone' :
+                        'Generate animated MP4'}
+                    </button>
+                    {data.kind === 'owner' && format === 'mp4' && phoneAvailable &&
+                      !awaitingVideo && <button type="button" className={secondary}
+                        disabled={busy !== null} onClick={() => void generate('mp4', 'server')}>
+                        Generate in background instead
+                      </button>}
+                    {data.kind === 'owner' && format === 'mp4' && phoneAvailable === false &&
+                      <p className="text-xs text-[#766b5d]">
+                        This browser cannot produce a compatible MP4 locally. The existing private queue will generate it for you.
+                      </p>}
+                  </>
                 ) : (
                   <>
                     <button type="button" disabled={busy !== null} onClick={() => void share(format)} className={primary}>
