@@ -14,7 +14,8 @@
   "dependencies": {
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "mediabunny": "1.65.0"
+    "@remotion/web-renderer": "4.0.537",
+    "remotion": "4.0.537"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",

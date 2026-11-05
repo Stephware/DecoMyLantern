@@ -126,7 +126,7 @@ test('Story export rejects mismatched media responses instead of exposing them',
 
 test('shareable PNG is the same completed 9:16 poster as the video, without movement', () => {
   const component = read('features/story/StoryShare.tsx')
-  const renderer = read('../../story-renderer/server.mjs')
+  const renderer = read('../../../story-renderer/server.mjs')
   const story = read('features/story/StoryFrame.tsx')
   assert.ok(component.includes('aspect-[9/16]'))
   assert.ok(component.includes("exportStoryMedia(data.kind, 'png', token, controller.signal)"))
@@ -136,10 +136,10 @@ test('shareable PNG is the same completed 9:16 poster as the video, without move
   assert.ok(component.includes('BeMyParol-Story.mp4'))
   assert.ok(component.includes("image ? 'image/png' : 'video/mp4'"))
   assert.ok(component.includes('Completed 9:16 BeMyParol Story poster'))
-  assert.ok(component.includes('<StoryFrame data={data} frame={200}/>'))
+  assert.ok(component.includes('<StoryFrame data={data} frame={200} preset="high"/>'))
   assert.ok(component.includes('background, festive border, branding and invitation text'))
-  assert.ok(renderer.includes("frame:200,imageFormat:'png'"))
-  assert.ok(renderer.includes("id:'BeMyParolStory'"))
+  assert.match(renderer, /frame:200,\s*imageFormat:'png'/)
+  assert.ok(renderer.includes("id:'BeMyParolStoryHigh'"))
   assert.ok(story.includes('A light from every friend'))
   assert.ok(story.includes('Find my invitation in the Link sticker'))
 })

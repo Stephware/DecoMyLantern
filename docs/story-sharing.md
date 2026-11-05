@@ -1,5 +1,7 @@
 # Animated Instagram/Facebook Story sharing (web-first)
 
+> Rendering implementation updated 2026-11-06: see [the original hybrid port](story-hybrid-rendering.md) for current presets, device encoder, fallback and verification. Earlier implementation notes below are historical where they conflict.
+
 BeMyParol offers owners an invitation Story and contributing friends a personalized contribution Story. It does **not** require account connections or automatically publish to Instagram/Facebook.
 
 ## Flow

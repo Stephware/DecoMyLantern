@@ -17,14 +17,14 @@ export function storyVideoDigest({kind, designKey, patternKey, friendCount, slot
  */
 export function createStoryVideoJobs({
   renderDir, renderVideo, isBusy, setBusy, cleanup = async () => {},
-  ttlMs = 24 * 60 * 60 * 1000, maxQueued = 12,
+  ttlMs = 24 * 60 * 60 * 1000, maxQueued = 12, digest = storyVideoDigest,
 }) {
   const jobs = new Map()
   const queue = []
   let retryTimer = null
 
   function filename(payload) {
-    return path.join(renderDir, storyVideoDigest(payload) + '.mp4')
+    return path.join(renderDir, digest(payload) + '.mp4')
   }
 
   async function completed(payload) {
@@ -71,7 +71,7 @@ export function createStoryVideoJobs({
   }
 
   async function status(payload) {
-    const id = storyVideoDigest(payload)
+    const id = digest(payload)
     if (await completed(payload)) return {status:'ready', id}
     const job = jobs.get(id)
     if (job?.status === 'ready') {

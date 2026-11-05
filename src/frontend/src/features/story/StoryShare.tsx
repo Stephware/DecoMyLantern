@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
-import {exportStoryMedia, startOwnerVideoJob,
+import {exportStoryMedia, fetchStoryComposition, startOwnerVideoJob,
   getOwnerVideoJobStatus, getOwnerVideoJobFile, type OwnerVideoJobState} from '../../lib/api'
 import {prepareMediaWithRetry} from './mediaExportTask'
 import {StoryFrame, type StoryData, type StoryFormat} from './StoryFrame'
@@ -8,6 +8,13 @@ type Props = {
   data: StoryData
   invitationUrl: string
   token?: string
+}
+
+type ExportRequest = {
+  key: string
+  format: StoryFormat
+  controller: AbortController
+  mode: 'device' | 'server'
 }
 
 const primary = 'w-full rounded-xl bg-[#8b2b35] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#70212c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b68c49] disabled:cursor-not-allowed disabled:opacity-50'
@@ -52,12 +59,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
   const previewRef = useRef<HTMLDivElement>(null)
   // One request at a time, including rapid double taps. Generated blobs stay
   // in component memory across modal close/reopen and format switching.
-  const activeRequest = useRef<{
-    key: string
-    format: StoryFormat
-    controller: AbortController
-    mode: 'device' | 'server'
-  } | null>(null)
+  const activeRequest = useRef<ExportRequest | null>(null)
 
   const cancelGeneration = useCallback(() => {
     const current = activeRequest.current
@@ -229,7 +231,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
       (selected === 'png' || (selected === 'mp4' && deviceAvailable))
       ? 'device' : 'server'
     const controller = new AbortController()
-    const request: NonNullable<typeof activeRequest.current> =
+    const request: ExportRequest =
       {key: requestedKey, format: selected, controller, mode}
     activeRequest.current = request
     setBusy(selected)
@@ -241,14 +243,17 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     try {
       let deviceFailed = false
       if (mode === 'device') {
+        const composition = await fetchStoryComposition(data.kind, token, controller.signal)
+        if (controller.signal.aborted || latestDataKey.current !== requestedKey ||
+            activeRequest.current !== request) return
         try {
           const {renderStoryOnDevice, renderStoryImageOnDevice} = await import('./phoneStoryVideo')
           if (controller.signal.aborted) return
           const blob = selected === 'mp4'
-            ? await renderStoryOnDevice(data, controller.signal, percent => {
+            ? await renderStoryOnDevice(composition, controller.signal, percent => {
                 if (activeRequest.current === request) setDeviceProgress(percent)
               })
-            : await renderStoryImageOnDevice(data, controller.signal)
+            : await renderStoryImageOnDevice(composition, controller.signal)
           if (controller.signal.aborted || latestDataKey.current !== requestedKey ||
               activeRequest.current !== request) return
           if (selected === 'mp4') {
@@ -411,7 +416,7 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
                       ? 'Preview of your still Story image'
                       : 'Still preview of your animated Story'} role="img"
                     style={{width:1080, height:1920, transform:'scale(' + previewScale + ')', transformOrigin:'top left'}}>
-                    <StoryFrame data={data} frame={200}/>
+                    <StoryFrame data={data} frame={200} preset="high"/>
                   </div>
                 )}
               </div>

@@ -1,15 +1,19 @@
 import http from 'node:http'
 import crypto from 'node:crypto'
 import {createReadStream} from 'node:fs'
-import {mkdir, readdir, stat, unlink, rename} from 'node:fs/promises'
+import {mkdir, readdir, stat, unlink, rename, rm, mkdtemp, readFile} from 'node:fs/promises'
 import sharp from 'sharp'
 import {validParolImage, parolImageDigest, PAROL_IMAGE_COMPOSITION} from './parolImage.mjs'
-import {createStoryVideoJobs} from './storyVideoJobs.mjs'
 import {tmpdir} from 'node:os'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {bundle} from '@remotion/bundler'
-import {renderMedia, renderStill, selectComposition} from '@remotion/renderer'
+import {renderMedia, renderStill, selectComposition, makeCancelSignal, openBrowser} from '@remotion/renderer'
+import {compositionFor, renderDigest, TEMPLATE_VERSION} from './composition.mjs'
+import {renderFfmpeg, RenderError, probeVideo, compatibleVideo} from './ffmpegRenderer.mjs'
+import {cachedExport, pruneExports} from './renderCache.mjs'
+import {selectRenderer} from './rendererSelection.mjs'
+import {createStoryVideoJobs} from './storyVideoJobs.mjs'
 
 const directory = path.dirname(fileURLToPath(import.meta.url))
 const port = Number(process.env.PORT || 7070)
@@ -17,8 +21,93 @@ const secret = process.env.STORY_RENDERER_SECRET
 if (!secret || secret.length < 24) throw new Error('Set a private STORY_RENDERER_SECRET (at least 24 characters).')
 const renderDir = path.join(tmpdir(), 'bemyparol-story-exports')
 const imageDir = path.join(tmpdir(), 'bemyparol-parol-images')
+const assetDir = path.join(directory, 'assets', 'generated', 'standard')
+// Re-audit layer behavior before changing this fingerprint. A new animation in
+// the parol artwork must not be silently flattened into stage PNGs.
+// Reviewed dev viewer-only zoom/admin/touch additions do not enter StoryFrame.
+const supportedVisualSha256 = '6d159e5fe973817e1f679a56d91b1fd35cba9584db1780839572f7ecabd58b9f'
+const mode = process.env.STORY_RENDERER_MODE || 'remotion'
+if (!['remotion', 'ffmpeg'].includes(mode)) throw new Error('Invalid STORY_RENDERER_MODE')
+const renderPreset = process.env.STORY_RENDERER_PRESET || 'standard'
+if (!['standard','high'].includes(renderPreset)) throw new Error('Invalid STORY_RENDERER_PRESET')
+const configuredTimeout = Number(process.env.STORY_RENDERER_TIMEOUT_MS || 240_000)
+if (!Number.isFinite(configuredTimeout)) throw new Error('Invalid STORY_RENDERER_TIMEOUT_MS')
+const timeoutMs = Math.max(10_000, Math.min(600_000, configuredTimeout))
 await mkdir(renderDir, {recursive:true})
 await mkdir(imageDir, {recursive:true})
+const sourceFiles = [
+  'story-renderer/package.json',
+  'story-renderer/server.mjs', 'story-renderer/remotionEntry.tsx',
+  'story-renderer/composition.mjs', 'story-renderer/ffmpegRenderer.mjs',
+  'story-renderer/renderCache.mjs',
+  'story-renderer/rendererSelection.mjs',
+  'story-renderer/storyVideoJobs.mjs', 'story-renderer/vectorEntry.tsx',
+  'story-renderer/vectorBundle.mjs',
+]
+const sourceHash = crypto.createHash('sha256')
+for (const file of sourceFiles) sourceHash.update(await readFile(path.join(directory, '..', file)))
+// Frontend source contains the parol geometry, fonts/styles and Story timing.
+async function hashTree(dir) {
+  for (const item of (await readdir(dir, {withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))) {
+    const full = path.join(dir,item.name)
+    if (item.isDirectory()) await hashTree(full)
+    else if (item.isFile()) { sourceHash.update(full); sourceHash.update(await readFile(full)) }
+  }
+}
+await hashTree(path.join(directory, '..', 'src', 'frontend', 'src'))
+await hashTree(path.join(directory, '..', 'src', 'frontend', 'public', 'story-assets'))
+await hashTree('/usr/share/fonts').catch(error => {
+  if (error.code !== 'ENOENT') throw error
+})
+if (mode === 'ffmpeg') sourceHash.update(await readFile(process.env.FFMPEG_PATH || '/usr/bin/ffmpeg'))
+sourceHash.update(process.version)
+const sourceDigest = sourceHash.digest('hex')
+const visualRoot = path.join(directory, '..', 'src', 'frontend', 'src')
+const visualFiles = [
+  'features/story/StoryFrame.tsx', 'features/story/storySpec.ts',
+  'features/customization/themes.ts',
+]
+for (const folder of ['features/lantern/renderer', 'features/lantern/growth']) {
+  const visit = async relative => {
+    for (const item of await readdir(path.join(visualRoot, relative), {withFileTypes:true})) {
+      const child = `${relative}/${item.name}`
+      if (item.isDirectory()) await visit(child)
+      else if (item.isFile()) visualFiles.push(child)
+    }
+  }
+  await visit(folder)
+}
+const visualHash = crypto.createHash('sha256')
+for (const relative of visualFiles.sort()) {
+  visualHash.update(relative)
+  visualHash.update(await readFile(path.join(visualRoot, relative)))
+}
+const visualsSupported = visualHash.digest('hex') === supportedVisualSha256
+let background = null
+let assetDigest = null
+if (mode === 'ffmpeg') {
+  const assetLoadStart = performance.now()
+  try {
+    const manifest = JSON.parse(await readFile(path.join(assetDir, 'manifest.json'), 'utf8'))
+    const file = path.join(assetDir, 'background.mp4')
+    const digest = crypto.createHash('sha256').update(await readFile(file)).digest('hex')
+    const backgroundSourceSha256 = crypto.createHash('sha256').update(await readFile(
+      path.join(directory, '..', 'src', 'frontend', 'src', 'features', 'story', 'StoryFrame.tsx')))
+      .digest('hex')
+    const asset = manifest.assets?.find(item => item.id === 'story-background')
+    if (!visualsSupported || manifest.templateVersion !== TEMPLATE_VERSION ||
+        asset?.sha256 !== digest || asset?.sourceSha256 !== backgroundSourceSha256 ||
+        asset?.width !== 720 || asset?.height !== 1280 || asset?.fps !== 24 ||
+        asset?.duration !== 8)
+      throw new Error('Story visuals changed or background asset is out of date')
+    background = file
+    assetDigest = digest
+    console.log('Story asset load',JSON.stringify({milliseconds:Math.round(performance.now()-assetLoadStart),bytes:(await stat(file)).size}))
+  } catch (error) {
+    console.warn('FFmpeg asset unavailable; Story MP4s will use Remotion:', error)
+  }
+}
+const bundleStart = performance.now()
 const serveUrl = await bundle({
   entryPoint: path.join(directory,'remotionEntry.tsx'),
   webpackOverride: config => ({
@@ -34,18 +123,25 @@ const serveUrl = await bundle({
     },
   }),
 })
+console.log('Story Chromium bundle',JSON.stringify({milliseconds:Math.round(performance.now()-bundleStart)}))
+let vectorSvg = null
+if (mode === 'ffmpeg' && background) {
+  try { ({renderVectorSvg:vectorSvg} = await import('./.generated/vector.mjs')) }
+  catch (error) { console.warn('SVG rasterizer unavailable; using Remotion:', error); background = null }
+}
 let busy = false
+const inFlight = new Map()
+// Keep the existing saved-state owner protocol and detached 12-pending queue.
+// Every media path shares busy, so only one encoder/capture runs at a time.
 const videoJobs = createStoryVideoJobs({
   renderDir,
+  digest: payload => exportIdentity(payload).digest,
   isBusy: () => busy,
   setBusy: value => { busy = value },
-  cleanup,
+  cleanup: () => pruneExports(renderDir),
   renderVideo: async (payload, output) => {
-    const {kind, designKey, patternKey, friendCount, slots, highlightSlot} = payload
-    const inputProps = {kind, designKey, patternKey, friendCount, slots, highlightSlot}
-    const composition = await selectComposition({serveUrl, id:'BeMyParolStory', inputProps})
-    await renderMedia({composition, serveUrl, codec:'h264', outputLocation:output, inputProps,
-      concurrency:2, crf:24, logLevel:'error', chromiumOptions:{enableMultiProcessOnLinux:true}})
+    const {inputProps} = exportIdentity(payload)
+    await renderExport(output, 'mp4', inputProps, new AbortController())
   },
 })
 
@@ -63,18 +159,7 @@ function valid(input) {
     && (input.highlightSlot === null || (Number.isSafeInteger(input.highlightSlot)
       && input.slots.includes(input.highlightSlot)))
 }
-async function cleanup() {
-  const entries = await readdir(renderDir)
-  const now = Date.now()
-  const sorted = []
-  for (const file of entries) {
-    const full = path.join(renderDir,file)
-    const info = await stat(full)
-    if (now - info.mtimeMs > 24*60*60*1000) await unlink(full)
-    else sorted.push({full,time:info.mtimeMs})
-  }
-  for (const entry of sorted.sort((a,b)=>b.time-a.time).slice(32)) await unlink(entry.full)
-}
+await pruneExports(renderDir, {removeAbandoned:true})
 async function cleanupImages() {
   const now = Date.now()
   const keep = []
@@ -198,6 +283,79 @@ function respond(res, status, message) {
   res.writeHead(status, {'content-type':'application/json','cache-control':'no-store'})
   res.end(JSON.stringify({message}))
 }
+async function renderExport(file, format, inputProps, controller, onProgress = () => {}) {
+  const workDir = await mkdtemp(path.join(renderDir, 'job-'))
+  const temporary = path.join(workDir, format === 'png' ? 'output.png' : 'output.mp4')
+  const timer = setTimeout(() => controller.abort(new RenderError('TIMEOUT', 'Render deadline exceeded')), timeoutMs)
+  const {cancelSignal, cancel} = makeCancelSignal()
+  const onAbort = () => cancel()
+  controller.signal.addEventListener('abort', onAbort, {once:true})
+  try {
+    if (controller.signal.aborted) throw controller.signal.reason
+    const renderer = selectRenderer(format, mode, !!background && renderPreset === 'standard')
+    const videoId = renderPreset === 'high' ? 'BeMyParolStoryHigh' : 'BeMyParolStory'
+    const renderRemotion = async () => {
+      const composition = await selectComposition({serveUrl,id:videoId,inputProps})
+      await renderMedia({composition,serveUrl,codec:'h264',outputLocation:temporary,inputProps,
+        concurrency:2,crf:24,logLevel:'error',cancelSignal,
+        chromiumOptions:{enableMultiProcessOnLinux:true}})
+    }
+    if (format === 'png') {
+      const composition = await selectComposition({serveUrl,id:'BeMyParolStoryHigh',inputProps})
+      await renderStill({composition,serveUrl,output:temporary,inputProps,frame:200,
+        imageFormat:'png',cancelSignal})
+    } else if (renderer === 'ffmpeg') {
+      try {
+        await renderFfmpeg({serveUrl, renderStill, selectComposition, openBrowser, inputProps,
+          background, workDir, output:temporary, signal:controller.signal, cancelSignal,
+          vectorSvg, onProgress, onMetrics:metrics=>console.log('Story render metrics',JSON.stringify(metrics)),
+          timeoutMs, binary:process.env.FFMPEG_PATH || '/usr/bin/ffmpeg'})
+      } catch (error) {
+        if (controller.signal.aborted || error?.code === 'CANCELLED') throw error
+        console.warn('FFmpeg Story failed; using Remotion compatibility render:',error)
+        await renderRemotion()
+      }
+    } else {
+      await renderRemotion()
+    }
+    if (controller.signal.aborted) throw controller.signal.reason
+    if ((await stat(temporary)).size <= 1024) throw new RenderError('EMPTY_OUTPUT','Render produced an empty file')
+    if (format === 'mp4') {
+      const binary = process.env.FFMPEG_PATH || '/usr/bin/ffmpeg'
+      const metadata = await probeVideo(binary.replace(/ffmpeg$/, 'ffprobe'), temporary,
+        {signal:controller.signal})
+      if (!compatibleVideo(metadata, renderPreset))
+        throw new RenderError('INVALID_OUTPUT', 'Story output failed media validation')
+    }
+    if (controller.signal.aborted) throw controller.signal.reason
+    await rename(temporary, file)
+    onProgress(1)
+  } finally {
+    clearTimeout(timer)
+    controller.signal.removeEventListener('abort', onAbort)
+    await rm(workDir, {recursive:true, force:true})
+  }
+}
+async function serveExport(res, file, format, cachedResult) {
+  const info = await stat(file)
+  res.writeHead(200,{
+    'content-type':format==='png'?'image/png':'video/mp4',
+    'content-length':info.size,
+    'cache-control':'private, max-age=300',
+    'x-story-cache':cachedResult ? 'HIT' : 'MISS',
+  })
+  createReadStream(file).pipe(res)
+}
+function exportIdentity(request) {
+  const {kind,designKey,patternKey,friendCount,slots,highlightSlot,format} = request
+  const inputProps = {kind,designKey,patternKey,friendCount,slots,highlightSlot}
+  const renderer = selectRenderer(format, mode, !!background && renderPreset === 'standard')
+  const preset = format === 'png' ? 'high' : renderPreset
+  const digest = renderDigest(compositionFor(inputProps,preset), sourceDigest, assetDigest, renderer + ':' + format)
+  const file = path.join(renderDir,digest+(format==='png'?'.png':'.mp4'))
+  return {inputProps,renderer,digest,file,format}
+}
+
 const server = http.createServer(async(req,res)=>{
   if (req.url === '/health' && req.method === 'GET') return respond(res,200,'ready')
   // Private video jobs receive server-verified parol state, never a public file path.
@@ -237,7 +395,6 @@ const server = http.createServer(async(req,res)=>{
     return respond(res,404,'Not found')
   if (!authorized(req)) return respond(res,403,'Forbidden')
   if (req.url === '/render-parol') return await renderParolImage(req, res)
-  if (busy) return respond(res,503,'Story renderer is busy. Retry shortly.')
   let payload = ''
   try {
     for await (const chunk of req) {
@@ -247,33 +404,35 @@ const server = http.createServer(async(req,res)=>{
     const request = JSON.parse(payload)
     if (!valid(request)) return respond(res,400,'Invalid story data')
     // Only accept server-retrieved public fields, never a URL or HTML fragment.
-    const {kind,designKey,patternKey,friendCount,slots,highlightSlot,format} = request
-    const inputProps = {kind,designKey,patternKey,friendCount,slots,highlightSlot}
-    const digest = crypto.createHash('sha256').update(JSON.stringify({...inputProps,format})).digest('hex')
-    const file = path.join(renderDir, digest+(format==='png'?'.png':'.mp4'))
-    if (busy) return respond(res,503,'Story renderer is busy. Retry shortly.')
-    busy = true
-    try {
-      let cached = false
-      try { cached = (await stat(file)).size > 1024 } catch { /* first render */ }
-      if (!cached) {
-        const composition = await selectComposition({serveUrl,id:'BeMyParolStory',inputProps})
-        if (format === 'png') {
-          await renderStill({composition,serveUrl,output:file,inputProps,frame:200,imageFormat:'png'})
-        } else {
-          await renderMedia({composition,serveUrl,codec:'h264',outputLocation:file,inputProps,
-            concurrency:2,crf:24,logLevel:'error',chromiumOptions:{enableMultiProcessOnLinux:true}})
-        }
+    const {inputProps,digest,file,format} = exportIdentity(request)
+    if (await cachedExport(file)) return await serveExport(res, file, format, true)
+    let job = inFlight.get(digest)
+    if (!job) {
+      if (busy) {
+        res.setHeader('Retry-After', '2')
+        return respond(res,503,'Story renderer is busy. Retry shortly.')
       }
-      const info = await stat(file)
-      res.writeHead(200,{
-        'content-type':format==='png'?'image/png':'video/mp4',
-        'content-length':info.size,
-        'cache-control':'private, max-age=300',
-      })
-      createReadStream(file).pipe(res)
-      void cleanup().catch(()=>{})
-    } finally { busy = false }
+      busy = true
+      const controller = new AbortController()
+      job = {controller, waiters:0, promise:null}
+      job.promise = renderExport(file, format, inputProps, controller)
+        .finally(() => { inFlight.delete(digest); busy = false })
+      inFlight.set(digest, job)
+    }
+    job.waiters++
+    let released = false
+    const release = () => {
+      if (released) return
+      released = true
+      job.waiters--
+      if (job.waiters === 0 && inFlight.has(digest)) job.controller.abort(new RenderError('CANCELLED','All clients disconnected'))
+    }
+    res.once('close', release)
+    try {
+      await job.promise
+      if (!res.destroyed) await serveExport(res, file, format, false)
+      void pruneExports(renderDir).catch(()=>{})
+    } finally { res.off('close', release); release() }
   } catch(e) {
     console.error('Story render failed:',e)
     if (!res.headersSent) respond(res,500,'Unable to render story')

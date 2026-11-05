@@ -4,22 +4,15 @@ import {readFileSync} from 'node:fs'
 
 const read = file => readFileSync(new URL('../' + file, import.meta.url), 'utf8')
 
-test('device MP4 exports use the exact existing deterministic StoryFrame and timings', () => {
+test('device MP4 exports delegate to the original Remotion browser renderer', () => {
   const source = read('src/features/story/phoneStoryVideo.ts')
-  const spec = read('src/features/story/storySpec.ts')
-  assert.match(source, /createElement\(StoryFrame, \{data, frame\}\)/)
-  assert.match(source, /renderToStaticMarkup/)
-  assert.match(source, /frame < STORY_FRAMES; frame\+\+/)
-  assert.match(source, /source\.add\(frame \/ STORY_FPS, 1 \/ STORY_FPS\)/)
-  assert.match(spec, /STORY_FPS = 30/)
-  assert.match(spec, /STORY_FRAMES = 240/)
-  assert.match(spec, /STORY_WIDTH = 1080/)
-  assert.match(spec, /STORY_HEIGHT = 1920/)
-  assert.match(source, /quality: new Quality\('high'\)/)
-  assert.match(source, /codec: 'avc'/)
-  assert.match(source, /new Mp4OutputFormat\(\)/)
-  assert.match(source, /type:'video\/mp4'/)
-  assert.match(source, /result\.slice\(4, 8\)\.text\(\) !== 'ftyp'/)
+  assert.match(source, /renderStoryInBrowser/)
+  assert.doesNotMatch(source, /CanvasSource|canEncodeVideo|mediabunny/)
+  const browser = read('src/features/story/browserRenderer.tsx')
+  assert.match(browser, /renderMediaOnWeb/)
+  assert.match(browser, /mediaCacheSizeInBytes:32\*1024\*1024/)
+  assert.match(browser, /validateBrowserVideo/)
+  assert.match(browser, /crypto\.subtle\.digest/)
 })
 
 test('safe device MP4 support is probed at runtime and limited by parol size', () => {
@@ -29,9 +22,7 @@ test('safe device MP4 support is probed at runtime and limited by parol size', (
   assert.match(device, /deviceVideoFriendLimit/)
   assert.ok(device.includes('(friendCount ?? 0) > deviceVideoFriendLimit()'))
   assert.ok(device.includes('(slotCount ?? 0) > deviceVideoFriendLimit()'))
-  assert.match(device, /window\.isSecureContext/)
-  assert.match(device, /typeof VideoEncoder === 'undefined'/)
-  assert.match(device, /canEncodeVideo\('avc'/)
+  assert.match(device, /browserCanRenderStory/)
   assert.match(share, /module\.canRenderStoryOnDevice\(data\.friendCount, data\.slots\.length\)/)
   assert.match(share, /Generate on this device/)
   assert.match(share, /Generate in background instead/)
@@ -53,8 +44,8 @@ test('PNG and MP4 both run locally first, preserving server fallback for owner a
   assert.match(device, /const signature = new Uint8Array/)
   assert.match(device, /export async function renderStoryOnDevice/)
   assert.match(share, /selected === 'png' \|\| \(selected === 'mp4' && deviceAvailable\)/)
-  assert.match(share, /renderStoryImageOnDevice\(data, controller\.signal\)/)
-  assert.match(share, /renderStoryOnDevice\(data, controller\.signal/)
+  assert.match(share, /renderStoryImageOnDevice\(composition, controller\.signal\)/)
+  assert.match(share, /renderStoryOnDevice\(composition, controller\.signal/)
   assert.match(share, /setPng\(blob\)/)
   assert.match(share, /setVideo\(blob\)/)
   assert.match(share, /exportStoryMedia\(data\.kind, 'png', token, controller\.signal\)/)
@@ -66,10 +57,7 @@ test('PNG and MP4 both run locally first, preserving server fallback for owner a
 test('device renderer is bounded, cancelable, validates frames and never runs hidden', () => {
   const device = read('src/features/story/phoneStoryVideo.ts')
   const share = read('src/features/story/StoryShare.tsx')
-  assert.match(device, /MAX_PHONE_RENDER_MS = 120_000/)
   assert.match(device, /signal\.aborted \|\| document\.hidden/)
-  assert.match(device, /await nextPaint\(signal\)/)
-  assert.match(device, /await output\.cancel\(\)\.catch/)
   assert.match(device, /image\.decode\(\)/)
   assert.match(device, /getImageData\(/)
   assert.match(device, /URL\.revokeObjectURL\(blobUrl\)/)
@@ -79,18 +67,30 @@ test('device renderer is bounded, cancelable, validates frames and never runs hi
   assert.match(share, /latestDataKey\.current !== requestedKey/)
 })
 
-test('local media dependency is pinned; server, share/download and zoom stay independent', () => {
+test('original Remotion dependencies are pinned; server, share/download and zoom stay independent', () => {
   const packageJson = JSON.parse(read('package.json'))
   const lock = JSON.parse(read('package-lock.json'))
   const share = read('src/features/story/StoryShare.tsx')
   const guest = read('src/features/invitations/GuestInvitationPage.tsx')
-  assert.equal(packageJson.dependencies.mediabunny, '1.65.0')
-  assert.equal(lock.packages[''].dependencies.mediabunny, '1.65.0')
-  assert.equal(lock.packages['node_modules/mediabunny'].version, '1.65.0')
-  assert.ok(lock.packages['node_modules/@types/dom-webcodecs'])
+  for (const name of ['remotion', '@remotion/web-renderer']) {
+    assert.equal(packageJson.dependencies[name], '4.0.537')
+    assert.equal(lock.packages[''].dependencies[name], '4.0.537')
+    assert.equal(lock.packages['node_modules/' + name].version, '4.0.537')
+  }
+  assert.equal(packageJson.dependencies.mediabunny, undefined)
   assert.ok(!guest.includes('<StoryShare'))
   assert.match(share, /Download MP4/)
   assert.match(share, /Download PNG/)
   assert.match(share, /Share video/)
   assert.match(share, /Share image/)
+})
+
+
+test('local painting preserves high-resolution PNG and authoritative saved composition', () => {
+  const device = read('src/features/story/phoneStoryVideo.ts')
+  const share = read('src/features/story/StoryShare.tsx')
+  assert.match(device, /preset: 'high'/)
+  assert.match(device, /STORY_PRESETS.high/)
+  assert.match(share, /fetchStoryComposition\(data.kind, token, controller.signal\)/)
+  assert.match(share, /frame=\{200\} preset="high"/)
 })
