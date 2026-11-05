@@ -22,8 +22,8 @@ export function isPhoneStoryDevice(): boolean {
 export function deviceVideoFriendLimit(): number {
   if (typeof navigator === 'undefined') return 0
   const memory = (navigator as Navigator & {deviceMemory?: number}).deviceMemory
-  if (memory !== undefined) return memory >= 8 ? 20 : memory >= 4 ? 12 : 6
-  return navigator.hardwareConcurrency >= 8 ? 12 : 6
+  if (memory === undefined) return 6
+  return memory >= 4 ? 12 : 6
 }
 
 export async function canRenderStoryOnDevice(friendCount?: number, slotCount?: number): Promise<boolean> {
