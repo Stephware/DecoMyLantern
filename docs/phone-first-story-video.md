@@ -1,5 +1,10 @@
 # Phase 1 — Phone-first animated MP4 with existing server queue fallback
 
+> **Historical implementation:** This document describes the original phone-only
+> behavior. The current device-first PNG and MP4 approach, memory guards and
+> deployment verification are in [device-first-story-media.md](device-first-story-media.md).
+> The secure server fallback remains available.
+
 > **Phase 2 update:** The shareable PNG is now a complete 9:16 Story poster, not the old transparent parol snapshot. This changes only the PNG output; the phone-first MP4 encoder and existing server queue remain as implemented here. See [still-story-poster.md](still-story-poster.md).
 
 ## Scope

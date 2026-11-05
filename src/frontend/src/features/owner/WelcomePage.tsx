@@ -34,7 +34,8 @@ export default function WelcomePage({
       <DesktopSideAds />
       <header className="mx-auto flex max-w-[1300px] items-center justify-between gap-3 px-5 py-5 sm:px-9 min-[1700px]:max-w-[1200px]">
         <div className="flex items-center gap-2 font-serif text-2xl font-semibold">
-          <span className="text-[#aa7d41]" aria-hidden="true">✦</span> BeMyParol
+          <img src="/bemyparol-logo.png" alt="" aria-hidden="true" width={40} height={40} draggable={false}
+            className="h-10 w-10 shrink-0 object-contain" /> BeMyParol
         </div>
         <span className="hidden rounded-full border border-[#dfd1bc] bg-white/75 px-4 py-2 text-xs text-[#77634c] sm:inline">
           Christmas, made together
