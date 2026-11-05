@@ -129,11 +129,11 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     let active = true
     setDeviceAvailable(null)
     void import('./phoneStoryVideo')
-      .then(module => module.canRenderStoryOnDevice(data))
+      .then(module => module.canRenderStoryOnDevice(data.friendCount, data.slots.length))
       .then(available => { if (active) setDeviceAvailable(available) })
       .catch(() => { if (active) setDeviceAvailable(false) })
     return () => { active = false }
-  }, [open, format, dataKey])
+  }, [open, format, data.friendCount, data.slots.length])
 
   // A queued video runs on the private renderer even after the modal or tab
   // closes. On reopening, re-check the saved owner parol and load its MP4.
@@ -225,8 +225,9 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
     if (selected === 'mp4' && videoKey === dataKey && video) return
 
     const requestedKey = dataKey
-    const mode = selected === 'mp4' && data.kind === 'owner' && requestedMode !== 'server' &&
-      deviceAvailable ? 'phone' : 'server'
+    const mode = requestedMode !== 'server' &&
+      (selected === 'png' || (selected === 'mp4' && deviceAvailable))
+      ? 'device' : 'server'
     const controller = new AbortController()
     const request = {key: requestedKey, format: selected, controller, mode}
     activeRequest.current = request
@@ -473,8 +474,8 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
                       {awaitingVideo ? 'Rendering in background…' :
                         busy === format ? 'Preparing…' :
                         format === 'png' ? 'Create image on this device' :
-                        data.kind === 'owner' && deviceAvailable === null ? 'Checking phone support…' :
-                        data.kind === 'owner' && deviceAvailable ? 'Generate on this phone' :
+                        deviceAvailable === null ? 'Checking device support…' :
+                        deviceAvailable ? 'Generate on this device' :
                         'Generate animated MP4'}
                     </button>
                     {data.kind === 'owner' && format === 'mp4' && deviceAvailable &&
@@ -482,9 +483,9 @@ export default function StoryShare({data, invitationUrl, token}: Props) {
                         disabled={busy !== null} onClick={() => void generate('mp4', 'server')}>
                         Generate in background instead
                       </button>}
-                    {data.kind === 'owner' && format === 'mp4' && deviceAvailable === false &&
+                    {format === 'mp4' && deviceAvailable === false &&
                       <p className="text-xs text-[#766b5d]">
-                        This browser cannot produce a compatible MP4 locally. The existing private queue will generate it for you.
+                        Local MP4 encoding is unsupported or this parol is too large for this device. Server rendering remains available.
                       </p>}
                   </>
                 ) : (
