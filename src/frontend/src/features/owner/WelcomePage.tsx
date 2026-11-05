@@ -54,8 +54,8 @@ export default function WelcomePage({
           </div>
           <div className="overflow-hidden rounded-[26px] border border-[#263e34] bg-[#15251e] p-3 shadow-[0_20px_55px_rgba(34,48,34,.18)] sm:p-5">
             <div className="relative mx-auto w-full max-w-[710px] p-6 sm:p-8">
-              <img src="/api/designs/classic/showcase?v=v1" width={1200} height={1280}
-                alt="Classic Gold grand parol fully grown with 50 sample friends"
+              <img src="/api/designs/classic/showcase?friends=20&v=v2" width={1200} height={1280}
+                alt="Classic Gold festival parol with 20 sample friends"
                 draggable={false} decoding="async" loading="eager"
                 onError={event => {
                   // Keep the welcome screen usable when the private showcase
@@ -65,15 +65,21 @@ export default function WelcomePage({
                     event.currentTarget.alt = 'BeMyParol Classic Gold festival parol'
                   }
                 }}
-                className="pointer-events-none block h-auto w-full select-none" />
+                className="welcome-parol-artwork pointer-events-none block h-auto w-full select-none" />
               <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-visible">
                 <div className="welcome-parol-halo absolute inset-[10%]" />
-                <span className="welcome-parol-sparkle">✦</span>
+                {/* Light glints follow ornament locations on the actual parol;
+                    only two small stars float in its surrounding dark space. */}
+                <span className="welcome-parol-glint">✦</span>
+                <span className="welcome-parol-glint">✧</span>
+                <span className="welcome-parol-glint">✦</span>
+                <span className="welcome-parol-glint">✧</span>
+                <span className="welcome-parol-glint">✦</span>
+                <span className="welcome-parol-glint">✧</span>
+                <span className="welcome-parol-glint">✦</span>
+                <span className="welcome-parol-glint">✧</span>
                 <span className="welcome-parol-sparkle">✧</span>
                 <span className="welcome-parol-sparkle">✦</span>
-                <span className="welcome-parol-sparkle">✧</span>
-                <span className="welcome-parol-sparkle">✦</span>
-                <span className="welcome-parol-sparkle">✧</span>
               </div>
             </div>
           </div>
