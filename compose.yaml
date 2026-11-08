@@ -22,6 +22,8 @@ services:
     restart: unless-stopped
     environment:
       STORY_RENDERER_SECRET: ${STORY_RENDERER_SECRET:?Set STORY_RENDERER_SECRET in .env}
+      STORY_RENDERER_MODE: ${STORY_RENDERER_MODE:-ffmpeg}
+      STORY_RENDERER_PRESET: ${STORY_RENDERER_PRESET:-standard}
       PORT: "7070"
     # Not published: only the backend can reach the private render service.
 

@@ -18,7 +18,7 @@ test('one responsive sharing dialog offers both media formats', () => {
   assert.ok(component.includes('aspect-[9/16]'))
   assert.ok(component.includes('sm:max-w-[270px]'))
   assert.ok(component.includes('ResizeObserver'))
-  assert.ok(component.includes('<StoryFrame data={data} frame={200}/>'))
+  assert.ok(component.includes('<StoryFrame data={data} frame={200} preset="high"/>'))
 })
 
 test('owner exports keep format-aware controls without a post-contribution guest sharing button', () => {

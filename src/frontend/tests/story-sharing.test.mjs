@@ -7,10 +7,10 @@ import {
 } from '../src/features/story/storySpec.ts'
 
 test('MP4 exports are eight-second vertical Stories', () => {
-  assert.equal(STORY_WIDTH,1080)
-  assert.equal(STORY_HEIGHT,1920)
-  assert.equal(STORY_FPS,30)
-  assert.equal(STORY_FRAMES,240)
+  assert.equal(STORY_WIDTH,720)
+  assert.equal(STORY_HEIGHT,1280)
+  assert.equal(STORY_FPS,24)
+  assert.equal(STORY_FRAMES,192)
   assert.equal(STORY_FRAMES/STORY_FPS,8)
 })
 
@@ -18,7 +18,7 @@ test('each Story reveals one real friend as three entire growth waves',()=>{
   for (const friends of [0,1,2,17,50]) {
     const final = Math.max(0,friends*3)
     assert.deepEqual(
-      [0,30,60,90,200].map(frame=>storyGrowthAtFrame(friends,frame)),
+      [0,24,48,72,160].map(frame=>storyGrowthAtFrame(friends,frame)),
       [Math.max(0,final-3),Math.min(final,Math.max(0,final-3)+1),
        Math.min(final,Math.max(0,final-3)+2),final,final]
     )
@@ -34,7 +34,7 @@ test('owner and guest sharing is present without requesting a Meta account',()=>
   assert.ok(code.includes('navigator.canShare'))
   assert.ok(code.includes('Download MP4'))
   assert.ok(code.includes('Copy invitation link'))
-  assert.ok(code.includes("generate(format, phoneAvailable ? 'phone' : 'server')"))
+  assert.ok(code.includes("generate(format, format === 'png' || deviceAvailable ? 'device' : 'server')"))
   assert.ok(code.includes("share(format)"))
   assert.ok(code.includes("Download PNG"))
   assert.ok(!code.includes('instagramAccessToken'))

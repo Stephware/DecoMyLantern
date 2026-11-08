@@ -1,8 +1,10 @@
 # Phase 2 — Static sharing image matches the completed animated Story
 
+> Rendering implementation updated 2026-11-06: see [the original hybrid port](story-hybrid-rendering.md) for current presets, device encoder, fallback and verification. Earlier implementation notes below are historical where they conflict.
+
 ## User-facing behavior
 
-In **Share your parol → Static image**, **Prepare Story PNG** now exports an
+In **Share your parol → Static image**, **Create image on this device** now exports an
 **actual 1080 × 1920 (9:16) still image of the existing Story video's
 completed frame**. It includes the same:
 
@@ -23,11 +25,12 @@ rather than `BeMyParol-Parol.png`.
 
 ## Reuse and server work
 
-- Frontend calls the existing protected `exportStoryMedia(kind, 'png', token)`
-  helper, which POSTs to `/api/my/lantern/story` for owners or
+- The frontend first renders frame 200 directly into a browser Canvas and
+  validates that the result is an actual PNG. If unsupported, it invokes
+  the unchanged protected `exportStoryMedia(kind, 'png', token)` fallback,
+  which POSTs to `/api/my/lantern/story` for owners or
   `/api/invitations/story` for previously contributing guests. The
-  authentication, CSRF, guest contribution check, quotas, and payload
-  sanitization are those of the existing Story export endpoint.
+  existing authentication, CSRF and quotas remain in force for the fallback.
 - The existing private `/render` Remotion renderer already uses
   `BeMyParolStory` and `renderStill({frame:200,imageFormat:'png'})`, with
   a 1080 × 1920 composition and the established on-disk media cache
@@ -42,7 +45,8 @@ rather than `BeMyParol-Parol.png`.
   **not removed**. They still provide the transparent parol-only snapshot
   where needed internally; the actual owner/guest parol viewer continues
   its independent 1x/2x/3x WebP zoom image path.
-- Phone-first video generation and the server queue (Phase 1) are unchanged.
+- Device-first MP4 is supported on compatible phones and desktops subject to
+  conservative memory checks; the server queue is retained.
   Changing the format or the saved parol state cannot expose media from an
   earlier owner, invitation, design, or contribution.
 

@@ -1,0 +1,548 @@
+{
+  "date": "2026-11-06",
+  "source": "47f872a",
+  "baseline": "fa88739",
+  "current": {
+    "environment": {
+      "host": "Darwin 25.3.0",
+      "cpu": "2 vCPU Docker quota per container",
+      "memory": "2 GiB Docker limit",
+      "baseline_image": "bemyparol-story-dev:fa88739",
+      "optimized_image": "bemyparol-story-optimized:full"
+    },
+    "remotion": {
+      "simple": {
+        "seconds": 18.14,
+        "cpu_seconds": 35.89,
+        "bytes": 1047543,
+        "cache": null,
+        "file": "/tmp/bemyparol-benchmark-current/remotion-simple.mp4"
+      },
+      "complex": {
+        "seconds": 33.0,
+        "cpu_seconds": 65.56,
+        "bytes": 1370108,
+        "cache": null,
+        "file": "/tmp/bemyparol-benchmark-current/remotion-complex.mp4"
+      },
+      "peak_memory_bytes": 2147483648
+    }
+  },
+  "matched": {
+    "environment": {
+      "host": "Darwin 25.3.0",
+      "cpu": "2 vCPU Docker quota per container",
+      "memory": "2 GiB Docker limit",
+      "baseline_image": "bemyparol-story-hybrid:port",
+      "optimized_image": "bemyparol-story-hybrid:port"
+    },
+    "remotion": {
+      "simple": {
+        "seconds": 5.7,
+        "cpu_seconds": 10.87,
+        "bytes": 488730,
+        "cache": "MISS",
+        "file": "/tmp/bemyparol-benchmark-matched/remotion-simple.mp4",
+        "media": {
+          "programs": [],
+          "streams": [
+            {
+              "codec_name": "h264",
+              "width": 720,
+              "height": 1280,
+              "pix_fmt": "yuv420p",
+              "r_frame_rate": "24/1"
+            }
+          ],
+          "format": {
+            "duration": "8.000000"
+          }
+        }
+      },
+      "complex": {
+        "seconds": 10.39,
+        "cpu_seconds": 20.71,
+        "bytes": 711176,
+        "cache": "MISS",
+        "file": "/tmp/bemyparol-benchmark-matched/remotion-complex.mp4",
+        "media": {
+          "programs": [],
+          "streams": [
+            {
+              "codec_name": "h264",
+              "width": 720,
+              "height": 1280,
+              "pix_fmt": "yuv420p",
+              "r_frame_rate": "24/1"
+            }
+          ],
+          "format": {
+            "duration": "8.000000"
+          }
+        }
+      },
+      "peak_memory_bytes": 1287888896,
+      "startup_bundle": {
+        "milliseconds": 941
+      }
+    },
+    "ffmpeg": {
+      "simple": {
+        "seconds": 4.71,
+        "cpu_seconds": 8.9,
+        "bytes": 376016,
+        "cache": "MISS",
+        "file": "/tmp/bemyparol-benchmark-matched/ffmpeg-simple.mp4",
+        "media": {
+          "programs": [],
+          "streams": [
+            {
+              "codec_name": "h264",
+              "width": 720,
+              "height": 1280,
+              "pix_fmt": "yuv420p",
+              "r_frame_rate": "24/1"
+            }
+          ],
+          "format": {
+            "duration": "8.000000"
+          }
+        },
+        "ssim_1fps": 0.969059
+      },
+      "complex": {
+        "seconds": 7.63,
+        "cpu_seconds": 12.72,
+        "bytes": 464232,
+        "cache": "MISS",
+        "file": "/tmp/bemyparol-benchmark-matched/ffmpeg-complex.mp4",
+        "media": {
+          "programs": [],
+          "streams": [
+            {
+              "codec_name": "h264",
+              "width": 720,
+              "height": 1280,
+              "pix_fmt": "yuv420p",
+              "r_frame_rate": "24/1"
+            }
+          ],
+          "format": {
+            "duration": "8.000000"
+          }
+        },
+        "ssim_1fps": 0.93639
+      },
+      "concurrency": {
+        "same_request_statuses": [
+          200,
+          200
+        ],
+        "same_request_identical_output": true,
+        "different_request_while_busy_status": 503,
+        "repeat_status": 200,
+        "repeat_cache": "HIT",
+        "repeat_identical_output": true
+      },
+      "peak_memory_bytes": 1113563136,
+      "profile": {
+        "simple": {
+          "vectorMs": 237,
+          "chromiumInitMs": 64,
+          "chromiumCaptureMs": 208,
+          "ffmpegMs": 4112,
+          "totalMs": 4663,
+          "chromiumCaptures": 1,
+          "vectorRasters": 7
+        },
+        "complex": {
+          "vectorMs": 2539,
+          "chromiumInitMs": 41,
+          "chromiumCaptureMs": 220,
+          "ffmpegMs": 4736,
+          "totalMs": 7577,
+          "chromiumCaptures": 1,
+          "vectorRasters": 7
+        }
+      },
+      "asset_load": {
+        "milliseconds": 1,
+        "bytes": 201359
+      },
+      "startup_bundle": {
+        "milliseconds": 733
+      }
+    }
+  },
+  "browserRenderer": {
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.8080.0 Safari/537.36",
+    "hidden": false,
+    "secure": true,
+    "memory": 8,
+    "support": true,
+    "pngError": "SecurityError: Failed to execute 'getImageData' on 'CanvasRenderingContext2D': The canvas has been tainted by cross-origin data.",
+    "mp4": {
+      "bytes": 2341410,
+      "ms": 5031.399999976158
+    },
+    "large": "This parol needs the server renderer to protect device memory."
+  },
+  "privateRendererCases": [
+    {
+      "case": "private auth denied",
+      "routes": 5
+    },
+    {
+      "case": "method and canonical payload validation"
+    },
+    {
+      "case": "owner survives response close; busy image/direct denied; second owner queued; changed state absent"
+    },
+    {
+      "case": "owner and direct share verified cache",
+      "sha256": "eda08e48af9a7df86d18ddb422931cd5e1518bc953e49f1edc1a92deadd88030",
+      "media": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 720,
+            "height": 1280,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "24/1",
+            "nb_read_frames": "192"
+          }
+        ],
+        "format": {
+          "duration": "8.000000"
+        }
+      }
+    },
+    {
+      "case": "completed owner reconstructed after renderer restart"
+    },
+    {
+      "case": "high PNG preserved",
+      "kind": "owner",
+      "width": 1080,
+      "height": 1920
+    },
+    {
+      "case": "high PNG preserved",
+      "kind": "friend",
+      "width": 1080,
+      "height": 1920
+    },
+    {
+      "case": "disconnected direct render not published",
+      "noNewFiles": true,
+      "noJobDirectories": true
+    },
+    {
+      "case": "optimized engine actually selected",
+      "oneChromiumCapture": true
+    },
+    {
+      "case": "compatibility missing-background",
+      "media": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 720,
+            "height": 1280,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "24/1",
+            "nb_read_frames": "192"
+          }
+        ],
+        "format": {
+          "duration": "8.000000"
+        }
+      }
+    },
+    {
+      "case": "compatibility corrupt-background",
+      "media": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 720,
+            "height": 1280,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "24/1",
+            "nb_read_frames": "192"
+          }
+        ],
+        "format": {
+          "duration": "8.000000"
+        }
+      }
+    },
+    {
+      "case": "compatibility high",
+      "media": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1080,
+            "height": 1920,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "30/1",
+            "nb_read_frames": "240"
+          }
+        ],
+        "format": {
+          "duration": "8.000000"
+        }
+      }
+    },
+    {
+      "case": "compatibility runtime-corrupt-background",
+      "media": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 720,
+            "height": 1280,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "24/1",
+            "nb_read_frames": "192"
+          }
+        ],
+        "format": {
+          "duration": "8.000000"
+        }
+      }
+    },
+    {
+      "case": "all integration cases passed"
+    }
+  ],
+  "storyShareCases": [
+    {
+      "scenario": "success",
+      "encodeRequests": 192,
+      "ms": 5409.399999976158,
+      "jobPosts": 0,
+      "binaryExports": 0,
+      "generated": true,
+      "shareReady": true,
+      "notice": [
+        "Video generated on this device. Ready to share or download."
+      ],
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.8080.0 Safari/537.36",
+      "secure": true
+    },
+    {
+      "scenario": "asset-failure",
+      "encodeRequests": 0,
+      "ms": 551.5,
+      "jobPosts": 1,
+      "binaryExports": 0,
+      "generated": false,
+      "shareReady": false,
+      "notice": [
+        "Local encoding was unavailable. Your video is queued on the server; you can leave and return.",
+        "Your video is rendering in the background. You can close this page and return to Share your parol to retrieve it."
+      ],
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.8080.0 Safari/537.36",
+      "secure": true
+    },
+    {
+      "scenario": "hidden",
+      "encodeRequests": 4,
+      "ms": 658.6000000238419,
+      "jobPosts": 0,
+      "binaryExports": 0,
+      "generated": false,
+      "shareReady": false,
+      "notice": [
+        "Local generation stopped when this page became inactive. Reopen sharing to retry."
+      ],
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.8080.0 Safari/537.36",
+      "secure": true
+    },
+    {
+      "scenario": "cancel",
+      "encodeRequests": 4,
+      "ms": 673.6000000238419,
+      "jobPosts": 0,
+      "binaryExports": 0,
+      "generated": false,
+      "shareReady": false,
+      "notice": [
+        "Device generation stopped. Reopen sharing to try again or use the server."
+      ],
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.8080.0 Safari/537.36",
+      "secure": true
+    },
+    {
+      "scenario": "stale",
+      "encodeRequests": 4,
+      "ms": 661,
+      "jobPosts": 0,
+      "binaryExports": 0,
+      "generated": false,
+      "shareReady": false,
+      "notice": [],
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.8080.0 Safari/537.36",
+      "secure": true
+    }
+  ],
+  "optimizedMedia": [
+    {
+      "programs": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuv420p",
+          "r_frame_rate": "24/1",
+          "nb_read_frames": "192"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    },
+    {
+      "programs": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuv420p",
+          "r_frame_rate": "24/1",
+          "nb_read_frames": "192"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    },
+    {
+      "programs": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuvj420p",
+          "r_frame_rate": "24/1",
+          "nb_read_frames": "192"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  ],
+  "originalOutputComparison": {
+    "source": "47f872a",
+    "method": "full-video decoded-frame SSIM",
+    "simple": 1.0,
+    "complex": 1.0
+  },
+  "finalSourceSmoke": [
+    {
+      "case": "final image ready",
+      "image": "sha256:deb61a34cf696360b563cf510385ddbc5e6900fa1b6e4daff20f6ed3b2f1f405"
+    },
+    {
+      "case": "verified standard MP4",
+      "kind": "owner",
+      "friends": 50,
+      "media": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 720,
+            "height": 1280,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "24/1",
+            "nb_read_frames": "192"
+          }
+        ],
+        "format": {
+          "duration": "8.000000"
+        }
+      },
+      "sha256": "d4cc3997ef930e2e63fae531c686c7c13afa4d7e7aae1830848429f56a48fca1"
+    },
+    {
+      "case": "verified standard MP4",
+      "kind": "friend",
+      "friends": 3,
+      "media": {
+        "programs": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 720,
+            "height": 1280,
+            "pix_fmt": "yuv420p",
+            "r_frame_rate": "24/1",
+            "nb_read_frames": "192"
+          }
+        ],
+        "format": {
+          "duration": "8.000000"
+        }
+      },
+      "sha256": "3cc60ab529254b5176ed2111c266edf6051eaf58d9cf451e5786fdd7ab708caa"
+    },
+    {
+      "case": "reviewed fingerprint selected original FFmpeg",
+      "renders": 2,
+      "chromiumCapturesPerRender": 1
+    },
+    {
+      "case": "verified high PNG",
+      "kind": "owner",
+      "friends": 0,
+      "width": 1080,
+      "height": 1920
+    },
+    {
+      "case": "verified high PNG",
+      "kind": "owner",
+      "friends": 50,
+      "width": 1080,
+      "height": 1920
+    },
+    {
+      "case": "verified high PNG",
+      "kind": "friend",
+      "friends": 0,
+      "width": 1080,
+      "height": 1920
+    },
+    {
+      "case": "verified high PNG",
+      "kind": "friend",
+      "friends": 50,
+      "width": 1080,
+      "height": 1920
+    },
+    {
+      "case": "final smoke passed"
+    }
+  ]
+}

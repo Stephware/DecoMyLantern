@@ -1,3 +1,5 @@
+import type {StoryData} from '../features/story/StoryFrame'
+
 export type Owner = { id: string }
 export type OwnerIssue = { owner: Owner; recoveryCode: string }
 export type OwnerRecoveryKey = { available: boolean; recoveryCode: string | null; expiresAtUtc: string }
@@ -146,6 +148,16 @@ export async function getOwnerVideoJobFile(signal?: AbortSignal): Promise<Blob> 
   if (response.headers.get('content-type')?.split(';')[0]?.trim() !== 'video/mp4')
     throw new Error('Unexpected video format.')
   return response.blob()
+}
+
+/** Read only the authenticated saved composition; rendered bytes stay on-device. */
+export async function fetchStoryComposition(kind: 'owner' | 'friend', token?: string,
+  signal?: AbortSignal): Promise<StoryData> {
+  if (kind === 'friend' && !token) throw new Error('Missing invitation for this Story.')
+  return api<StoryData>(kind === 'friend'
+    ? '/api/invitations/story/composition' : '/api/my/lantern/story/composition',
+    {method:'POST', body:JSON.stringify(kind === 'friend' ? {token} : {}), signal},
+    kind === 'friend' ? '/api/invitations/csrf' : '/api/owner/csrf')
 }
 
 // Story exports are binary, so do not use the JSON-only api<T> helper.

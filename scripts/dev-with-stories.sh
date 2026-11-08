@@ -25,7 +25,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-for command_name in node npm dotnet openssl curl; do
+for command_name in node npm dotnet openssl curl ffmpeg ffprobe; do
   if ! command -v "$command_name" >/dev/null 2>&1; then
     echo "Missing $command_name. Install it before starting BeMyParol." >&2
     exit 1
@@ -47,6 +47,9 @@ fi
 export STORY_RENDERER_SECRET="$(openssl rand -hex 32)"
 export StoryRenderer__SharedSecret="$STORY_RENDERER_SECRET"
 export StoryRenderer__Url="http://127.0.0.1:7070"
+export FFMPEG_PATH="${FFMPEG_PATH:-$(command -v ffmpeg)}"
+export STORY_RENDERER_MODE="${STORY_RENDERER_MODE:-ffmpeg}"
+export STORY_RENDERER_PRESET="${STORY_RENDERER_PRESET:-standard}"
 
 echo "Preparing Story and parol image renderer dependencies..."
 if [[ ! -x "$RENDERER_DIR/node_modules/.bin/remotion" || ! -d "$RENDERER_DIR/node_modules/sharp" ]]; then
@@ -55,6 +58,10 @@ fi
 
 # Remotion needs a compatible Chrome Headless Shell for video encoding.
 (cd "$RENDERER_DIR" && npx --no-install remotion browser ensure)
+(cd "$RENDERER_DIR" && npm run vectors)
+if [[ "$STORY_RENDERER_MODE" == "ffmpeg" ]]; then
+  (cd "$RENDERER_DIR" && npm run assets)
+fi
 
 echo "Starting the private Story and parol image renderer..."
 (cd "$RENDERER_DIR" && exec npm start) > "$RENDERER_LOG" 2>&1 &
