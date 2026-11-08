@@ -2,6 +2,7 @@ using DecoMyLantern.Api.Models.Database;
 using DecoMyLantern.Api.Models.DTOs;
 using DecoMyLantern.Api.Repository.Lanterns;
 using DecoMyLantern.Api.Services.Messages;
+using DecoMyLantern.Api.Services.Shared;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,7 +35,7 @@ public sealed class LanternService(ILanternRepository repository, TimeProvider t
         if (await repository.FindByOwnerAndSeasonAsync(ownerId, seasonYear, cancellationToken) is not null)
             throw new LanternOperationException(409, "You already have a lantern for this Christmas season.");
 
-        var design = await repository.FindEnabledDesignAsync("classic", cancellationToken)
+        var design = await repository.FindEnabledDesignAsync(DesignConstants.DesignKeys.Classic, cancellationToken)
             ?? throw new InvalidOperationException("The default parol design is not configured.");
 
         var lantern = new Lantern
@@ -44,7 +45,7 @@ public sealed class LanternService(ILanternRepository repository, TimeProvider t
             SelectedDesignId = design.Id,
             SelectedDesign = design,
             PaletteKey = design.DesignKey,
-            PatternKey = "default",
+            PatternKey = DesignConstants.PatternKeys.Default,
             UnlockAtUtc = ChristmasUnlockPolicy.UnlockUtcForSeason(seasonYear),
             CreatedAtUtc = timeProvider.GetUtcNow().UtcDateTime
         };

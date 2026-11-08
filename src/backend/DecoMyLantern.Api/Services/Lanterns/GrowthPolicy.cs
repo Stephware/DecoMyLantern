@@ -1,4 +1,5 @@
 using DecoMyLantern.Api.Models.Database;
+using DecoMyLantern.Api.Services.Shared;
 
 namespace DecoMyLantern.Api.Services.Lanterns;
 
@@ -20,12 +21,12 @@ public static class GrowthPolicy
     public static string StageFor(int acceptedFriends) => acceptedFriends switch
     {
         < 0 => throw new ArgumentOutOfRangeException(nameof(acceptedFriends)),
-        < 3 => "base",
-        < 10 => "floral",
-        < 23 => "festival",
-        < 40 => "celestial",
-        < 50 => "fiesta",
-        _ => "sampaguita"
+        < 3 => DesignConstants.GrowthStageKeys.Base,
+        < 10 => DesignConstants.GrowthStageKeys.Floral,
+        < 23 => DesignConstants.GrowthStageKeys.Festival,
+        < 40 => DesignConstants.GrowthStageKeys.Celestial,
+        < 50 => DesignConstants.GrowthStageKeys.Fiesta,
+        _ => DesignConstants.GrowthStageKeys.Sampaguita
     };
 
     // Legacy helper retained for callers; a design is now available whenever

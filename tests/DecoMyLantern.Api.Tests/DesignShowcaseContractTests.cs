@@ -20,10 +20,10 @@ public sealed class DesignShowcaseContractTests
             method.GetCustomAttribute<HttpGetAttribute>()?.Template);
         Assert.NotNull(method.GetCustomAttribute<EnableRateLimitingAttribute>());
 
-        // No owner ID, session, invitation token or requested friend count
-        // is accepted from the caller.
+        // No owner ID, session, invitation token is accepted from the caller.
+        // The friend count is optional from query (20 or 50 only).
         Assert.Equal(
-            new[] {typeof(string), typeof(CancellationToken)},
+            new[] {typeof(string), typeof(int?), typeof(CancellationToken)},
             method.GetParameters().Select(x => x.ParameterType).ToArray());
     }
 
