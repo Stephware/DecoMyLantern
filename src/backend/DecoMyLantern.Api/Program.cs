@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using Serilog;
 using System.Reflection;
 using System.Threading.RateLimiting;
@@ -50,7 +51,12 @@ if (!string.IsNullOrWhiteSpace(trustedProxyNetwork))
     });
 }
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions =>
+        {
+            sqlOptions.CommandTimeout(30);
+            sqlOptions.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);
+        }));
 
 builder.Services.AddAuthorization(options =>
 {
@@ -227,7 +233,7 @@ builder.Services.AddScoped<IOwnerAccessService, OwnerAccessService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "BeMyParol API",
         Version = "v1",
@@ -243,6 +249,18 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+// Enable Swagger UI in development
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "BeMyParol API v1");
+        options.RoutePrefix = "swagger";
+    });
+}
+
 if (!string.IsNullOrWhiteSpace(trustedProxyNetwork))
     app.UseForwardedHeaders();
 if (!app.Environment.IsDevelopment())

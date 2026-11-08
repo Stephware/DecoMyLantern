@@ -83,7 +83,7 @@ public sealed class OwnerAccessService(
         if (credential.EncryptedRecoveryCode is null)
         {
             var keyIssuedAt = credential.RecoveryIssuedAtUtc ?? credential.CreatedAtUtc;
-            var keyOneYearDeadline = keyIssuedAt.Add(OwnerSession.RecoveryLifetime);
+            var keyOneYearDeadline = keyIssuedAt.Add(OwnerPolicy.RecoveryLifetime);
             if (now < keyOneYearDeadline)
                 credential.EncryptedRecoveryCode = recoveryCipher.Protect(recoveryCode, credential.OwnerUserId);
         }
@@ -127,7 +127,7 @@ public sealed class OwnerAccessService(
         credential.RecoveryHash = Hash(code);
         credential.EncryptedRecoveryCode = encrypted;
         credential.RecoveryIssuedAtUtc = now;
-        credential.RecoveryExpiresAtUtc = now.Add(OwnerSession.RecoveryLifetime);
+        credential.RecoveryExpiresAtUtc = now.Add(OwnerPolicy.RecoveryLifetime);
         try { await database.SaveChangesAsync(cancellationToken); }
         catch (DbUpdateConcurrencyException)
         { throw new OwnerAccessException(409, "Recovery key changed in another session. Refresh and try again."); }

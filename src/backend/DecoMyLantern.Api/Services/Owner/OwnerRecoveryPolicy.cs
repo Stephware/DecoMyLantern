@@ -20,6 +20,6 @@ public static class OwnerRecoveryPolicy
     public static void RefreshSession(OwnerCredential credential, string newTokenHash, DateTime nowUtc)
     {
         credential.TokenHash = newTokenHash;
-        credential.SessionExpiresAtUtc = nowUtc.Add(OwnerSession.Lifetime);
+        credential.SessionExpiresAtUtc = nowUtc.Add(OwnerPolicy.SessionLifetime);
     }
 }

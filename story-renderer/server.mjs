@@ -47,11 +47,13 @@ if (isProduction) {
     }),
   })
 }
-let busy = false
+// Separate semaphores for images (concurrent) and videos (serialized)
+let videoBusy = false
+const imageSemaphore = { count: 3, waiting: [] } // Allow up to 3 concurrent image renders
 const videoJobs = createStoryVideoJobs({
   renderDir,
-  isBusy: () => busy,
-  setBusy: value => { busy = value },
+  isBusy: () => videoBusy,
+  setBusy: value => { videoBusy = value },
   cleanup,
   renderVideo: async (payload, output) => {
     const {kind, designKey, patternKey, friendCount, slots, highlightSlot} = payload
@@ -169,12 +171,30 @@ async function renderParolImage(req, res) {
       Date.now() - cachedInfo.mtimeMs < 24 * 60 * 60 * 1000)
     return await serveImage(res, file, format, true)
 
-  if (busy) {
-    res.setHeader('Retry-After', '2')
-    return respond(res, 503, 'Image renderer is busy. Retry shortly.')
+  // Acquire semaphore slot for concurrent image rendering (max 3)
+  let released = false
+  async function acquireImageSlot() {
+    return new Promise((resolve) => {
+      if (imageSemaphore.count > 0) {
+        imageSemaphore.count--
+        resolve()
+      } else {
+        imageSemaphore.waiting.push(resolve)
+      }
+    })
+  }
+  function releaseImageSlot() {
+    if (released) return
+    released = true
+    if (imageSemaphore.waiting.length > 0) {
+      const next = imageSemaphore.waiting.shift()
+      next()
+    } else {
+      imageSemaphore.count++
+    }
   }
 
-  busy = true
+  await acquireImageSlot()
   const tmpPng = file + '.' + crypto.randomUUID() + '.tmp.png'
   const tmpWebp = file + '.' + crypto.randomUUID() + '.tmp.webp'
   try {
@@ -200,7 +220,7 @@ async function renderParolImage(req, res) {
     if (!res.headersSent) respond(res, 500, 'Unable to generate parol image')
     else res.destroy()
   } finally {
-    busy = false
+    releaseImageSlot()
     await Promise.all([unlink(tmpPng).catch(() => {}), unlink(tmpWebp).catch(() => {})])
   }
 }
@@ -272,7 +292,7 @@ const server = http.createServer(async(req,res)=>{
     return respond(res,404,'Not found')
   if (!authorized(req)) return respond(res,403,'Forbidden')
   if (req.url === '/render-parol') return await renderParolImage(req, res)
-  if (busy) return respond(res,503,'Story renderer is busy. Retry shortly.')
+  if (videoBusy) return respond(res,503,'Story renderer is busy. Retry shortly.')
   let payload = ''
   try {
     for await (const chunk of req) {
@@ -286,8 +306,8 @@ const server = http.createServer(async(req,res)=>{
     const inputProps = {kind,designKey,patternKey,friendCount,slots,highlightSlot}
     const digest = crypto.createHash('sha256').update(JSON.stringify({...inputProps,format})).digest('hex')
     const file = path.join(renderDir, digest+(format==='png'?'.png':'.mp4'))
-    if (busy) return respond(res,503,'Story renderer is busy. Retry shortly.')
-    busy = true
+    if (videoBusy) return respond(res,503,'Story renderer is busy. Retry shortly.')
+    videoBusy = true
     try {
       let cached = false
       try { cached = (await stat(file)).size > 1024 } catch { /* first render */ }
