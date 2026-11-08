@@ -35,6 +35,10 @@ if (!Number.isFinite(configuredTimeout)) throw new Error('Invalid STORY_RENDERER
 const timeoutMs = Math.max(10_000, Math.min(600_000, configuredTimeout))
 await mkdir(renderDir, {recursive:true})
 await mkdir(imageDir, {recursive:true})
+
+// Use pre-built bundle in production, dynamic bundle in development
+const isProduction = process.env.NODE_ENV === 'production'
+
 const sourceFiles = [
   'story-renderer/package.json',
   'story-renderer/server.mjs', 'story-renderer/remotionEntry.tsx',
@@ -107,37 +111,51 @@ if (mode === 'ffmpeg') {
     console.warn('FFmpeg asset unavailable; Story MP4s will use Remotion:', error)
   }
 }
-const bundleStart = performance.now()
-const serveUrl = await bundle({
-  entryPoint: path.join(directory,'remotionEntry.tsx'),
-  webpackOverride: config => ({
-    ...config,
-    resolve: {
-      ...config.resolve,
-      modules: [path.join(directory, 'node_modules'), 'node_modules'],
-      alias: {
-        ...config.resolve?.alias,
-        react: path.join(directory, 'node_modules/react'),
-        'react-dom': path.join(directory, 'node_modules/react-dom'),
+
+let serveUrl
+if (isProduction) {
+  // Read pre-built bundle info
+  const bundleInfoPath = path.join(directory, 'dist', 'bundle-info.json')
+  const bundleInfo = JSON.parse(await import('node:fs/promises').then(fs => fs.readFile(bundleInfoPath, 'utf8')))
+  serveUrl = bundleInfo.serveUrl
+  console.log('Using pre-built Remotion bundle:', serveUrl)
+} else {
+  // Dynamic bundling for development
+  const bundleStart = performance.now()
+  serveUrl = await bundle({
+    entryPoint: path.join(directory,'remotionEntry.tsx'),
+    webpackOverride: config => ({
+      ...config,
+      resolve: {
+        ...config.resolve,
+        modules: [path.join(directory, 'node_modules'), 'node_modules'],
+        alias: {
+          ...config.resolve?.alias,
+          react: path.join(directory, 'node_modules/react'),
+          'react-dom': path.join(directory, 'node_modules/react-dom'),
+        },
       },
-    },
-  }),
-})
-console.log('Story Chromium bundle',JSON.stringify({milliseconds:Math.round(performance.now()-bundleStart)}))
+    }),
+  })
+  console.log('Story Chromium bundle',JSON.stringify({milliseconds:Math.round(performance.now()-bundleStart)}))
+}
+
 let vectorSvg = null
 if (mode === 'ffmpeg' && background) {
   try { ({renderVectorSvg:vectorSvg} = await import('./.generated/vector.mjs')) }
   catch (error) { console.warn('SVG rasterizer unavailable; using Remotion:', error); background = null }
 }
-let busy = false
+
+// Separate semaphores for images (concurrent) and videos (serialized)
+let videoBusy = false
+const imageSemaphore = { count: 3, waiting: [] } // Allow up to 3 concurrent image renders
 const inFlight = new Map()
-// Keep the existing saved-state owner protocol and detached 12-pending queue.
-// Every media path shares busy, so only one encoder/capture runs at a time.
+
 const videoJobs = createStoryVideoJobs({
   renderDir,
   digest: payload => exportIdentity(payload).digest,
-  isBusy: () => busy,
-  setBusy: value => { busy = value },
+  isBusy: () => videoBusy,
+  setBusy: value => { videoBusy = value },
   cleanup: () => pruneExports(renderDir),
   renderVideo: async (payload, output) => {
     const {inputProps} = exportIdentity(payload)
@@ -145,6 +163,10 @@ const videoJobs = createStoryVideoJobs({
   },
 })
 
+/*
+ * Shared design/pattern constants — values must match DesignConstants in the backend.
+ * Backend: /Users/stephen/Documents/DecoMyLantern/DecoMyLantern/src/backend/DecoMyLantern.Api/Services/Shared/DesignConstants.cs
+ */
 const values = ['classic','floral','festival','celestial','fiesta','sampaguita']
 const patterns = ['default','rings','rays']
 function valid(input) {
@@ -237,12 +259,30 @@ async function renderParolImage(req, res) {
       Date.now() - cachedInfo.mtimeMs < 24 * 60 * 60 * 1000)
     return await serveImage(res, file, format, true)
 
-  if (busy) {
-    res.setHeader('Retry-After', '2')
-    return respond(res, 503, 'Image renderer is busy. Retry shortly.')
+  // Acquire semaphore slot for concurrent image rendering (max 3)
+  let released = false
+  async function acquireImageSlot() {
+    return new Promise((resolve) => {
+      if (imageSemaphore.count > 0) {
+        imageSemaphore.count--
+        resolve()
+      } else {
+        imageSemaphore.waiting.push(resolve)
+      }
+    })
+  }
+  function releaseImageSlot() {
+    if (released) return
+    released = true
+    if (imageSemaphore.waiting.length > 0) {
+      const next = imageSemaphore.waiting.shift()
+      next()
+    } else {
+      imageSemaphore.count++
+    }
   }
 
-  busy = true
+  await acquireImageSlot()
   const tmpPng = file + '.' + crypto.randomUUID() + '.tmp.png'
   const tmpWebp = file + '.' + crypto.randomUUID() + '.tmp.webp'
   try {
@@ -268,7 +308,7 @@ async function renderParolImage(req, res) {
     if (!res.headersSent) respond(res, 500, 'Unable to generate parol image')
     else res.destroy()
   } finally {
-    busy = false
+    releaseImageSlot()
     await Promise.all([unlink(tmpPng).catch(() => {}), unlink(tmpWebp).catch(() => {})])
   }
 }
@@ -357,7 +397,25 @@ function exportIdentity(request) {
 }
 
 const server = http.createServer(async(req,res)=>{
-  if (req.url === '/health' && req.method === 'GET') return respond(res,200,'ready')
+  if (req.url === '/health' && req.method === 'GET') {
+    // Enhanced health check: verify disk space, bundle validity, and render capability
+    try {
+      const bundleStat = await stat(serveUrl).catch(() => null)
+      if (!bundleStat) return respond(res, 503, 'Remotion bundle not available')
+
+      // Check temp directories are writable
+      await mkdir(renderDir, {recursive:true})
+      await mkdir(imageDir, {recursive:true})
+      const testFile = path.join(renderDir, '.health-check')
+      await import('node:fs/promises').then(fs => fs.writeFile(testFile, 'ok'))
+      await import('node:fs/promises').then(fs => fs.unlink(testFile))
+
+      return respond(res, 200, 'ready')
+    } catch (e) {
+      console.error('Health check failed:', e)
+      return respond(res, 503, 'Health check failed: ' + e.message)
+    }
+  }
   // Private video jobs receive server-verified parol state, never a public file path.
   if (['/story-video/start', '/story-video/status', '/story-video/file'].includes(req.url)) {
     if (req.method !== 'POST') return respond(res,405,'Method not allowed')
@@ -395,6 +453,7 @@ const server = http.createServer(async(req,res)=>{
     return respond(res,404,'Not found')
   if (!authorized(req)) return respond(res,403,'Forbidden')
   if (req.url === '/render-parol') return await renderParolImage(req, res)
+  if (videoBusy) return respond(res,503,'Story renderer is busy. Retry shortly.')
   let payload = ''
   try {
     for await (const chunk of req) {
@@ -408,15 +467,15 @@ const server = http.createServer(async(req,res)=>{
     if (await cachedExport(file)) return await serveExport(res, file, format, true)
     let job = inFlight.get(digest)
     if (!job) {
-      if (busy) {
+      if (videoBusy) {
         res.setHeader('Retry-After', '2')
         return respond(res,503,'Story renderer is busy. Retry shortly.')
       }
-      busy = true
+      videoBusy = true
       const controller = new AbortController()
       job = {controller, waiters:0, promise:null}
       job.promise = renderExport(file, format, inputProps, controller)
-        .finally(() => { inFlight.delete(digest); busy = false })
+        .finally(() => { inFlight.delete(digest); videoBusy = false })
       inFlight.set(digest, job)
     }
     job.waiters++

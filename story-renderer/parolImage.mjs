@@ -6,6 +6,10 @@ export const PAROL_IMAGE_VERSION = 'approved-parol-snapshot-v1'
 export const PAROL_IMAGE_COMPOSITION = 'BeMyParolSnapshot'
 export const PAROL_IMAGE_FORMATS = ['webp', 'png']
 
+/*
+ * Shared design/pattern constants — values must match DesignConstants in the backend.
+ * Backend: /Users/stephen/Documents/DecoMyLantern/DecoMyLantern/src/backend/DecoMyLantern.Api/Services/Shared/DesignConstants.cs
+ */
 const designs = ['classic', 'floral', 'festival', 'celestial', 'fiesta', 'sampaguita']
 const patterns = ['default', 'rings', 'rays']
 

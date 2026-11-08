@@ -1,4 +1,9 @@
+using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using DecoMyLantern.Api.Models.Database;
 using DecoMyLantern.Api.Models.DTOs;
 using DecoMyLantern.Api.Services.Lanterns;
@@ -63,8 +68,20 @@ public interface IInvitationService
 public sealed class InvitationService(
     ApplicationDbContext database,
     InvitationTokenCipher cipher,
-    TimeProvider clock) : IInvitationService
+    TimeProvider clock,
+    IHttpContextAccessor httpContextAccessor) : IInvitationService
 {
+    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
+
+    // In-memory rate limit for guest visitor creation: 20 per hour per IP.
+    // Keyed by IP address, storing count and timestamp for sliding window.
+    private static readonly Dictionary<string, RateLimitEntry> _guestVisitorCounts = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly object _rateLimitLock = new();
+    private class RateLimitEntry
+    {
+        public int Count;
+        public DateTime FirstSeen;
+    }
     public async Task<CreatedInvitationDto> GetOrCreateLinkAsync(
         Guid ownerId, CancellationToken cancellationToken)
     {
@@ -77,8 +94,7 @@ public sealed class InvitationService(
             : null;
 
         var lantern = await database.Lanterns
-            .FromSqlInterpolated($"SELECT * FROM [Lanterns] WITH (UPDLOCK, HOLDLOCK) WHERE [OwnerUserId] = {ownerId} AND [SeasonYear] = {season}")
-            .SingleOrDefaultAsync(cancellationToken)
+            .SingleOrDefaultAsync(x => x.OwnerUserId == ownerId && x.SeasonYear == season, cancellationToken)
             ?? throw new InvitationException(404, "Create your parol before inviting friends.");
 
         var expiresAt = InvitationPolicy.EndOfSeasonUtc(lantern.SeasonYear);
@@ -142,6 +158,36 @@ public sealed class InvitationService(
         try
         {
             var now = clock.GetUtcNow().UtcDateTime;
+
+            // Rate limit guest visitor creation per IP to prevent abuse (20 per hour).
+            var ipAddress = _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString();
+            if (ipAddress != null)
+            {
+                lock (_rateLimitLock)
+                {
+                    if (!_guestVisitorCounts.ContainsKey(ipAddress))
+                    {
+                        _guestVisitorCounts[ipAddress] = new RateLimitEntry { Count = 1, FirstSeen = now };
+                    }
+                    else
+                    {
+                        var entry = _guestVisitorCounts[ipAddress];
+                        // Reset count if more than an hour has passed since first entry
+                        if (now > entry.FirstSeen.AddHours(1))
+                        {
+                            entry.Count = 1;
+                            entry.FirstSeen = now;
+                        }
+                        else
+                        {
+                            entry.Count++;
+                            if (entry.Count > 20)
+                                throw new InvitationException(429, "Too many attempts. Please wait and try again.");
+                        }
+                    }
+                }
+            }
+
             var link = await database.ShareLinks.AsNoTracking()
                 .SingleOrDefaultAsync(x => x.TokenHash == inviteHash &&
                     x.IsOfficial && x.RevokedAtUtc == null &&
@@ -149,8 +195,7 @@ public sealed class InvitationService(
                 ?? throw new InvitationException(404, "This invitation is unavailable or has expired.");
 
             var lantern = await database.Lanterns
-                .FromSqlInterpolated($"SELECT * FROM [Lanterns] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {link.LanternId}")
-                .SingleOrDefaultAsync(cancellationToken)
+                .SingleOrDefaultAsync(x => x.Id == link.LanternId, cancellationToken)
                 ?? throw new InvitationException(404, "This parol no longer exists.");
 
             // An owner may illuminate someone else's parol, but not their own.
