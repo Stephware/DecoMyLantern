@@ -8,7 +8,11 @@ test('only an admin parol sees the testing lab and early message inbox', () => {
   const owner = read('features/dashboard/HostDashboard.tsx')
   assert.ok(owner.includes('{lantern.isAdmin && <section'))
   assert.ok(owner.indexOf('{lantern.isAdmin && <section') < owner.indexOf('Admin testing lab'))
-  assert.ok(owner.includes('{lantern.isAdmin && <AdminMessages'))
+  const christmas = read('features/dashboard/ChristmasExperience.tsx')
+  assert.ok(owner.includes('isAdmin={lantern.isAdmin}'))
+  assert.ok(owner.includes('adminPreviewSignal={adminChristmasPreviewSignal}'))
+  assert.ok(christmas.includes('earlyAdmin'))
+  // The message inbox moved to ChristmasExperience and remains server-gated.
   assert.ok(owner.includes('showTestingLab'))
   assert.ok(owner.includes('previewCount={previewCount}'))
   assert.ok(owner.includes('snapshot={{kind:\'owner\',stateId:lantern.id}}'))
@@ -17,6 +21,7 @@ test('only an admin parol sees the testing lab and early message inbox', () => {
 test('owner summary focuses on friends and milestone, not technical growth counters', () => {
   const owner = read('features/dashboard/HostDashboard.tsx')
   const publicScreen = owner.split('{lantern.isAdmin && <section')[0]
+  const christmas = read('features/dashboard/ChristmasExperience.tsx')
   assert.ok(publicScreen.includes('Friends joined'))
   assert.ok(publicScreen.includes('Grand parol'))
   assert.ok(publicScreen.includes('aria-label="Progress toward 50 friends"'))
@@ -24,8 +29,9 @@ test('owner summary focuses on friends and milestone, not technical growth count
   assert.ok(!publicScreen.includes('growth milestone'))
   assert.ok(!publicScreen.includes('Growth layers</div>'))
   assert.ok(!publicScreen.includes('Drag to explore · Pinch to zoom'))
-  assert.ok(publicScreen.includes('Christmas letters'))
-  assert.ok(publicScreen.includes('Messages from friends stay private until Christmas Day.'))
+  assert.ok(publicScreen.includes('<ChristmasExperience'))
+  assert.ok(christmas.includes('Christmas letters'))
+  assert.ok(christmas.includes("Your friends' Christmas messages will open on December 25"))
 })
 
 test('guest and parol canvas hide technical diagnostics but keep usable controls', () => {

@@ -112,7 +112,7 @@ test('renderer renders real 2x pixels, with the same geometry and bounded cache'
   assert.ok(renderer.includes('retained >= 128'))
   assert.ok(renderer.includes('doubleRetained >= 32'))
   assert.ok(renderer.includes('tripleRetained >= 12'))
-  assert.ok(renderer.includes("scale > 1 ? \`-\${scale}x\` : ''"))
+  assert.ok(renderer.includes("scale > 1 ? `-${scale}x` : ''"))
   assert.ok(renderer.includes('24 * 60 * 60 * 1000'))
   assert.ok(keys.includes('...(input.scale === 2 || input.scale === 3 ? {scale: input.scale} : {})'))
   assert.ok(keys.includes("(input.scale ?? 1) === 1 || input.format === 'webp'"))
