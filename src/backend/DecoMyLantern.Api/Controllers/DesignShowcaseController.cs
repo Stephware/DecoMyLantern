@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using DecoMyLantern.Api.Services.Designs;
-using DecoMyLantern.Api.Services.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -45,7 +44,7 @@ public sealed class DesignShowcaseController(
         // The renderer already keys its WebP cache by friendCount and slots.
         var payload = new {
             designKey = selected.DesignKey,
-            patternKey = DesignConstants.PatternKeys.Default,
+            patternKey = "default",
             friendCount = previewFriendCount,
             slots = Enumerable.Range(0, previewFriendCount).ToArray(),
             format = "webp"

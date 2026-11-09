@@ -41,16 +41,8 @@ public static class OwnerSession
     public const string Scheme = "BeMyParol.OwnerToken";
     public const string LegacyUpgradePolicy = "BeMyParol.LegacyOwnerUpgrade";
     public const string Cookie = "BeMyParol.Owner";
-
-    /// <summary>
-    /// Lifetime of an owner session, delegated to OwnerPolicy for centralization.
-    /// </summary>
-    public static readonly TimeSpan Lifetime = OwnerPolicy.SessionLifetime;
-
-    /// <summary>
-    /// Recovery lifetime window, delegated to OwnerPolicy for centralization.
-    /// </summary>
-    public static readonly TimeSpan RecoveryLifetime = OwnerPolicy.RecoveryLifetime;
+    public static readonly TimeSpan Lifetime = TimeSpan.FromDays(400);
+    public static readonly TimeSpan RecoveryLifetime = TimeSpan.FromDays(365);
 
     public static CookieOptions CookieOptions(HttpContext context, IHostEnvironment environment, DateTime expiresAtUtc) =>
         new()
