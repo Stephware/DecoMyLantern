@@ -1,4 +1,3 @@
-using DecoMyLantern.Api.Services.Shared;
 using Microsoft.AspNetCore.Identity;
 
 namespace DecoMyLantern.Api.Models.Database;
@@ -16,8 +15,8 @@ public sealed class Lantern
     public int SeasonYear { get; set; }
     public Guid SelectedDesignId { get; set; }
     public ParolDesign SelectedDesign { get; set; } = null!;
-    public string PaletteKey { get; set; } = DesignConstants.DesignKeys.Classic;
-    public string PatternKey { get; set; } = DesignConstants.PatternKeys.Default;
+    public string PaletteKey { get; set; } = "classic";
+    public string PatternKey { get; set; } = "default";
     public int NextSlotIndex { get; set; }
     public DateTime UnlockAtUtc { get; set; }
     public bool IsAdmin { get; set; }

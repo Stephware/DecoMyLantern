@@ -57,6 +57,6 @@ public sealed class ParolImageContractTests
     {
         var fields = typeof(ParolImageRenderPayload).GetProperties()
             .Select(property => property.Name).OrderBy(name => name).ToArray();
-        Assert.Equal(new[] { "DesignKey", "Format", "FriendCount", "PatternKey", "Scale", "Slots" }, fields);
+        Assert.Equal(new[] { "DesignKey", "Format", "FriendCount", "PatternKey", "Slots" }, fields);
     }
 }

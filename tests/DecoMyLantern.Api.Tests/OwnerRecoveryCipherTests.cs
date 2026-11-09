@@ -28,7 +28,7 @@ public sealed class OwnerRecoveryCipherTests
         Assert.DoesNotContain(recovery, protectedCode, StringComparison.Ordinal);
         Assert.Equal(recovery, cipher.Unprotect(protectedCode, owner));
         Assert.NotEqual(cipher.Protect(recovery, owner), protectedCode);
-        Assert.ThrowsAny<CryptographicException>(() =>
+        Assert.Throws<CryptographicException>(() =>
             cipher.Unprotect(protectedCode, Guid.NewGuid()));
     }
 
@@ -40,12 +40,12 @@ public sealed class OwnerRecoveryCipherTests
         var owner = Guid.NewGuid();
         var encrypted = first.Protect(OwnerSecrets.GenerateRecoveryKey(), owner);
 
-        Assert.ThrowsAny<CryptographicException>(() => second.Unprotect(encrypted, owner));
+        Assert.Throws<CryptographicException>(() => second.Unprotect(encrypted, owner));
 
         var bytes = Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlDecode(encrypted);
         bytes[^1] ^= 1;
         var altered = Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlEncode(bytes);
-        Assert.ThrowsAny<CryptographicException>(() => first.Unprotect(altered, owner));
+        Assert.Throws<CryptographicException>(() => first.Unprotect(altered, owner));
     }
 
     [Fact]

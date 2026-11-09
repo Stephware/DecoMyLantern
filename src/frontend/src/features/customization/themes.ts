@@ -1,7 +1,5 @@
 import type { OuterDesignKey } from '../lantern/growth/outerGrowth'
 
-// Shared design/pattern constants — values must match DesignConstants in the backend.
-// Backend: /Users/stephen/Documents/DecoMyLantern/DecoMyLantern/src/backend/DecoMyLantern.Api/Services/Shared/DesignConstants.cs
 export type ThemeKey = OuterDesignKey
 export type Theme = {
   key: ThemeKey
