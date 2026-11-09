@@ -22,7 +22,7 @@ def docker(*args, check=True):
 
 def call(port, key, path, payload=None, timeout=240):
     body = json.dumps(payload).encode() if payload is not None else None
-    headers = {"Content-Type": "application/json"}
+    headers = {"content-type": "application/json"}
     if payload is not None:
         headers["X-Story-Renderer-Key"] = key
     start = time.monotonic()
@@ -31,10 +31,10 @@ def call(port, key, path, payload=None, timeout=240):
         method="POST" if payload is not None else "GET")
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
-            return response.status, dict(response.headers), response.read(), round(
+            return response.status, {k.lower(): v for k, v in response.headers.items()}, response.read(), round(
                 (time.monotonic() - start) * 1000)
     except urllib.error.HTTPError as error:
-        return error.code, dict(error.headers), error.read(), round(
+        return error.code, {k.lower(): v for k, v in error.headers.items()}, error.read(), round(
             (time.monotonic() - start) * 1000)
 
 
@@ -109,10 +109,10 @@ def measure(image_tag, cpu, memory):
             second = call(port, key, "/render-parol", image(count))
             require(first, [200], "cold image")
             require(second, [200], "cached image")
-            assert first[2] == second[2] and second[1].get("X-Parol-Cache") == "HIT"
-            assert first[1].get("Content-Type", "").startswith("image/webp")
-            out["webp"][title] = {"cold": detail(first, "X-Parol-Cache"),
-                                  "cached": detail(second, "X-Parol-Cache")}
+            assert first[2] == second[2] and second[1].get("x-parol-cache") == "HIT"
+            assert first[1].get("content-type", "").startswith("image/webp")
+            out["webp"][title] = {"cold": detail(first, "x-parol-cache"),
+                                  "cached": detail(second, "x-parol-cache")}
         out["cpu_after_images_seconds"] = round(cpu_usage(name) - start_cpu, 2)
 
         out["mp4"] = {}
@@ -122,9 +122,9 @@ def measure(image_tag, cpu, memory):
             require(first, [200], "cold video")
             require(second, [200], "cached video")
             assert first[2][4:8] == b"ftyp"
-            assert first[2] == second[2] and second[1].get("X-Story-Cache") == "HIT"
-            out["mp4"][title] = {"cold": detail(first, "X-Story-Cache"),
-                                 "cached": detail(second, "X-Story-Cache")}
+            assert first[2] == second[2] and second[1].get("x-story-cache") == "HIT"
+            out["mp4"][title] = {"cold": detail(first, "x-story-cache"),
+                                 "cached": detail(second, "x-story-cache")}
         out["cpu_after_videos_seconds"] = round(cpu_usage(name) - start_cpu, 2)
 
         with ThreadPoolExecutor(max_workers=12) as pool:
@@ -141,7 +141,7 @@ def measure(image_tag, cpu, memory):
             require(item, [200], "simultaneous MP4 " + str(index))
         assert results[0][2] == results[1][2], "Identical MP4s did not coalesce"
         require(hot_image, [200], "cached image during video load")
-        assert hot_image[1].get("X-Parol-Cache") == "HIT"
+        assert hot_image[1].get("x-parol-cache") == "HIT"
         cold_codes = [item[0] for item in cold_results]
         assert all(status in (200, 503) for status in cold_codes), cold_codes
         if 503 not in cold_codes:
@@ -151,7 +151,7 @@ def measure(image_tag, cpu, memory):
             "identical_bytes": True,
             "cold_image_http": cold_codes,
             "busy_responses": cold_codes.count(503),
-            "cached_image": detail(hot_image, "X-Parol-Cache"),
+            "cached_image": detail(hot_image, "x-parol-cache"),
         }
 
         accepted = []
