@@ -14,7 +14,7 @@ test('only an admin parol sees the testing lab and early message inbox', () => {
   assert.ok(christmas.includes('earlyAdmin'))
   // The message inbox moved to ChristmasExperience and remains server-gated.
   assert.ok(owner.includes('showTestingLab'))
-  assert.ok(owner.includes('previewCount={previewCount}'))
+  assert.ok(owner.includes('friendCount={previewCount}'))
   assert.ok(owner.includes('snapshot={{kind:\'owner\',stateId:lantern.id}}'))
 })
 
