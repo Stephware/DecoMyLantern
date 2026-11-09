@@ -197,6 +197,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<DecoMyLantern.Api.Controllers.ReadinessTransitionLogger>();
 builder.Services.AddScoped<IDesignRepository, DesignRepository>();
 builder.Services.AddScoped<IGrowthStageRepository, GrowthStageRepository>();
 builder.Services.AddScoped<IMessageRepository, MessageRepository>();

@@ -301,4 +301,28 @@ public sealed class OwnerGuestSqlServerFlows(SqlServerApiFixture fixture)
         using var after = await ownerBrowser.GetAsync("/api/owner/me");
         Assert.Equal(HttpStatusCode.Unauthorized, after.StatusCode);
     }
+
+    [Fact]
+    public async Task Liveness_is_independent_and_sql_readiness_is_reported_safely()
+    {
+        using var browser = fixture.NewBrowser();
+        using var live = await browser.GetAsync("/api/health");
+        Assert.Equal(HttpStatusCode.OK, live.StatusCode);
+        var liveReport = await live.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("ok", liveReport.GetProperty("status").GetString());
+        Assert.Equal("no-store", live.Headers.CacheControl?.ToString());
+
+        using var ready = await browser.GetAsync("/api/health/ready");
+        Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
+        var report = await ready.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("ready", report.GetProperty("components")
+            .GetProperty("database").GetString());
+        Assert.Contains(report.GetProperty("status").GetString(), new[] {"ready", "degraded"});
+        Assert.Equal("no-store", ready.Headers.CacheControl?.ToString());
+        var responseText = report.GetRawText();
+        Assert.DoesNotContain("ConnectionString", responseText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Password", responseText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("EncryptionKey", responseText, StringComparison.OrdinalIgnoreCase);
+    }
+
 }

@@ -14,6 +14,7 @@ import {renderFfmpeg, RenderError, probeVideo, compatibleVideo} from './ffmpegRe
 import {cachedExport, pruneExports} from './renderCache.mjs'
 import {selectRenderer} from './rendererSelection.mjs'
 import {createStoryVideoJobs} from './storyVideoJobs.mjs'
+import {createRendererReadiness} from './readiness.mjs'
 
 const directory = path.dirname(fileURLToPath(import.meta.url))
 const port = Number(process.env.PORT || 7070)
@@ -144,6 +145,13 @@ const videoJobs = createStoryVideoJobs({
     await renderExport(output, 'mp4', inputProps, new AbortController())
   },
 })
+
+const checkReadiness = createRendererReadiness({
+  bundlePath:serveUrl, renderDir, imageDir,
+  ffmpegPath:process.env.FFMPEG_PATH || '/usr/bin/ffmpeg',
+  mode, optimizedAssetsReady:!!(background && vectorSvg), backgroundPath:background,
+})
+let lastReadinessStatus = null
 
 const values = ['classic','floral','festival','celestial','fiesta','sampaguita']
 const patterns = ['default','rings','rays']
@@ -358,6 +366,17 @@ function exportIdentity(request) {
 
 const server = http.createServer(async(req,res)=>{
   if (req.url === '/health' && req.method === 'GET') return respond(res,200,'ready')
+  if (req.url === '/ready' && req.method === 'GET') {
+    const report = await checkReadiness()
+    if (report.status !== lastReadinessStatus) {
+      console[report.status === 'ready' ? 'info' : 'warn'](
+        'Story renderer readiness changed', JSON.stringify(report))
+      lastReadinessStatus = report.status
+    }
+    res.writeHead(report.status === 'unavailable' ? 503 : 200,
+      {'content-type':'application/json','cache-control':'no-store'})
+    return res.end(JSON.stringify(report))
+  }
   // Private video jobs receive server-verified parol state, never a public file path.
   if (['/story-video/start', '/story-video/status', '/story-video/file'].includes(req.url)) {
     if (req.method !== 'POST') return respond(res,405,'Method not allowed')
