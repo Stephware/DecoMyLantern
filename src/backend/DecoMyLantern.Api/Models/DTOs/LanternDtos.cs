@@ -17,6 +17,7 @@ public sealed record LanternDto(
     string GrowthStage,
     DateTime UnlockAtUtc,
     DateTime CreatedAtUtc,
+    bool IsAdmin,
     IReadOnlyList<ContributionLightDto> Lights);
 
 public sealed class UpdateLanternRequest

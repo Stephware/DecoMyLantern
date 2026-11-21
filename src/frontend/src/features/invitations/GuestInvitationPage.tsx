@@ -3,6 +3,7 @@ import { contributeInvitation, previewInvitation, type InvitationPreview } from 
 import LanternScene from '../lantern/renderer/LanternScene'
 import { THEMES } from '../customization/themes'
 import { isValidInvitationToken } from './invitationLinks'
+import { BannerAd, ContributionPopunder, DesktopSideAds } from '../ads/AdPlacements'
 
 type Props = { token: string }
 
@@ -61,95 +62,107 @@ export default function GuestInvitationPage({ token }: Props) {
   const alreadyContributed = submitted || preview?.alreadyContributed === true
 
   return (
-    <main className="relative min-h-screen bg-[#080e20] px-4 pb-12 pt-6 text-[#fff7e5] sm:px-6 sm:pt-10">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_40%_0%,#27385d_0%,transparent_50%),radial-gradient(ellipse_at_88%_85%,#442c37_0%,transparent_40%)]" />
-      <div className="relative mx-auto max-w-6xl">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <a href="/" className="inline-flex items-center gap-2 text-base font-bold tracking-wide text-amber-100">
-            <span className="text-2xl text-amber-300">✦</span> BeMyParol
+    <main className="relative min-h-screen bg-[#f7f2e9] px-4 pb-14 text-[#273a30] sm:px-7">
+      <DesktopSideAds />
+      <div className="mx-auto max-w-[1250px] min-[1700px]:max-w-[1200px]">
+        <header className="flex items-center justify-between gap-3 border-b border-[#e2d8c8] py-5">
+          <a href="/" className="inline-flex items-center gap-2 font-serif text-2xl font-semibold text-[#293c30]">
+            <img src="/bemyparol-logo.png" alt="" aria-hidden="true" width={36} height={36} draggable={false}
+              className="inline-block h-9 w-9 align-middle object-contain" /> BeMyParol
           </a>
-          <span className="rounded-full border border-amber-200/20 bg-amber-100/5 px-3 py-1.5 text-xs text-amber-100/70">
-            A little light from every friend
-          </span>
         </header>
-        <div className="grid items-start gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
-          <section className="min-w-0 rounded-3xl border border-white/10 bg-[#121d33]/70 p-4 sm:p-7">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-300/80">A parol of friendship</p>
-            <h1 className="mt-2 font-serif text-3xl font-semibold sm:text-4xl">
-              You’ve been invited to add a light!
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-7 text-white/60">
-              This Christmas parol becomes brighter with every friend. Your light will join the others,
-              while your optional note stays private until Christmas Day in the Philippines.
-            </p>
+        <div className="pb-5 pt-7 sm:pt-9">
+          <h1 className="mt-2 max-w-3xl font-serif text-3xl font-semibold leading-tight sm:text-5xl">
+            Add your light to a brighter <span className="text-[#902632]">Christmas.</span>
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-[#746b5e]">
+            Add your light and an optional Christmas greeting to your friend's parol.
+          </p>
+          {!alreadyContributed && <a href="#add-light"
+            className="mt-3 inline-flex rounded-full border border-[#d2bda1] px-4 py-2 text-sm font-semibold text-[#832c31] lg:hidden">
+            Share my light ↓
+          </a>}
+        </div>
+
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,.8fr)] lg:gap-6">
+          <section className="min-w-0 overflow-hidden rounded-[26px] border border-[#284037] bg-[#13251f] p-3 shadow-[0_18px_40px_rgba(39,52,39,.13)] sm:p-5">
+            <div className="flex items-center justify-between gap-2 px-2 py-2 sm:px-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#dbb87d]">A parol of friendship</p>
+                <h2 className="mt-1 font-serif text-2xl text-[#fff4e1]">{theme.label}</h2>
+              </div>
+              {preview && <span className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-xs text-[#f6dcab]">
+                {preview.acceptedFriends} {preview.acceptedFriends === 1 ? 'friend' : 'friends'}
+              </span>}
+            </div>
             {preview ? (
               <>
-                <div className="mx-auto mt-4 max-w-[560px]">
-                  <LanternScene theme={theme} pattern={preview.patternKey} contributions={contributions} />
+                <div className="mx-auto w-full max-w-[620px]">
+                  <LanternScene theme={theme} pattern={preview.patternKey}
+                    contributions={contributions} friendCount={preview.acceptedFriends}
+                    snapshot={{kind:'guest',stateId:token,token}} />
                 </div>
-                <p className="mt-1 text-center text-xs text-white/50">
-                  {preview.acceptedFriends} {preview.acceptedFriends === 1 ? 'friend has' : 'friends have'} lit this parol · {preview.growthPoints} growth layers
-                </p>
               </>
             ) : (
-              <div className="mt-8 flex min-h-72 items-center justify-center rounded-2xl border border-white/10 bg-[#0b1327] text-center text-sm text-white/50">
+              <div role="status" className="mt-6 flex min-h-72 items-center justify-center rounded-xl bg-[#0d1918] px-5 text-center text-sm text-[#e1d0b8]">
                 {loading ? 'Opening your friend’s parol…' : 'This parol is unavailable.'}
               </div>
             )}
           </section>
-          <aside className="rounded-3xl border border-amber-200/15 bg-[#131e35]/95 p-5 shadow-xl sm:p-8">
+
+          <aside id="add-light" className="scroll-mt-6 rounded-[26px] border border-[#e6d8c5] bg-[#fffdf8] p-6 shadow-[0_12px_35px_rgba(59,45,30,.07)] sm:p-8">
             {alreadyContributed ? (
               <div role="status">
-                <div className="text-4xl text-amber-300" aria-hidden="true">✦</div>
+                <ContributionPopunder />
+                <span className="text-4xl text-[#ab7d3f]" aria-hidden="true">✦</span>
                 <h2 className="mt-3 font-serif text-3xl font-semibold">
                   {submitted ? 'Your light is shining!' : 'Your light is already here!'}
                 </h2>
-                <p className="mt-4 text-sm leading-7 text-white/65">
-                  You grew the lantern by three whole decorative layers and completed one illuminated outer band. Only one light can be added per browser visitor.
-                  Your Christmas message, if you left one, is visible only to the owner on December 25 (Philippine time).
+                <p className="mt-3 text-sm leading-7 text-[#746b5d]">
+                  Your light is part of this parol. Your Christmas message stays private until December 25.
                 </p>
-                <a href="/" className="mt-6 inline-block rounded-xl border border-amber-300/40 px-5 py-3 text-sm font-semibold text-amber-100">
-                  Make my own parol →
+                <a href="/" className="mt-6 inline-block rounded-xl bg-[#902632] px-5 py-3 text-sm font-bold text-white">
+                  Create my own parol →
                 </a>
               </div>
             ) : (
               <>
-                <h2 className="font-serif text-3xl font-semibold">Leave your light</h2>
-                <p className="mt-3 text-sm leading-6 text-white/60">
-                  Add your name and an optional Christmas greeting. No account required.
+                <h2 className="mt-2 font-serif text-3xl font-semibold">Share your light.</h2>
+                <p className="mt-3 text-sm leading-6 text-[#746b5d]">
+                  No account needed. One light per browser.
                 </p>
-                {error && <p role="alert" className="mt-4 rounded-xl border border-rose-300/30 bg-rose-400/10 p-3 text-sm text-rose-100">{error}</p>}
+                {error && <p role="alert" className="mt-4 rounded-xl border border-[#e4b3ab] bg-[#fff0ec] p-3 text-sm text-[#922632]">{error}</p>}
                 <form onSubmit={contribute} className="mt-6 space-y-4">
                   <div>
-                    <label htmlFor="friend-name" className="mb-2 block text-sm font-semibold text-white/80">Your name</label>
-                    <input id="friend-name" autoComplete="name" maxLength={80} required disabled={!preview || sending}
-                      value={name} onChange={event => setName(event.target.value)}
+                    <label htmlFor="friend-name" className="mb-2 block text-sm font-semibold text-[#39493c]">Your name</label>
+                    <input id="friend-name" autoComplete="name" maxLength={80} required
+                      disabled={!preview || sending} value={name} onChange={event => setName(event.target.value)}
                       placeholder="How your friend knows you"
-                      className="w-full rounded-xl border border-white/15 bg-[#090f20] px-4 py-3.5 text-sm text-white placeholder:text-white/35 focus:border-amber-300 focus:outline-none disabled:opacity-50" />
+                      className="w-full rounded-xl border border-[#d8c8b5] bg-white px-4 py-3.5 text-sm text-[#263c30] placeholder:text-[#a29a8d] focus:border-[#a57842] focus:outline-none disabled:opacity-50" />
                   </div>
                   <div>
-                    <label htmlFor="friend-message" className="mb-2 block text-sm font-semibold text-white/80">
-                      Christmas message <span className="font-normal text-white/45">(optional)</span>
+                    <label htmlFor="friend-message" className="mb-2 block text-sm font-semibold text-[#39493c]">
+                      Christmas message <span className="font-normal text-[#8b7d6d]">(optional)</span>
                     </label>
-                    <textarea id="friend-message" maxLength={500} rows={5} disabled={!preview || sending}
-                      value={message} onChange={event => setMessage(event.target.value)}
+                    <textarea id="friend-message" maxLength={500} rows={5}
+                      disabled={!preview || sending} value={message} onChange={event => setMessage(event.target.value)}
                       placeholder="A wish, a memory, or a little thank-you…"
-                      className="w-full resize-y rounded-xl border border-white/15 bg-[#090f20] px-4 py-3.5 text-sm text-white placeholder:text-white/35 focus:border-amber-300 focus:outline-none disabled:opacity-50" />
-                    <p className="mt-1 text-right text-xs text-white/45">{message.length}/500</p>
+                      className="w-full resize-y rounded-xl border border-[#d8c8b5] bg-white px-4 py-3.5 text-sm text-[#263c30] placeholder:text-[#a29a8d] focus:border-[#a57842] focus:outline-none disabled:opacity-50" />
+                    <p className="mt-1 text-right text-xs text-[#8b7d6d]">{message.length}/500</p>
                   </div>
                   <button type="submit" disabled={!preview || !name.trim() || sending}
-                    className="w-full rounded-xl bg-amber-300 px-5 py-3.5 text-sm font-bold text-slate-900 transition hover:bg-amber-200 disabled:opacity-45">
-                    {sending ? 'Adding your light…' : 'Add my light ✦'}
+                    className="w-full rounded-xl bg-[#902632] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#74202b] disabled:opacity-45">
+                    {sending ? 'Sharing your light…' : 'Share my light ✦'}
                   </button>
                 </form>
-                <p className="mt-4 text-xs leading-5 text-white/45">
-                  Your name helps identify your contribution to the parol owner.
-                  Your note is not publicly displayed. One contribution per guest browser is permitted.
+                <p className="mt-4 text-xs leading-5 text-[#887c6e]">
+                  Your message stays private until December 25 and is only visible to the parol owner.
                 </p>
               </>
             )}
           </aside>
         </div>
+        <BannerAd />
       </div>
     </main>
   )

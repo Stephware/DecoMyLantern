@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace DecoMyLantern.Api.Services.Owner;
 
 public sealed record IssuedOwnerAccess(Guid OwnerId, string Token, string RecoveryCode, DateTime ExpiresAtUtc);
+public sealed record OwnerRecoveryKeyView(bool Available, string? RecoveryCode, DateTime ExpiresAtUtc);
 public sealed class OwnerAccessException(int statusCode, string message) : Exception(message)
 {
     public int StatusCode { get; } = statusCode;
@@ -18,6 +19,8 @@ public interface IOwnerAccessService
     Task<IssuedOwnerAccess> CreateAsync(CancellationToken cancellationToken);
     Task<IssuedOwnerAccess> UpgradeLegacyAsync(Guid ownerId, CancellationToken cancellationToken);
     Task<IssuedOwnerAccess> RecoverAsync(string recoveryCode, CancellationToken cancellationToken);
+    Task<OwnerRecoveryKeyView> GetRecoveryKeyAsync(Guid ownerId, CancellationToken cancellationToken);
+    Task<OwnerRecoveryKeyView> ReplaceRecoveryKeyAsync(Guid ownerId, CancellationToken cancellationToken);
     Task SignOutAsync(Guid ownerId, CancellationToken cancellationToken);
     Task FinishSetupAsync(Guid ownerId, CancellationToken cancellationToken);
     Task CancelCreationAsync(Guid ownerId, CancellationToken cancellationToken);
@@ -28,6 +31,7 @@ public sealed class OwnerAccessService(
     UserManager<ApplicationUser> userManager,
     ILanternService lanternService,
     IInvitationService invitationService,
+    OwnerRecoveryCipher recoveryCipher,
     TimeProvider clock) : IOwnerAccessService
 {
     public async Task<IssuedOwnerAccess> CreateAsync(CancellationToken cancellationToken)
@@ -72,11 +76,56 @@ public sealed class OwnerAccessService(
         // hash and the original one-year deadline. Repeated use never rotates it.
         var newToken = OwnerSecrets.Generate();
         OwnerRecoveryPolicy.RefreshSession(credential, Hash(newToken), now);
+        // An older key can now be encrypted when its rightful holder uses it;
+        // this does not rotate the code or extend its original one-year expiry.
+        if (credential.EncryptedRecoveryCode is null)
+            credential.EncryptedRecoveryCode = recoveryCipher.Protect(recoveryCode, credential.OwnerUserId);
         credential.SetupPending = false;
         try { await database.SaveChangesAsync(cancellationToken); }
         catch (DbUpdateConcurrencyException)
         { throw new OwnerAccessException(409, "Your session changed during recovery. Retry with the same recovery key."); }
         return new IssuedOwnerAccess(credential.OwnerUserId, newToken, recoveryCode, credential.SessionExpiresAtUtc);
+    }
+
+    /// <summary>
+    /// Reveal only an authenticated owner's current, unexpired recovery key.
+    /// Legacy rows contain only a one-way hash and must not be silently rotated.
+    /// </summary>
+    public async Task<OwnerRecoveryKeyView> GetRecoveryKeyAsync(Guid ownerId, CancellationToken cancellationToken)
+    {
+        var credential = await GetCredentialAsync(ownerId, cancellationToken);
+        var now = clock.GetUtcNow().UtcDateTime;
+        if (!OwnerRecoveryPolicy.CanRecover(credential, now) ||
+            string.IsNullOrEmpty(credential.EncryptedRecoveryCode))
+            return new OwnerRecoveryKeyView(false, null, credential.RecoveryExpiresAtUtc);
+
+        var code = recoveryCipher.Unprotect(credential.EncryptedRecoveryCode, ownerId);
+        if (!OwnerSecrets.TryHashRecovery(code, out var hash) ||
+            !string.Equals(hash, credential.RecoveryHash, StringComparison.Ordinal))
+            throw new InvalidOperationException("The stored recovery key could not be verified.");
+
+        return new OwnerRecoveryKeyView(true, code, credential.RecoveryExpiresAtUtc);
+    }
+
+    /// <summary>
+    /// Explicit owner-initiated replacement only. Previous saved recovery keys
+    /// become invalid; owner session, parol, invitations and lights are untouched.
+    /// </summary>
+    public async Task<OwnerRecoveryKeyView> ReplaceRecoveryKeyAsync(Guid ownerId, CancellationToken cancellationToken)
+    {
+        var credential = await GetCredentialAsync(ownerId, cancellationToken);
+        var now = clock.GetUtcNow().UtcDateTime;
+        var code = OwnerSecrets.GenerateRecoveryKey();
+        var encrypted = recoveryCipher.Protect(code, ownerId);
+        credential.RecoveryHash = Hash(code);
+        credential.EncryptedRecoveryCode = encrypted;
+        credential.RecoveryIssuedAtUtc = now;
+        credential.RecoveryExpiresAtUtc = now.Add(OwnerSession.RecoveryLifetime);
+        try { await database.SaveChangesAsync(cancellationToken); }
+        catch (DbUpdateConcurrencyException)
+        { throw new OwnerAccessException(409, "Recovery key changed in another session. Refresh and try again."); }
+
+        return new OwnerRecoveryKeyView(true, code, credential.RecoveryExpiresAtUtc);
     }
 
     public async Task SignOutAsync(Guid ownerId, CancellationToken cancellationToken)
@@ -136,6 +185,8 @@ public sealed class OwnerAccessService(
             OwnerUserId = ownerId,
             TokenHash = Hash(token),
             RecoveryHash = Hash(recoveryCode),
+            EncryptedRecoveryCode = recoveryCipher.Protect(recoveryCode, ownerId),
+            RecoveryIssuedAtUtc = now,
             CreatedAtUtc = now,
             SessionExpiresAtUtc = now.Add(OwnerSession.Lifetime),
             RecoveryExpiresAtUtc = now.Add(OwnerSession.RecoveryLifetime),

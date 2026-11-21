@@ -10,6 +10,10 @@ public sealed class OwnerCredential
     public ApplicationUser Owner { get; set; } = null!;
     public string TokenHash { get; set; } = "";
     public string RecoveryHash { get; set; } = "";
+    // Null for keys issued before the encrypted redisplay feature.
+    public string? EncryptedRecoveryCode { get; set; }
+    // Null for legacy keys: their original CreatedAtUtc is the issue date.
+    public DateTime? RecoveryIssuedAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime SessionExpiresAtUtc { get; set; }
     public DateTime RecoveryExpiresAtUtc { get; set; }

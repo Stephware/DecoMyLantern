@@ -19,6 +19,7 @@ public sealed class Lantern
     public string PatternKey { get; set; } = "default";
     public int NextSlotIndex { get; set; }
     public DateTime UnlockAtUtc { get; set; }
+    public bool IsAdmin { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public byte[] RowVersion { get; set; } = [];
     public ICollection<ShareLink> ShareLinks { get; set; } = new List<ShareLink>();

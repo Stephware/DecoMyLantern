@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <defs><radialGradient id="story-night-v2" gradientUnits="userSpaceOnUse" cx="540" cy="787" r="1602" gradientTransform="translate(540 787) scale(.477 1) translate(-540 -787)">
+    <stop offset="0%" stop-color="#28405d"/>
+    <stop offset="52%" stop-color="#101c32"/>
+    <stop offset="100%" stop-color="#080e20"/>
+  </radialGradient></defs>
+  <rect width="1080" height="1920" fill="url(#story-night-v2)"/>
+</svg>

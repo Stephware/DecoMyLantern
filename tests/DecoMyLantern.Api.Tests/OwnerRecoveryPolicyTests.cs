@@ -42,6 +42,20 @@ public sealed class OwnerRecoveryPolicyTests
     }
 
     [Fact]
+    public void Explicit_replacement_uses_its_own_one_year_lifetime()
+    {
+        var owner = NewCredential();
+        var replacementDate = CreatedAt.AddDays(364);
+        owner.RecoveryIssuedAtUtc = replacementDate;
+        owner.RecoveryExpiresAtUtc = replacementDate.AddDays(365);
+
+        Assert.True(OwnerRecoveryPolicy.CanRecover(owner, CreatedAt.AddDays(400)));
+        Assert.True(OwnerRecoveryPolicy.CanRecover(owner, replacementDate.AddDays(365).AddTicks(-1)));
+        Assert.False(OwnerRecoveryPolicy.CanRecover(owner, replacementDate.AddDays(365)));
+        Assert.Equal(CreatedAt, owner.CreatedAtUtc);
+    }
+
+    [Fact]
     public void Earlier_expiration_stays_respected_without_renewing_the_key()
     {
         var older = NewCredential(CreatedAt.AddDays(10));

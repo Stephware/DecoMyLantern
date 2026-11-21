@@ -1,0 +1,73 @@
+import {test} from 'node:test'
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+import {canPanParol} from '../src/features/lantern/renderer/parolTouchPolicy.ts'
+
+const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
+
+test('touch policy: normal mobile page scrolls; only explicit Explore pans the parol', () => {
+  assert.equal(canPanParol(true, false), false, 'touch parol must not capture normal page swipes')
+  assert.equal(canPanParol(true, true), true, 'touch pan is allowed only inside Explore')
+  assert.equal(canPanParol(false, false), true, 'existing desktop drag stays enabled')
+  assert.equal(canPanParol(false, true), true, 'mouse drag works on hybrid devices')
+})
+
+test('actual owner and guest viewers use the scroll-first mobile behavior', () => {
+  const viewer = read('src/features/lantern/renderer/CachedParolScene.tsx')
+  const css = read('src/styles/index.css')
+  const wrapper = read('src/features/lantern/renderer/LanternScene.tsx')
+  const owner = read('src/features/dashboard/HostDashboard.tsx')
+  const guest = read('src/features/invitations/GuestInvitationPage.tsx')
+  assert.ok(wrapper.includes('<CachedParolScene'))
+  assert.ok(owner.includes("snapshot={{kind:'owner',stateId:lantern.id}}"))
+  assert.ok(guest.includes("snapshot={{kind:'guest',stateId:token,token}}"))
+  assert.ok(viewer.includes("window.matchMedia('(pointer: coarse)').matches"))
+  assert.ok(viewer.includes("pointerType !== 'mouse'"))
+  assert.ok(viewer.includes('if (!touchCanPan(event.pointerType)) return'))
+  assert.ok(viewer.includes('parol-touch-surface'))
+  assert.ok(css.includes('.parol-touch-surface { touch-action: none; }'))
+  assert.ok(css.includes('.parol-touch-surface:not(.parol-explore-active)'))
+  assert.ok(css.includes('touch-action: auto;'))
+  assert.ok(css.includes('.parol-zoom-controls:not(.parol-explore-active) { display: none; }'))
+  assert.ok(css.includes('.parol-mobile-explore-action { display: flex; }'))
+})
+
+test('Explore is a clear accessible full-screen dialog and returns to the same page', () => {
+  const viewer = read('src/features/lantern/renderer/CachedParolScene.tsx')
+  assert.ok(viewer.includes('Explore parol'))
+  assert.ok(viewer.includes('onClick={() => { pointers.current.clear(); dragged.current = false; setExploring(true) }}'))
+  assert.ok(viewer.includes('exploring && createPortal('))
+  assert.ok(viewer.includes('document.body,'))
+  assert.ok(viewer.includes('role="dialog" aria-modal="true"'))
+  assert.ok(viewer.includes('aria-labelledby="parol-explore-title"'))
+  assert.ok(viewer.includes('aria-describedby="parol-explore-help"'))
+  assert.ok(viewer.includes('aria-label="Done exploring parol"'))
+  assert.ok(viewer.includes('document.body.style.overflow = \'hidden\''))
+  assert.ok(viewer.includes('document.body.style.overflow = previousOverflow'))
+  assert.ok(viewer.includes("event.key === 'Escape'"))
+  assert.ok(viewer.includes("event.key === 'Tab'"))
+  assert.ok(viewer.includes('exploreDoneRef.current?.focus()'))
+  assert.ok(viewer.includes('exploreTriggerRef.current.focus()'))
+  assert.ok(viewer.includes('setCamera({zoom: 1, x: 0, y: 0})'))
+  assert.ok(viewer.includes('Drag to move, pinch to zoom'))
+})
+
+test('parol zoom tiers, real light tapping, three-wave reveal and retries remain intact', () => {
+  const viewer = read('src/features/lantern/renderer/CachedParolScene.tsx')
+  assert.ok(viewer.includes('onPointerDown={pointerDown}'))
+  assert.ok(viewer.includes('onPointerMove={pointerMove}'))
+  assert.ok(viewer.includes('onPointerCancel={pointerEnd}'))
+  assert.ok(viewer.includes('onClick={selectLight}'))
+  assert.ok(viewer.includes('aria-label="Fit the whole lantern"'))
+  assert.ok(viewer.includes('aria-label="Highlight next friend\'s light"'))
+  assert.ok(viewer.includes('ULTRA_RES_ZOOM_THRESHOLD = 3'))
+  assert.ok(viewer.includes('HIGH_RES_ZOOM_THRESHOLD = 1.75'))
+  assert.ok(viewer.includes("'webp', desiredScale"))
+  assert.ok(viewer.includes('highRes?.url, ultraRes?.url'))
+  assert.ok(viewer.includes('SNAPSHOT_WAVE_DURATIONS_MS[transition.wave - 1]'))
+  assert.ok(viewer.includes('SNAPSHOT_WAVE_RADIUS[activeWave.wave]'))
+  assert.ok(viewer.includes('URL.revokeObjectURL(url)'))
+  assert.ok(viewer.includes('controller.abort()'))
+  assert.ok(viewer.includes('setAttempt(n => n + 1)'))
+  assert.ok(!viewer.includes('<ProceduralOuterShell'))
+})

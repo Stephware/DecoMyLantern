@@ -1,8 +1,8 @@
 # BeMyParol (formerly Deco My Lantern)
 
-**BeMyParol** is a mobile-first Filipino Christmas *parol* experience. Every accepted friend keeps an identifiable light in the central tambor and adds **three actual visual growth layers** to an elaborate, round/floral festival-style parol inspired by San Fernando, Pampanga. A single visible outer boundary completes every three growth layers. Fifty friends therefore create 150 filled growth layers and 50 outer bands across 15 geometric, floral and illuminated regions. Friend milestones at **0, 3, 10, 23, 40 and 50** unlock six selectable design families.
+**BeMyParol** is a mobile-first Filipino Christmas *parol* experience. Every accepted friend keeps an identifiable light in the central tambor and adds **three actual visual growth layers** to an elaborate, round/floral festival-style parol inspired by San Fernando, Pampanga. A single visible outer boundary completes every three growth layers. Fifty friends therefore create 150 filled growth layers and 50 outer bands across 15 geometric, floral and illuminated regions. Six selectable design families are available immediately; **0, 3, 10, 23, 40 and 50** remain visual growth milestones.
 
-The parol looks complete even with **zero friends**: a compact festival lantern with intricate glass windows, a floral-starburst tambor, diamond patterns and decorative lighting. Every friend triggers a three-wave visual reveal and one completed outer band; the camera fits the growing design. **No dangling tail, cord, tassels or ribbon fringe.** Design unlocks are separate from ongoing visual evolution; friends can continue joining past 50.
+The parol looks complete even with **zero friends**: a compact festival lantern with intricate glass windows, a floral-starburst tambor, diamond patterns and decorative lighting. Every friend triggers a three-wave visual reveal and one completed outer band; the camera fits the growing design. **No dangling tail, cord, tassels or ribbon fringe.** All six designs can be changed anytime; visual growth milestones remain separate and friends can continue joining past 50.
 
 > **Development status:** Passwordless owner access and guest invitations exist. The extended 150-layer procedural design and three-wave animation require local build and browser validation before release. The owner Christmas inbox UI and production abuse controls remain incomplete; full .NET, SQL Server and browser validation are required before release.
 
@@ -11,7 +11,7 @@ The parol looks complete even with **zero friends**: a compact festival lantern 
 - **Owners** create a seasonal parol without signing up or logging in. The API gives the browser a secure HTTP-only owner cookie and shows a reusable 22-character private recovery key once (old 43-character keys remain accepted if valid).
 - **Friends** open the owner's single short invitation link without creating an account, then contribute one light per browser visitor and optionally leave a sealed Christmas message.
 - Each accepted contribution keeps a stable central light and adds three connected ornament layers, with one visible contour after all three. The first 150 layers span 15 distinct festival-inspired regions instead of repeating the previous final design.
-- Owners can switch among designs unlocked by their reached friend milestones (0/3/10/23/40/50). A previously selected design stays available.
+- Owners can choose any of six designs when they create the parol or change styles later, regardless of friend count. New owners preview each design at the completed 50-friend appearance before choosing.
 - Messages are private to the lantern owner and stay sealed until **December 25, 12:00 AM Philippine Standard Time (UTC+8)**. For Christmas 2026, the server-side unlock is `2026-12-24T16:00:00Z`.
 
 Anonymous guest participation is convenient, but a browser token cannot prove that two contributions came from different people. Duplicate-submission checks, rate limits, moderation, and other safeguards must be finished before public launch.
@@ -70,6 +70,9 @@ Install the following before running the project:
 If you develop on an Apple Silicon Mac, using a supported Windows or remote SQL Server instance is recommended.
 
 ## Run locally
+
+**Animated Story exports:** Instead of starting Vite and .NET separately, stop existing local servers and run **`bash scripts/dev-with-stories.sh`** from the repository root. This starts the API, frontend and private video renderer with matching temporary renderer credentials, then serves the frontend at http://localhost:5173. Your existing SQL connection and invitation encryption key must already be configured in .NET User Secrets; the script never changes them. Renderer startup logs are in `story-renderer/.dev-renderer.log` (ignored by Git). See [Story sharing setup](docs/story-sharing.md) for details.
+
 
 ### 1. Clone the repository
 
@@ -145,6 +148,36 @@ The dashboard displays real accepted contributions. Owners can copy their one sh
 
 **Owner API security:** The server authenticates by looking up the SHA-256 hash of a 256-bit random browser token in SQL on each protected request. The token is only sent in an HTTP-only SameSite=Strict cookie (Secure on HTTPS/production); React does not read or persist it. All writes require a fresh CSRF token from `GET /api/owner/csrf`. Only public catalogs are cached for two minutes — never owner identity or recovery codes. See the [API contracts](docs/api-contracts.md).
 
+## Recovery key popup and simplified sharing controls
+
+On the owner dashboard, **Recovery key** appears beside **Leave parol**.
+Opening it displays the owner-only recovery key and a Copy button. Leaving
+also opens this popup first, offering Copy, Stay, or Leave. The secret is
+retrieved by a CSRF-protected, authenticated API request; it is never stored
+in frontend localStorage.
+
+- New parols store a hash and an AES-GCM-encrypted recoverable copy of the
+  code. This uses a purpose-isolated derivative of the already required
+  stable `INVITATION_ENCRYPTION_KEY`; no new secret is needed.
+- Recovery keys belonging to older parols were originally hash-only. Those
+  **cannot be displayed retroactively**. An older owner can keep using their
+  saved key, or explicitly replace it. **Replacing immediately invalidates
+  the previous key**, but does not reset friends, invitations, or session.
+- An owner who recovers using an old key causes the existing code to be
+  securely saved for subsequent owner-only redisplay without rotation.
+- The `20261029080000_EncryptedOwnerRecoveryKeys` EF Core migration adds
+  two nullable database columns. **Apply it to the existing SQL Server
+  database before deploying the updated API**; back up production first.
+  Never rotate the stable invitation encryption key or recreate production
+  data as part of this change.
+
+The dashboard and mobile design drawer no longer offer the three decorative
+pattern options. Already saved patterns remain supported by the renderer so
+existing parols retain their artwork. On the guest page, the contribution
+heading and action now say **Share your light**. The owner invitation card
+shows the official link and a single **Copy invitation link** button; the
+animated Story export remains available in its **separate** panel.
+
 ## Friend invitations — Task 4
 
 Once your parol exists, copy its single invitation link and share it with friends. Friends can open their own guest page, enter a name, and optionally leave a Christmas note. The invitation link never contains your private owner or recovery key. One light per guest browser is enforced with a secure cookie and SQL constraints; this does not prove unique human identity. Links expire December 31 Philippine time. Historic links are retired without removing existing contributions.
@@ -177,6 +210,8 @@ docker compose -f compose.yaml ps
 ```
 
 Check `http://localhost:5173` for the frontend and `http://localhost:5173/api/health` for the API through Nginx. Use `docker compose -f compose.yaml down` to stop the stack. `FRONTEND_PORT` and `BACKEND_PORT` in `.env` can change the local host ports.
+
+Set `ADS_ENABLED=false` in the root `.env` to disable all frontend ad scripts and placements; set it to `true` to enable them. This is a frontend build setting, so apply changes with `docker compose -f compose.yaml up -d --build --no-deps frontend`. Restarting the existing container alone will not change it.
 
 ### Public domains through Cloudflare Tunnel
 
@@ -310,3 +345,22 @@ Do not merge feature branches directly to `main`, force-push protected branches,
 - [API routes](docs/api-contracts.md)
 - [GitHub branch protection](docs/github-protection.md)
 - [Contribution guidelines](CONTRIBUTING.md)
+
+### Responsive redesign and fully grown design previews
+
+The owner dashboard now uses an ivory/forest/burgundy festive layout, while
+the approved parol artwork and cached-image animation remain unchanged.
+After first setup and recovery-key acknowledgement, owners choose from six
+designs shown in their **50-friend full-bloom form**; their actual lantern
+starts from its real friend count and contributions are never simulated.
+Desktop owners can reopen the design gallery any time. Mobile owners use a
+fixed **swipe-up/swipe-down design drawer** with an arrow handle, so design
+selection does not require scrolling below the parol. The testing lab is kept
+collapsed for later staging separation.
+
+The GET `/api/designs/{designKey}/showcase` endpoint uses the private renderer
+and produces a reusable synthetic WebP (six designs, 50 test light slots),
+so make sure `bash scripts/dev-with-stories.sh` runs during local testing.
+First-time preview requests can be slow while the six images are generated
+and cached. The official invitation/recovery flows do not change.
+

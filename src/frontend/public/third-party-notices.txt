@@ -1,0 +1,9 @@
+Third-party software used by BeMyParol phone-side Story rendering
+
+Mediabunny 1.65.0 — Copyright its respective contributors
+License: Mozilla Public License 2.0
+Source: https://github.com/Vanilagy/mediabunny/tree/v1.65.0
+License text: /licenses/Mediabunny-MPL-2.0.txt
+
+The application imports the unmodified Mediabunny npm distribution for
+in-browser MP4 multiplexing. The rest of BeMyParol does not use this license.

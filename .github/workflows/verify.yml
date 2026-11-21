@@ -1,0 +1,68 @@
+name: Verify BeMyParol
+
+on:
+  pull_request:
+    branches: [dev]
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    name: Frontend, API and renderer checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+      - name: Backend unit and contract tests
+        run: dotnet test tests/DecoMyLantern.Api.Tests/DecoMyLantern.Api.Tests.csproj --configuration Release
+      - name: Frontend dependencies
+        run: npm ci --no-audit --no-fund
+        working-directory: src/frontend
+      - name: Frontend tests
+        run: npm test
+        working-directory: src/frontend
+      - name: Frontend typecheck and build
+        run: npm run build
+        working-directory: src/frontend
+      - name: Frontend lint
+        run: npm run lint
+        working-directory: src/frontend
+      - name: Renderer dependencies
+        run: npm ci --no-audit --no-fund
+        working-directory: story-renderer
+      - name: Renderer tests
+        run: npm test
+        working-directory: story-renderer
+
+  sql-integration:
+    name: SQL Server end-to-end workflows
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: 'LocalSql!Integration2026'
+        ports:
+          - 1433:1433
+    env:
+      BEMYPAROL_TEST_SQL: 'Server=127.0.0.1,1433;Initial Catalog=master;User Id=sa;Password=LocalSql!Integration2026;Encrypt=True;TrustServerCertificate=True;'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run isolated real SQL Server integration tests
+        run: dotnet test tests/DecoMyLantern.Api.IntegrationTests/DecoMyLantern.Api.IntegrationTests.csproj --configuration Release --logger "console;verbosity=normal"

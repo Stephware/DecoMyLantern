@@ -246,6 +246,11 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("IsAdmin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -361,6 +366,14 @@ namespace DecoMyLantern.Api.Models.Database.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("RecoveryExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EncryptedRecoveryCode")
+                        .HasMaxLength(160)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(160)");
+
+                    b.Property<DateTime?>("RecoveryIssuedAtUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("RecoveryHash")

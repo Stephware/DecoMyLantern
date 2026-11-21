@@ -3,8 +3,8 @@ using DecoMyLantern.Api.Models.Database;
 namespace DecoMyLantern.Api.Services.Lanterns;
 
 /// <summary>
-/// Design milestones, independent of the deterministic outer-shell geometry.
-/// Friend contributions do not stop at the final 50-friend design unlock.
+/// Visual growth milestones, independent of design selection.
+/// All enabled designs are selectable from the start; growth continues past 50.
 /// </summary>
 public static class GrowthPolicy
 {
@@ -28,12 +28,12 @@ public static class GrowthPolicy
         _ => "sampaguita"
     };
 
+    // Legacy helper retained for callers; a design is now available whenever
+    // it is enabled. Friend thresholds still describe decorative milestones.
     public static bool DesignUnlocked(ParolDesign design, int acceptedFriends, int highestAcceptedSlot)
     {
         if (acceptedFriends < 0 || highestAcceptedSlot < 0)
             throw new ArgumentOutOfRangeException(nameof(acceptedFriends));
-        // NextSlotIndex is monotonic. Once a friend unlocked a design it cannot
-        // relock because their light was later removed.
-        return design.IsEnabled && Math.Max(acceptedFriends, highestAcceptedSlot) >= design.RequiredFriends;
+        return design.IsEnabled;
     }
 }

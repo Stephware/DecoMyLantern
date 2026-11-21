@@ -19,6 +19,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient("StoryRenderer", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["StoryRenderer:Url"] ?? "http://127.0.0.1:7070");
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
 var trustedProxyNetwork = builder.Configuration["ReverseProxy:KnownNetwork"];
 if (!string.IsNullOrWhiteSpace(trustedProxyNetwork))
 {
@@ -113,6 +118,75 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = 80, Window = TimeSpan.FromMinutes(15),
             QueueLimit = 0, AutoReplenishment = true
         }));
+    // Snapshot requests are read-only but cold images are expensive to render.
+    // Limits are per-process; renderer caches duplicate visual states.
+    options.AddPolicy("design-showcase", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 36, Window = TimeSpan.FromMinutes(10),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("parol-image-owner", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 60, Window = TimeSpan.FromMinutes(10),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("parol-image-guest", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 60, Window = TimeSpan.FromMinutes(10),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("story-owner", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10, Window = TimeSpan.FromHours(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    // Polling and downloading completed owner videos require a valid owner
+    // session; separate limits prevent status checks from spending render quota.
+    options.AddPolicy("story-video-status", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 100, Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("story-video-download", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 30, Window = TimeSpan.FromHours(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("story-guest", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 12, Window = TimeSpan.FromHours(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("owner-recovery-display", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 18, Window = TimeSpan.FromHours(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
+    options.AddPolicy("owner-recovery-replace", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 3, Window = TimeSpan.FromHours(1),
+            QueueLimit = 0, AutoReplenishment = true
+        }));
     options.AddPolicy("owner-recover", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
@@ -123,6 +197,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<DecoMyLantern.Api.Controllers.ReadinessTransitionLogger>();
 builder.Services.AddScoped<IDesignRepository, DesignRepository>();
 builder.Services.AddScoped<IGrowthStageRepository, GrowthStageRepository>();
 builder.Services.AddScoped<IMessageRepository, MessageRepository>();
@@ -132,6 +207,7 @@ builder.Services.AddScoped<IGrowthStageService, GrowthStageService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<ILanternService, LanternService>();
 builder.Services.AddSingleton<InvitationTokenCipher>();
+builder.Services.AddSingleton<OwnerRecoveryCipher>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IOwnerAccessService, OwnerAccessService>();
 

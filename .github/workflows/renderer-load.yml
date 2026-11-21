@@ -1,0 +1,35 @@
+name: Bounded renderer load benchmark
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'scripts/benchmark-renderer-load.py'
+      - '.github/workflows/renderer-load.yml'
+      - 'story-renderer/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  renderer-load:
+    name: Isolated renderer, 2 CPU and 2 GiB
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production renderer image
+        run: docker build -f story-renderer/Dockerfile -t bemyparol-renderer:load .
+      - name: Measure real, bounded HTTP loads and Docker cgroups
+        run: |
+          python3 scripts/benchmark-renderer-load.py --image bemyparol-renderer:load \
+            --cpu 2 --memory 2g --out "$RUNNER_TEMP/bemyparol-renderer-load"
+      - name: Publish benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: renderer-load-${{ github.run_id }}
+          path: ${{ runner.temp }}/bemyparol-renderer-load/
+          if-no-files-found: warn
+          retention-days: 7

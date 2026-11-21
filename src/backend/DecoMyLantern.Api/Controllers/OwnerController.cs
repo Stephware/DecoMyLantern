@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Data.SqlClient;
 
 namespace DecoMyLantern.Api.Controllers;
 
@@ -19,7 +20,8 @@ public sealed class RecoverOwnerRequest
 public sealed class OwnerController(
     IOwnerAccessService access,
     IAntiforgery antiforgery,
-    IHostEnvironment environment) : ControllerBase
+    IHostEnvironment environment,
+    ILogger<OwnerController> logger) : ControllerBase
 {
     [AllowAnonymous]
     [HttpGet("csrf")]
@@ -136,6 +138,54 @@ public sealed class OwnerController(
             return NoContent();
         }
         catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
+    }
+
+    // A POST (not GET) protects secret display behind owner authentication
+    // AND antiforgery. Never cache or persist the plaintext in browser storage.
+    [Authorize]
+    [EnableRateLimiting("owner-recovery-display")]
+    [HttpPost("recovery-key")]
+    public async Task<IActionResult> RecoveryKey(CancellationToken cancellationToken)
+    {
+        if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid security token. Refresh and try again." });
+        if (!TryOwner(out var id)) return Unauthorized();
+        NoStore();
+        try
+        {
+            var result = await access.GetRecoveryKeyAsync(id, cancellationToken);
+            return Ok(result);
+        }
+        catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
+        catch (SqlException ex) when (ex.Number == 207)
+        {
+            logger.LogError(ex, "Recovery-key display database schema is outdated. Apply the pending EF Core migrations.");
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { message = "Recovery keys are temporarily unavailable. Please try again later.", code = "RECOVERY_SCHEMA_OUTDATED" });
+        }
+    }
+
+    // For keys originally stored only as one-way hashes, issue a replacement
+    // only after explicit user confirmation that the old key stops working.
+    [Authorize]
+    [EnableRateLimiting("owner-recovery-replace")]
+    [HttpPost("replace-recovery-key")]
+    public async Task<IActionResult> ReplaceRecoveryKey(CancellationToken cancellationToken)
+    {
+        if (!await ValidCsrfAsync()) return BadRequest(new { message = "Invalid security token. Refresh and try again." });
+        if (!TryOwner(out var id)) return Unauthorized();
+        NoStore();
+        try
+        {
+            var result = await access.ReplaceRecoveryKeyAsync(id, cancellationToken);
+            return Ok(result);
+        }
+        catch (OwnerAccessException ex) { return StatusCode(ex.StatusCode, new { message = ex.Message }); }
+        catch (SqlException ex) when (ex.Number == 207)
+        {
+            logger.LogError(ex, "Recovery-key replacement database schema is outdated. Apply the pending EF Core migrations.");
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { message = "Recovery keys are temporarily unavailable. Please try again later.", code = "RECOVERY_SCHEMA_OUTDATED" });
+        }
     }
 
     [Authorize]
