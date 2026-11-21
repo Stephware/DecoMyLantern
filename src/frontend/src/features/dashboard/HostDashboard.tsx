@@ -22,7 +22,7 @@ type Props = {
 
 const card = 'rounded-[24px] border border-[#e6dccc] bg-[#fffdf8] shadow-[0_10px_30px_rgba(57,43,27,.05)]'
 const button = 'rounded-xl bg-[#902632] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#711e28] disabled:cursor-not-allowed disabled:opacity-40'
-const ONBOARDING_PREFIX = 'bemyparol:visual-choice:v1:'
+export const ONBOARDING_PREFIX = 'bemyparol:visual-choice:v1:'
 
 export default function HostDashboard({ lantern, designs, onCreate, onSave, onLogout }: Props) {
   const [draftDesign, setDraftDesign] = useState(lantern?.designKey ?? 'classic')

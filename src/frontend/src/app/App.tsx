@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import WelcomePage from '../features/owner/WelcomePage'
 import RecoveryKeyPage from '../features/owner/RecoveryKeyPage'
-import HostDashboard from '../features/dashboard/HostDashboard'
+import HostDashboard, { ONBOARDING_PREFIX } from '../features/dashboard/HostDashboard'
 import GuestInvitationPage from '../features/invitations/GuestInvitationPage'
 import { invitationTokenFromHash } from '../features/invitations/invitationLinks'
 import {
@@ -35,9 +35,11 @@ export default function App() {
   const [recoveryKey, setRecoveryKey] = useState('')
   const [canCancelCreation, setCanCancelCreation] = useState(false)
   const [legacyAvailable, setLegacyAvailable] = useState(false)
+  // shortcut: lost if the owner reloads on the recovery-key screen (the dashboard picker covers it); use sessionStorage if that matters.
+  const [pendingDesign, setPendingDesign] = useState<string | null>(null)
   const [error, setError] = useState('')
 
-  async function enterDashboard(currentOwner: Owner) {
+  async function enterDashboard(currentOwner: Owner, chosenDesign: string | null = null) {
     setScreen('loading')
     setOwner(currentOwner)
     setError('')
@@ -46,7 +48,7 @@ export default function App() {
       if (lanternResult.status === 'rejected') {
         const failure: unknown = lanternResult.reason
         if (!(failure instanceof ApiError && failure.status === 404)) throw failure
-        setLantern(null)
+        setLantern(chosenDesign ? await createWithDesign(chosenDesign) : null)
       } else {
         setLantern(lanternResult.value)
       }
@@ -57,6 +59,15 @@ export default function App() {
       setError(caught instanceof Error ? caught.message : 'Unable to load your parol.')
       setScreen('error')
     }
+  }
+
+  // The landing page picked the design, so create the parol in it and skip the first-time picker.
+  async function createWithDesign(designKey: string) {
+    let created = await createMyLantern()
+    if (created.designKey !== designKey) created = await updateMyLantern(designKey, created.patternKey)
+    try { localStorage.setItem(ONBOARDING_PREFIX + created.id, 'done') }
+    catch { /* storage only controls onboarding */ }
+    return created
   }
 
   function showIssuedKey(issued: OwnerIssue, newlyCreated = false) {
@@ -150,7 +161,9 @@ export default function App() {
       if (canCancelCreation) await finishOwnerSetup()
       setCanCancelCreation(false)
       setRecoveryKey('')
-      if (owner) await enterDashboard(owner)
+      const chosenDesign = pendingDesign
+      setPendingDesign(null)
+      if (owner) await enterDashboard(owner, chosenDesign)
     }} onCancel={canCancelCreation ? async () => {
       await cancelOwnerCreation()
       setOwner(null)
@@ -158,6 +171,7 @@ export default function App() {
       setDesigns([])
       setRecoveryKey('')
       setCanCancelCreation(false)
+      setPendingDesign(null)
       setScreen('welcome')
     } : undefined} />
   }
@@ -165,7 +179,7 @@ export default function App() {
   if (screen === 'welcome' || !owner) return (
     <WelcomePage
       legacyAvailable={legacyAvailable}
-      onCreate={async () => { showIssuedKey(await createOwner(), true) }}
+      onCreate={async designKey => { const issued = await createOwner(); setPendingDesign(designKey); showIssuedKey(issued, true) }}
       onRecover={async code => {
         const restored = await recoverOwner(code)
         setLegacyAvailable(false)

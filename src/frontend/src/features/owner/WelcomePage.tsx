@@ -1,20 +1,32 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { BannerAd, DesktopSideAds, NativeAd } from '../ads/AdPlacements'
+import { THEMES, type Theme } from '../customization/themes'
 
 type Props = {
   legacyAvailable: boolean
-  onCreate: () => Promise<void>
+  onCreate: (designKey: string) => Promise<void>
   onRecover: (code: string) => Promise<void>
   onUpgradeLegacy: () => Promise<void>
 }
 
+const STEPS = [
+  ['Pick a parol', 'Choose the design that feels like your Pasko.'],
+  ['Share your link', 'Send it to friends and family. No account needed.'],
+  ['Watch it grow', 'Every friend adds a light and a private greeting.'],
+] as const
+
 export default function WelcomePage({
   legacyAvailable, onCreate, onRecover, onUpgradeLegacy,
 }: Props) {
+  const [selected, setSelected] = useState<Theme | null>(null)
   const [showRecovery, setShowRecovery] = useState(false)
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const dialogRef = useRef<HTMLDialogElement>(null)
+
+  // Open after render so showModal focuses the dialog's Create button.
+  useEffect(() => { if (selected) dialogRef.current?.showModal() }, [selected])
 
   async function run(action: () => Promise<void>) {
     setBusy(true)
@@ -29,83 +41,58 @@ export default function WelcomePage({
     void run(() => onRecover(code.trim()))
   }
 
+  // Static files only: the landing page must never call the parol renderer.
+  // Card width 40svh keeps the whole parol plus the recover link on a 360x640 phone with browser bars;
+  // 70vw lets the next parol peek in so it reads as scrollable.
+  // No lazy loading: cards start off-screen in an overflow-hidden, transform-animated track,
+  // where lazy images never get fetched; all six are needed anyway (~940 KB total, cached).
+  const parolCards = (copy: boolean) => THEMES.map(theme => (
+    <li key={theme.key} className="px-2 sm:px-3">
+      <button type="button" tabIndex={copy ? -1 : undefined} aria-haspopup="dialog"
+        onClick={() => { setSelected(theme); setShowRecovery(false); setError('') }}
+        className="group block w-[clamp(190px,min(40svh,70vw),400px)] rounded-[22px] p-2 text-center transition hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-[#f8cc6f]">
+        <img src={`/parols/${theme.key}.webp`} width={800} height={853} alt={copy ? '' : `${theme.label} parol`}
+          decoding="async" draggable={false}
+          className="pointer-events-none mx-auto h-auto w-full select-none transition duration-300 group-hover:scale-105" />
+        <span className="mt-1 block text-sm font-semibold text-[#efe6d4]">{theme.label}</span>
+      </button>
+    </li>
+  ))
+
   return (
     <div className="relative min-h-screen bg-[#f7f2e9] text-[#27392e]">
       <DesktopSideAds />
-      <header className="mx-auto flex max-w-[1300px] items-center justify-between gap-3 px-5 py-5 sm:px-9 min-[1700px]:max-w-[1200px]">
-        <div className="flex items-center gap-2 font-serif text-2xl font-semibold">
-          <img src="/bemyparol-logo.png" alt="" aria-hidden="true" width={40} height={40} draggable={false}
-            className="h-10 w-10 shrink-0 object-contain" /> BeMyParol
+      <div className="flex min-h-svh flex-col">
+      <header className="mx-auto flex max-w-[1200px] items-center justify-center px-5 pt-6 sm:px-9">
+        <div className="flex items-center gap-2 font-serif text-3xl font-semibold">
+          <img src="/bemyparol-logo.png" alt="" aria-hidden="true" width={48} height={48} draggable={false}
+            className="h-12 w-12 shrink-0 object-contain" /> BeMyParol
         </div>
-        <span className="hidden rounded-full border border-[#dfd1bc] bg-white/75 px-4 py-2 text-xs text-[#77634c] sm:inline">
-          Christmas, made together
-        </span>
       </header>
 
-      <main className="mx-auto grid max-w-[1300px] items-center gap-7 px-5 pb-14 pt-5 sm:px-9 lg:min-h-[calc(100dvh-90px)] lg:grid-cols-[1.2fr_.8fr] lg:gap-12 min-[1700px]:max-w-[1200px]">
-        <section className="min-w-0">
-          <div className="mb-5 max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-[.23em] text-[#a87b42]">Bawat ilaw, may kwento</p>
-            <h1 className="mt-3 font-serif text-4xl font-semibold leading-[1.12] tracking-tight sm:text-6xl">
-              A brighter <span className="text-[#902632]">Pasko</span>, together.
-            </h1>
-            <p className="mt-4 max-w-lg text-sm leading-7 text-[#71685a] sm:text-base">
-              Create a Filipino parol that grows as friends add their lights. Collect private greetings and share the joy of Christmas.
-            </p>
-          </div>
-          <div className="overflow-hidden rounded-[26px] border border-[#263e34] bg-[#15251e] p-3 shadow-[0_20px_55px_rgba(34,48,34,.18)] sm:p-5">
-            <div className="welcome-parol-stage relative mx-auto w-full max-w-[710px] p-6 sm:p-8">
-              {/* Decorative lighting is positioned only in the empty space surrounding the parol.
-                  The approved 20-friend artwork remains the same static, non-interactive image. */}
-              <div aria-hidden="true" className="welcome-parol-ambient pointer-events-none absolute inset-0 z-0" />
-              <div aria-hidden="true" className="welcome-parol-bokeh welcome-parol-bokeh-1" />
-              <div aria-hidden="true" className="welcome-parol-bokeh welcome-parol-bokeh-2" />
-              <div aria-hidden="true" className="welcome-parol-bokeh welcome-parol-bokeh-3" />
-              <img src="/api/designs/classic/showcase?friends=20&v=v2" width={1200} height={1280}
-                alt="Classic Gold festival parol with 20 sample friends"
-                draggable={false} decoding="async" loading="eager"
-                onError={event => {
-                  // Keep the welcome screen usable when the private showcase
-                  // renderer is busy; never mount a draggable SVG preview.
-                  if (!event.currentTarget.src.endsWith('/parol-classic-preview.svg')) {
-                    event.currentTarget.src = '/parol-classic-preview.svg'
-                    event.currentTarget.alt = 'BeMyParol Classic Gold festival parol'
-                  }
-                }}
-                className="welcome-parol-artwork pointer-events-none relative z-10 block h-auto w-full select-none" />
-              <div aria-hidden="true" className="welcome-parol-decor pointer-events-none absolute inset-0 z-20">
-                <span className="welcome-parol-starburst">✦</span>
-                <span className="welcome-parol-starburst">✦</span>
-                <span className="welcome-parol-starburst">✦</span>
-                <span className="welcome-parol-starburst">✦</span>
-                <span className="welcome-parol-dust" />
-                <span className="welcome-parol-dust" />
-                <span className="welcome-parol-dust" />
-                <span className="welcome-parol-dust" />
-                <span className="welcome-parol-dust" />
-                <span className="welcome-parol-dust" />
-                <span className="welcome-parol-dust" />
-                <span className="welcome-parol-dust" />
-                <span className="welcome-parol-dust" />
-                <span className="welcome-parol-dust" />
-              </div>
+      <main className="flex flex-1 flex-col justify-center pb-8">
+        <section className="mx-auto max-w-2xl px-5 pt-4 text-center">
+          <p className="text-xs font-bold uppercase tracking-[.23em] text-[#a87b42]">Bawat ilaw, may kwento</p>
+          <h1 className="mt-3 font-serif text-4xl font-semibold leading-tight tracking-tight sm:text-6xl">
+            Select your <span className="text-[#902632]">parol</span>
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-[#71685a] sm:text-base">Tap the one you love to start.</p>
+        </section>
+
+        <section aria-label="Parol designs" className="mt-4 bg-[#15251e] py-5 sm:py-8">
+          <div className="parol-marquee" data-paused={selected !== null}>
+            <div className="parol-marquee-track">
+              <ul className="flex">{parolCards(false)}</ul>
+              <ul className="parol-marquee-copy flex" aria-hidden="true">{parolCards(true)}</ul>
             </div>
           </div>
         </section>
 
-        <section className="mx-auto w-full max-w-md rounded-[28px] border border-[#e6d8c4] bg-[#fffdf8] p-6 shadow-[0_20px_45px_rgba(64,52,34,.08)] sm:p-9">
-          <h2 className="mt-3 font-serif text-3xl font-semibold">
-            {showRecovery ? 'Welcome back.' : 'Your parol starts here.'}
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-[#73695b]">
-            {showRecovery
-              ? 'Enter your private recovery key to return to your parol.'
-              : 'No account required. Keep your recovery key to come back.'}
-          </p>
-          {error && <p role="alert" className="mt-5 rounded-xl border border-[#e8b0ac] bg-[#fff0ee] px-4 py-3 text-sm text-[#922632]">{error}</p>}
-
-          {showRecovery ? (
-            <form onSubmit={recover} className="mt-6 space-y-4">
+        <section className="mx-auto mt-2 w-full max-w-md px-5 text-center">
+          {error && !selected && <p role="alert" className="mb-4 rounded-xl border border-[#e8b0ac] bg-[#fff0ee] px-4 py-3 text-left text-sm text-[#922632]">{error}</p>}
+          {showRecovery && (
+            <form onSubmit={recover} className="mb-2 space-y-4 rounded-[28px] border border-[#e6d8c4] bg-[#fffdf8] p-6 text-left shadow-[0_20px_45px_rgba(64,52,34,.08)] sm:p-8">
+              <h2 className="font-serif text-2xl font-semibold">Welcome back.</h2>
               <label htmlFor="recovery-key" className="block text-sm font-semibold text-[#3a493b]">
                 Your private recovery key
               </label>
@@ -122,17 +109,11 @@ export default function WelcomePage({
                 Your key is valid for one year. Recovering access ends your previous session.
               </p>
             </form>
-          ) : (
-            <button type="button" disabled={busy} onClick={() => void run(onCreate)}
-              className="mt-7 w-full rounded-xl bg-[#902632] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#73202b] disabled:opacity-50">
-              {busy ? 'Creating…' : 'Create my parol ✦'}
-            </button>
           )}
-
           <button type="button" disabled={busy}
             onClick={() => {setShowRecovery(value=>!value);setError('');setCode('')}}
-            className="mt-5 w-full py-2 text-sm font-semibold text-[#745a43] underline decoration-[#bfa887] underline-offset-4">
-            {showRecovery ? 'Create a new parol instead' : 'Already have a parol? Recover it'}
+            className="py-2 text-sm font-semibold text-[#745a43] underline decoration-[#bfa887] underline-offset-4">
+            {showRecovery ? 'Cancel' : 'Already have a parol? Recover it'}
           </button>
           {legacyAvailable && <div className="mt-5 border-t border-[#e8ddcf] pt-5">
             <p className="text-xs leading-5 text-[#7b7163]">An older Deco My Lantern session was found.</p>
@@ -141,14 +122,50 @@ export default function WelcomePage({
               Transfer my existing parol
             </button>
           </div>}
-          <div className="mt-7 rounded-2xl bg-[#f4ebdc] p-4">
-            <p className="text-sm font-semibold text-[#294334]">Your parol stays yours.</p>
-            <p className="mt-1 text-xs leading-5 text-[#7c705f]">
-              Save your private recovery key. Never share it with friends.
-            </p>
-          </div>
         </section>
       </main>
+      </div>
+
+      <section className="mx-auto max-w-[1000px] px-5 py-14 text-center">
+        <h2 className="font-serif text-3xl font-semibold sm:text-4xl">
+          Create a growing parol to share with your friends
+        </h2>
+        <ol className="mt-8 grid gap-4 text-left sm:grid-cols-3">
+          {STEPS.map(([title, body], index) => (
+            <li key={title} className="rounded-2xl bg-[#f4ebdc] p-5">
+              <p className="font-serif text-2xl text-[#a87b42]" aria-hidden="true">{index + 1}</p>
+              <p className="mt-1 font-semibold text-[#294334]">{title}</p>
+              <p className="mt-1 text-sm leading-6 text-[#7c705f]">{body}</p>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-6 text-xs leading-5 text-[#8b7d6c]">
+          Your parol stays yours. Save your private recovery key and never share it with friends.
+        </p>
+      </section>
+
+      {/* A confirm tap: owner creation is rate limited and a moving marquee is easy to mis-tap. */}
+      <dialog ref={dialogRef} aria-labelledby="create-parol-title"
+        onCancel={event => { if (busy) event.preventDefault() }}
+        onClose={() => { setSelected(null); setError('') }}
+        onClick={event => { if (event.target === event.currentTarget && !busy) dialogRef.current?.close() }}
+        className="m-auto w-[min(92vw,380px)] rounded-[28px] bg-[#fffdf8] p-0 text-[#27392e] shadow-[0_24px_70px_rgba(0,0,0,.45)] backdrop:bg-[#081811]/75">
+        {selected && <div className="p-6 text-center sm:p-8">
+          <img src={`/parols/${selected.key}.webp`} width={800} height={853} alt="" draggable={false}
+            className="mx-auto h-auto w-40 select-none sm:w-48" />
+          <h2 id="create-parol-title" className="mt-2 font-serif text-2xl font-semibold">{selected.label}</h2>
+          <p className="mt-1 text-sm leading-6 text-[#73695b]">No account required. Keep your recovery key to come back.</p>
+          {error && <p role="alert" className="mt-4 rounded-xl border border-[#e8b0ac] bg-[#fff0ee] px-4 py-3 text-left text-sm text-[#922632]">{error}</p>}
+          <button type="button" disabled={busy} onClick={() => void run(() => onCreate(selected.key))}
+            className="mt-5 w-full rounded-xl bg-[#902632] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#73202b] disabled:opacity-50">
+            {busy ? 'Creating…' : `Create my ${selected.label} parol ✦`}
+          </button>
+          <button type="button" disabled={busy} onClick={() => dialogRef.current?.close()}
+            className="mt-2 w-full py-2 text-sm font-semibold text-[#745a43] disabled:opacity-50">
+            Choose another
+          </button>
+        </div>}
+      </dialog>
       <NativeAd />
       <div className="mt-10"><BannerAd /></div>
     </div>
