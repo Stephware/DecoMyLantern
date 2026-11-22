@@ -58,12 +58,12 @@ Without an argument it uses `http://localhost:8080`. If a design is added, add i
 
 Result: six files, about 940 KB total.
 
-## Step 3 – Build the marquee (CSS only, no JavaScript)
+## Step 3 – Build the marquee (swipeable, auto-scrolling)
 
 In `WelcomePage.tsx` the parol list is rendered **twice** inside one track:
 
 ```tsx
-<div className="parol-marquee" data-paused={selected !== null}>
+<div ref={marqueeRef} className="parol-marquee" data-paused={selected !== null}>
   <div className="parol-marquee-track">
     <ul className="flex">{parolCards(false)}</ul>
     <ul className="parol-marquee-copy flex" aria-hidden="true">{parolCards(true)}</ul>
@@ -71,20 +71,34 @@ In `WelcomePage.tsx` the parol list is rendered **twice** inside one track:
 </div>
 ```
 
-In `index.css` the track slides left by exactly half its width, then restarts. Because the second half is an identical copy, the jump back is invisible, which gives an endless loop:
+`.parol-marquee` is a **real horizontal scroller** (`overflow-x: auto`, scrollbar hidden), so visitors can move it themselves:
 
-```css
-@keyframes parol-marquee { to { transform: translateX(-50%); } }
-.parol-marquee-track { display: flex; width: max-content; animation: parol-marquee 28s linear infinite; }
-```
+- **Phones:** swipe sideways (native touch scrolling, with momentum).
+- **Laptops:** two-finger trackpad swipe, or Shift + mouse wheel.
+- **Mouse:** click and drag. A drag never opens the popup for the card it ends on.
+
+A small `requestAnimationFrame` loop in `WelcomePage.tsx` moves `scrollLeft` forward a little every frame. One full loop takes **28s**, or **70s** with reduced motion on.
+
+**Endless in both directions.** The strip starts **half a track in**, so there is a full copy to the left as well as the right. Every frame, whether the loop or the visitor moved it, it checks the position:
+
+- near the right end, it jumps back by exactly half a track,
+- near the left end, it jumps forward by half a track.
+
+Both halves are identical, so the jump is invisible. Positions stay between `margin` and `half + margin`, where `margin = (half − visible width) / 2`, so every jump lands inside the scrollable range. During a mouse drag the drag's starting point shifts by the same amount, so the drag continues smoothly.
+
+**When it moves and when it holds:**
+
+- **Hover does not pause it.** It keeps moving under the mouse.
+- **Pressing** (mouse down or finger down) holds it still, so a tap lands on the parol under the pointer and **that design is the one recorded** in the popup.
+- **Any manual scroll** (swipe, trackpad, drag, keyboard focus) is detected because `scrollLeft` changed without the loop. The loop follows the new position, waits **0.5s** after the last movement or release (`HOLD_MS`), then carries on from there.
+- It is **paused while the popup is open** (`data-paused="true"`) and while a card has keyboard focus (`:focus-visible`).
 
 Details:
 
-- **Pausing:** the animation pauses on hover, when a card has keyboard focus, and while the popup is open (`data-paused="true"`).
 - **Faded edges:** a `mask-image` gradient fades the left and right edges.
 - **Accessibility:** the copy is `aria-hidden` and its buttons have `tabIndex={-1}`, so screen readers and the Tab key see each parol once.
-- **Reduced motion:** the marquee still scrolls (a product decision) but slower, **70s** per loop instead of 28s. It needs `!important` because a global reduced-motion rule in `index.css` sets every animation to 0.01ms, which would make it flicker.
-- **No lazy loading:** the images must **not** use `loading="lazy"`. The cards start off-screen inside an `overflow: hidden` track that moves by transform, and the browser never notices them coming into view, so lazy images stayed blank. All six are needed anyway.
+- **No lazy loading:** the images must **not** use `loading="lazy"`. The cards start off-screen in the moving strip, and the browser did not notice them coming into view, so lazy images stayed blank. All six are needed anyway.
+- **Known limits:** the loop needs the screen narrower than one copy of the list (about 2500px); on wider screens it stops at the end (add a third copy of the list if that matters). On iPhones, jumping the scroll position mid-swipe may cut a very fast fling short; test on a real iPhone.
 
 ## Step 4 – Size the carousel safely for small phones
 
@@ -164,7 +178,7 @@ The heaviest part is the ~1 MB of images on a first visit, served by nginx as st
 - an image exists for every theme,
 - the list is duplicated, the copy is hidden from screen readers and Tab,
 - nothing is selected by default, tapping opens the popup, and the old inline create card is gone,
-- the marquee keyframe, pause rules and reduced-motion speed are in place,
+- the marquee is a real scroller advanced by `requestAnimationFrame`, never paused by hover, held while pressed, with the reduced-motion speed,
 - images are not lazy loaded.
 
 Run them:
@@ -216,7 +230,7 @@ Needs SQL Server running and the backend's user secrets set (see `docs/setup-gui
 | Symptom | Cause and fix |
 | --- | --- |
 | Some parols are blank | Images were lazy loaded. Remove `loading="lazy"` (see Step 3). |
-| Marquee does not move | Hover or focus pauses it. With reduce motion on it moves slowly (70s per loop). |
+| Marquee does not move | It holds for 0.5s after any swipe, drag or press, and stops while the popup is open or a card has keyboard focus. With reduce motion on it moves slowly (70s per loop). |
 | `AggregateError [ECONNREFUSED]` in the Vite terminal | The backend on port 5050 is not running. Start it (see Running it locally). |
 | `IndexOutOfRangeException` from `dotnet ef` | An option was left without a value (often a cut-off paste). Run `dotnet ef database update` from the API project folder with no options. |
 | Old images still showing after re-export | Browser cache (7 days). Hard refresh, or rename the files and update the `src`. |

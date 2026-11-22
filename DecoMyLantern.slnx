@@ -1,4 +1,8 @@
 <Solution>
   <Project Path="src/backend/DecoMyLantern.Api/DecoMyLantern.Api.csproj" />
+  <Project Path="src/frontend/DecoMyLantern.Frontend.esproj">
+    <Build />
+    <Deploy />
+  </Project>
   <Project Path="tests/DecoMyLantern.Api.Tests/DecoMyLantern.Api.Tests.csproj" />
 </Solution>

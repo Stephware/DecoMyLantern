@@ -75,7 +75,7 @@ test('interactive Design Lab remains separate from the static welcome page', () 
   assert.ok(lab.includes('<ProceduralOuterShell'))
 })
 
-test('welcome marquee always loops with CSS only and opens a create popup', () => {
+test('welcome marquee auto-scrolls a swipeable scroller and opens a create popup', () => {
   const welcome = read('src/features/owner/WelcomePage.tsx')
   const css = read('src/styles/index.css')
   assert.ok(welcome.includes('<ul className="flex">{parolCards(false)}</ul>'))
@@ -88,11 +88,17 @@ test('welcome marquee always loops with CSS only and opens a create popup', () =
   assert.ok(welcome.includes('onCreate(selected.key)'))
   assert.ok(welcome.includes("'Already have a parol? Recover it'"))
   assert.ok(!welcome.includes('Choose a parol first'), 'inline create card was replaced by the popup')
-  assert.ok(css.includes('@keyframes parol-marquee { to { transform: translateX(-50%); } }'))
-  assert.ok(css.includes('.parol-marquee:focus-within .parol-marquee-track'))
-  assert.ok(css.includes('.parol-marquee[data-paused="true"] .parol-marquee-track { animation-play-state: paused; }'))
-  // Reduced motion slows the marquee instead of stopping it; !important beats the global .01ms rule.
-  assert.ok(css.includes('.parol-marquee-track { animation-duration: 70s !important; }'))
+  // A real scroller (swipe, trackpad, drag) advanced by scrollLeft, looping over the duplicated list.
+  assert.ok(css.includes('overflow-x: auto;'))
+  assert.ok(welcome.includes('requestAnimationFrame(tick)'))
+  // Endless both ways, even while scrolled by hand: start half a track in, wrap at either end.
+  assert.ok(welcome.includes('el.scrollLeft = el.scrollWidth / 2'))
+  assert.ok(welcome.includes('const shift = pos < margin ? half : pos > half + margin ? -half : 0'))
+  assert.ok(welcome.includes('const HOLD_MS = 500'))
+  // Hover never pauses it; pressing, scrolling or dragging holds it so a tap records the parol under it.
+  assert.doesNotMatch(css, /parol-marquee:hover|@keyframes parol-marquee/)
+  assert.ok(welcome.includes('if (!pressed && !paused && now > holdUntil)'))
+  assert.ok(welcome.includes("matchMedia('(prefers-reduced-motion: reduce)').matches ? 70 : 28"))
   assert.ok(!css.includes('.parol-marquee-copy { display: none; }'))
   assert.doesNotMatch(css, /welcome-parol-/)
 })

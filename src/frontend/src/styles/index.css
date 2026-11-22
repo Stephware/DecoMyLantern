@@ -76,26 +76,18 @@ button:focus-visible, input:focus-visible { outline: 2px solid #ffcf75; outline-
   animation: parol-snapshot-glint 720ms ease-out both;
 }
 
-/* Landing marquee: static pre-rendered parols, one CSS transform animation.
-   The track holds the list twice, so sliding by -50% loops seamlessly. */
-@keyframes parol-marquee { to { transform: translateX(-50%); } }
+/* Landing marquee: static pre-rendered parols in a real horizontal scroller, so visitors can swipe,
+   trackpad-scroll or drag it. WelcomePage auto-advances scrollLeft; the track holds the list twice
+   so jumping back by half a track is invisible. */
 .parol-marquee {
-  overflow: hidden;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  user-select: none;
   mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
 }
-.parol-marquee-track {
-  display: flex;
-  width: max-content;
-  animation: parol-marquee 28s linear infinite;
-}
-.parol-marquee:hover .parol-marquee-track,
-.parol-marquee:focus-within .parol-marquee-track,
-.parol-marquee[data-paused="true"] .parol-marquee-track { animation-play-state: paused; }
-/* Always scrolls (product choice); reduced motion gets a gentler pace and hover/focus still pause it.
-   !important beats the global reduced-motion rule below that would otherwise make it flicker. */
-@media (prefers-reduced-motion: reduce) {
-  .parol-marquee-track { animation-duration: 70s !important; }
-}
+.parol-marquee::-webkit-scrollbar { display: none; }
+.parol-marquee-track { display: flex; width: max-content; }
 
 /* Real parol on touchscreens: allow the browser to scroll the page by
    default. Deliberate Explore mode captures drag/pinch within its dialog.

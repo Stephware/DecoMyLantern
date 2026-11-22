@@ -24,9 +24,83 @@ export default function WelcomePage({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const marqueeRef = useRef<HTMLDivElement>(null)
 
   // Open after render so showModal focuses the dialog's Create button.
   useEffect(() => { if (selected) dialogRef.current?.showModal() }, [selected])
+
+  // Auto-advance a real scroller (never paused by hover). Any user scroll, swipe, drag or press holds it
+  // briefly, so a tap lands on the parol under the finger and that design is the one recorded.
+  // The list is there twice, so jumping by half a track is invisible: it wraps in both directions,
+  // whoever is moving it, and starts half a track in so there is content to the left too.
+  // shortcut: the loop needs the viewport narrower than one list (~2500px); add a third copy for wider screens.
+  useEffect(() => {
+    const el = marqueeRef.current
+    if (!el) return
+    const HOLD_MS = 500
+    const loopSeconds = matchMedia('(prefers-reduced-motion: reduce)').matches ? 70 : 28
+    el.scrollLeft = el.scrollWidth / 2
+    let pos = el.scrollLeft, last = performance.now(), holdUntil = 0, frame = 0
+    let pressed = false, suppressClick = false
+    let drag: { x: number, left: number, moved: boolean } | null = null
+
+    const tick = (now: number) => {
+      const dt = Math.min(now - last, 250) / 1000 // cap: no leap after returning to the tab
+      last = now
+      const half = el.scrollWidth / 2
+      const margin = Math.max(0, (half - el.clientWidth) / 2) // keeps both jump targets inside the scroll range
+      // Moved by someone else (swipe, trackpad, keyboard focus, drag): follow it and hold.
+      if (Math.abs(el.scrollLeft - pos) > 2) { pos = el.scrollLeft; holdUntil = now + HOLD_MS }
+      const paused = el.dataset.paused === 'true' || el.querySelector(':focus-visible') !== null
+      let moved = false
+      if (!pressed && !paused && now > holdUntil) { pos += half / loopSeconds * dt; moved = true }
+      const shift = pos < margin ? half : pos > half + margin ? -half : 0
+      if (shift) { pos += shift; moved = true; if (drag) drag.left += shift }
+      if (moved) el.scrollLeft = pos
+      frame = requestAnimationFrame(tick)
+    }
+    const down = (event: PointerEvent) => {
+      pressed = true
+      suppressClick = false
+      // Touch and pen scroll natively; a mouse needs drag-to-scroll.
+      if (event.pointerType === 'mouse' && event.button === 0) drag = { x: event.clientX, left: el.scrollLeft, moved: false }
+    }
+    const move = (event: PointerEvent) => {
+      if (!drag) return
+      const dx = event.clientX - drag.x
+      if (Math.abs(dx) > 5) drag.moved = true
+      if (drag.moved) el.scrollLeft = drag.left - dx
+    }
+    const up = () => {
+      if (!pressed) return
+      suppressClick = drag?.moved ?? false
+      pressed = false
+      drag = null
+      holdUntil = performance.now() + HOLD_MS
+    }
+    // A drag must not also open the popup for the card it ended on.
+    const click = (event: MouseEvent) => {
+      if (!suppressClick) return
+      event.preventDefault()
+      event.stopPropagation()
+      suppressClick = false
+    }
+
+    frame = requestAnimationFrame(tick)
+    el.addEventListener('pointerdown', down)
+    el.addEventListener('click', click, true)
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+    return () => {
+      cancelAnimationFrame(frame)
+      el.removeEventListener('pointerdown', down)
+      el.removeEventListener('click', click, true)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+    }
+  }, [])
 
   async function run(action: () => Promise<void>) {
     setBusy(true)
@@ -80,7 +154,7 @@ export default function WelcomePage({
         </section>
 
         <section aria-label="Parol designs" className="mt-4 bg-[#15251e] py-5 sm:py-8">
-          <div className="parol-marquee" data-paused={selected !== null}>
+          <div ref={marqueeRef} className="parol-marquee" data-paused={selected !== null}>
             <div className="parol-marquee-track">
               <ul className="flex">{parolCards(false)}</ul>
               <ul className="parol-marquee-copy flex" aria-hidden="true">{parolCards(true)}</ul>

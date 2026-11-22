@@ -36,3 +36,6 @@ Thumbs.db
 **/.dev-renderer.log
 /story-renderer/assets/generated/
 /story-renderer/.generated/
+
+# Understand Anything git ignore
+.ua/
